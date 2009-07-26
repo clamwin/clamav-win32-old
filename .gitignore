@@ -1,0 +1,17 @@
+*.[oa]
+*.l[oa]
+*~
+*.swp
+*.gcno
+*.gcda
+TAGS
+.deps
+.libs
+clamav-config*
+libtool
+stamp-h1
+config.log
+config.status
+libclamav.pc
+unit_tests/*
+autom4te.cache/*
