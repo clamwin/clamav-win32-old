@@ -1,0 +1,5 @@
+!Makefile
+*.dll
+*.exe
+*.a
+*.log

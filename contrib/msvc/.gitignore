@@ -1,4 +1,5 @@
 !clamav-config.h
+!target.h
 *.pdb
 *.ncb
 *.suo
