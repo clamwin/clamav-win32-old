@@ -60,7 +60,7 @@
 #include "libclamav/readdb.h"
 #include "libclamav/cltypes.h"
 
-#ifndef	C_WINDOWS
+#ifndef	_WIN32
 #define	closesocket(s)	close(s)
 #endif
 
@@ -125,6 +125,9 @@ static void scanner_thread(void *arg)
 	/* close connection if we were last in group */
 	shutdown(conn->sd, 2);
 	closesocket(conn->sd);
+#ifdef _WIN32
+    WSACloseEvent(conn->event);
+#endif
     }
     cl_engine_free(conn->engine);
     free(conn);
@@ -309,11 +312,20 @@ struct acceptdata {
     pthread_cond_t cond_nfds;
     int max_queue;
     int commandtimeout;
+#ifdef _WIN32
+    HANDLE syncpipe_wake_recv;
+    HANDLE syncpipe_wake_accept;
+#else
     int syncpipe_wake_recv[2];
     int syncpipe_wake_accept[2];
+#endif
 };
 
+#ifdef _WIN32
+#define ACCEPTDATA_INIT(mutex1, mutex2) { FDS_INIT(mutex1), FDS_INIT(mutex2), PTHREAD_COND_INITIALIZER, 0, 0, INVALID_HANDLE_VALUE, INVALID_HANDLE_VALUE }
+#else
 #define ACCEPTDATA_INIT(mutex1, mutex2) { FDS_INIT(mutex1), FDS_INIT(mutex2), PTHREAD_COND_INITIALIZER, 0, 0, {-1, -1}, {-1, -1}}
+#endif
 
 static void *acceptloop_th(void *arg)
 {
@@ -350,6 +362,10 @@ static void *acceptloop_th(void *arg)
 	    struct fd_buf *buf = &fds->buf[i];
 	    if (!buf->got_newdata)
 		continue;
+#ifdef _WIN32
+        if ((HANDLE) buf->fd == data->syncpipe_wake_accept)
+            continue;
+#else
 	    if (buf->fd == data->syncpipe_wake_accept[0]) {
 		/* dummy sync pipe, just to wake us */
 		if (read(buf->fd, buff, sizeof(buff)) < 0) {
@@ -357,6 +373,7 @@ static void *acceptloop_th(void *arg)
 		}
 		continue;
 	    }
+#endif
 	    if (buf->got_newdata == -1) {
 		logg("$Acceptloop closed FD: %d\n", buf->fd);
 		shutdown(buf->fd, 2);
@@ -417,10 +434,14 @@ static void *acceptloop_th(void *arg)
 		}
 
 		/* notify recvloop */
+#ifdef _WIN32
+        SetEvent(data->syncpipe_wake_recv);
+#else
 		if (write(data->syncpipe_wake_recv[1], "", 1) == -1) {
 		    logg("!write syncpipe failed\n");
 		    continue;
 		}
+#endif
 	    } else if (errno != EINTR) {
 		/* very bad - need to exit or restart */
 #ifdef HAVE_STRERROR_R
@@ -449,6 +470,10 @@ static void *acceptloop_th(void *arg)
 	if (fds->buf[i].fd == -1)
 	    continue;
 	logg("$Shutdown: closed fd %d\n", fds->buf[i].fd);
+#ifdef _WIN32
+    /* fake socket */
+    if (fds->buf[i].fd == 0) continue;
+#endif
 	shutdown(fds->buf[i].fd, 2);
 	closesocket(fds->buf[i].fd);
     }
@@ -457,10 +482,13 @@ static void *acceptloop_th(void *arg)
     pthread_mutex_lock(&exit_mutex);
     progexit = 1;
     pthread_mutex_unlock(&exit_mutex);
+#ifdef _WIN32
+    SetEvent(data->syncpipe_wake_recv);
+#else
     if (write(data->syncpipe_wake_recv[1], "", 1) < 0) {
 	logg("$Syncpipe write failed\n");
     }
-
+#endif
     return NULL;
 }
 
@@ -524,6 +552,9 @@ static const unsigned char* parse_dispatch_cmd(client_conn_t *conn, struct fd_bu
 		/* if there are no more active jobs */
 		shutdown(conn->sd, 2);
 		closesocket(conn->sd);
+#ifdef _WIN32
+        WSACloseEvent(conn->event);
+#endif
 		buf->fd = -1;
 		conn->group = NULL;
 	    } else if (conn->mode != MODE_STREAM) {
@@ -602,7 +633,7 @@ static const unsigned char* parse_dispatch_cmd(client_conn_t *conn, struct fd_bu
     return cmd;
 }
 
-//static const unsigned char* parse_dispatch_cmd(client_conn_t *conn, struct fd_buf *buf, size_t *ppos, int *error, const struct optstruct *opts, int readtimeout)
+/*static const unsigned char* parse_dispatch_cmd(client_conn_t *conn, struct fd_buf *buf, size_t *ppos, int *error, const struct optstruct *opts, int readtimeout)*/
 static int handle_stream(client_conn_t *conn, struct fd_buf *buf, const struct optstruct *opts, int *error, size_t *ppos, int readtimeout)
 {
     int rc;
@@ -1049,7 +1080,12 @@ int recvloop_th(int *socketds, unsigned nsockets, struct cl_engine *engine, unsi
 	    cl_engine_free(engine);
 	    return 1;
 	}
-
+#ifdef _WIN32
+    acceptdata.syncpipe_wake_recv = CreateEvent(NULL, TRUE, FALSE, "Wake_Recv");
+    fds_add(fds, (long long) acceptdata.syncpipe_wake_recv, 2, 0);
+    acceptdata.syncpipe_wake_accept = CreateEvent(NULL, TRUE, FALSE, "Wake_Accept");
+    fds_add(&acceptdata.fds, (long long) acceptdata.syncpipe_wake_accept, 2, 0);
+#else
     if (pipe(acceptdata.syncpipe_wake_recv) == -1 ||
 	(pipe(acceptdata.syncpipe_wake_accept) == -1)) {
 
@@ -1064,7 +1100,7 @@ int recvloop_th(int *socketds, unsigned nsockets, struct cl_engine *engine, unsi
 	logg("!failed to add pipe fd\n");
 	exit(-1);
     }
-
+#endif
     if ((thr_pool = thrmgr_new(max_threads, idletimeout, max_queue, scanner_thread)) == NULL) {
 	logg("!thrmgr_new failed\n");
 	exit(-1);
@@ -1112,6 +1148,10 @@ int recvloop_th(int *socketds, unsigned nsockets, struct cl_engine *engine, unsi
 	    if (!buf->got_newdata)
 		continue;
 
+#ifdef _WIN32
+        if (buf->fd == (long long) acceptdata.syncpipe_wake_recv)
+            continue;
+#else
 	    if (buf->fd == acceptdata.syncpipe_wake_recv[0]) {
 		/* dummy sync pipe, just to wake us */
 		if (read(buf->fd, buff, sizeof(buff)) < 0) {
@@ -1119,7 +1159,7 @@ int recvloop_th(int *socketds, unsigned nsockets, struct cl_engine *engine, unsi
 		}
 		continue;
 	    }
-
+#endif
 	    if (buf->got_newdata == -1) {
 		if (buf->mode == MODE_WAITREPLY) {
 		    logg("$mode WAIT_REPLY -> closed\n");
@@ -1165,6 +1205,9 @@ int recvloop_th(int *socketds, unsigned nsockets, struct cl_engine *engine, unsi
 		conn.filename = buf->dumpname;
 		conn.mode = buf->mode;
 		conn.term = buf->term;
+#ifdef _WIN32
+        conn.event = buf->event;
+#endif
 
 		/* Parse & dispatch command */
 		cmd = parse_dispatch_cmd(&conn, buf, &pos, &error, opts, readtimeout);
@@ -1204,6 +1247,9 @@ int recvloop_th(int *socketds, unsigned nsockets, struct cl_engine *engine, unsi
 		    logg("$Shutting down socket after error (FD %d)\n", buf->fd);
 		    shutdown(buf->fd, 2);
 		    closesocket(buf->fd);
+#ifdef _WIN32
+            WSACloseEvent(buf->event);
+#endif
 		} else
 		    logg("$Socket not shut down due to active tasks\n");
 		buf->fd = -1;
@@ -1222,8 +1268,18 @@ int recvloop_th(int *socketds, unsigned nsockets, struct cl_engine *engine, unsi
 		thrmgr_group_terminate(fds->buf[i].group);
 		if (thrmgr_group_finished(fds->buf[i].group, EXIT_ERROR)) {
 		    logg("$Shutdown closed fd %d\n", fds->buf[i].fd);
+#ifdef _WIN32
+            /* skip fake sockets */
+            if (fds->buf[i].fd > 0)
+            {
+                shutdown(fds->buf[i].fd, 2);
+                closesocket(fds->buf[i].fd);
+                WSACloseEvent(fds->buf[i].event);
+            }
+#else
 		    shutdown(fds->buf[i].fd, 2);
 		    closesocket(fds->buf[i].fd);
+#endif
 		    fds->buf[i].fd = -1;
 		}
 	    }
@@ -1287,9 +1343,13 @@ int recvloop_th(int *socketds, unsigned nsockets, struct cl_engine *engine, unsi
     pthread_mutex_lock(&exit_mutex);
     progexit = 1;
     pthread_mutex_unlock(&exit_mutex);
+#ifdef _WIN32
+    SetEvent(acceptdata.syncpipe_wake_accept);
+#else
     if (write(acceptdata.syncpipe_wake_accept[1], "", 1) < 0) {
 	logg("^Write to syncpipe failed\n");
     }
+#endif
     /* Destroy the thread manager.
      * This waits for all current tasks to end
      */
@@ -1309,8 +1369,13 @@ int recvloop_th(int *socketds, unsigned nsockets, struct cl_engine *engine, unsi
 
     pthread_join(accept_th, NULL);
     fds_free(fds);
+#ifdef _WIN32
+    CloseHandle(acceptdata.syncpipe_wake_accept);
+    CloseHandle(acceptdata.syncpipe_wake_recv);
+#else
     close(acceptdata.syncpipe_wake_accept[1]);
     close(acceptdata.syncpipe_wake_recv[1]);
+#endif
     if(dbstat.entries)
 	cl_statfree(&dbstat);
     logg("*Shutting down the main socket%s.\n", (nsockets > 1) ? "s" : "");

@@ -43,6 +43,7 @@ typedef enum {
     CL_ECVD,
     CL_EVERIFY,
     CL_EUNPACK,
+    CL_EUSERABORT,
 
     /* I/O and memory errors */
     CL_EOPEN,
@@ -152,6 +153,8 @@ extern int cl_engine_compile(struct cl_engine *engine);
 
 extern int cl_engine_addref(struct cl_engine *engine);
 
+extern int cl_engine_setcallback(struct cl_engine *engine, int (*callback)(int desc, int bytes));
+
 extern int cl_engine_free(struct cl_engine *engine);
 
 
@@ -204,6 +207,8 @@ extern unsigned int cl_retflevel(void);
 extern const char *cl_retver(void);
 
 /* others */
+extern char *cli_gettempdir(void);
+extern int cli_rmdirs(const char *dirname);
 extern const char *cl_strerror(int clerror);
 
 #ifdef __cplusplus

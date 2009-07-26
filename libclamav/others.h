@@ -52,7 +52,11 @@
 #define CL_FLEVEL 46
 #define CL_FLEVEL_DCONF	CL_FLEVEL
 
+#ifdef _WIN32
+extern uint8_t LIBCLAMAV_API cli_debug_flag;
+#else
 extern uint8_t cli_debug_flag;
+#endif
 
 /*
  * CLI_ISCONTAINED(buf1, size1, buf2, size2) checks if buf2 is contained
@@ -175,6 +179,9 @@ struct cl_engine {
 
     /* Used for memory pools */
     mpool_t *mempool;
+
+    /* Callback for Scanning */
+    int (*callback)(int desc, int bytes);
 };
 
 struct cl_settings {

@@ -37,7 +37,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <time.h>
-#ifdef C_WINDOWS
+#ifdef _WIN32
 #include <direct.h>	/* for chdir */
 #else
 #include <pwd.h>
@@ -69,7 +69,7 @@
 #include "others.h"
 #include "shared.h"
 
-#ifndef C_WINDOWS
+#ifndef _WIN32
 #define	closesocket(s)	close(s)
 #endif
 
@@ -87,6 +87,13 @@ static void help(void)
     printf("    --version                -V             Show version number.\n");
     printf("    --debug                                 Enable debug mode.\n");
     printf("    --config-file=FILE       -c FILE        Read configuration from FILE.\n\n");
+#ifdef _WIN32
+    printf("Windows Service:\n");
+    printf("    --daemon                                Start in Service mode (internal)\n");
+    printf("    --install                               Install Windows Service\n");
+    printf("    --uninstall                             Uninstall Windows Service\n");
+#endif
+
 }
 
 static struct optstruct *opts;
@@ -138,6 +145,7 @@ int main(int argc, char **argv)
 	    perror("setrlimit");
 #endif
 	debug_mode = 1;
+	cl_debug();
     }
 
     /* parse the config file */
@@ -156,10 +164,26 @@ int main(int argc, char **argv)
 	return 0;
     }
 
+#ifdef _WIN32
+    if (optget(opts, "install")->enabled)
+    {
+        cw_installservice("ClamD", "ClamWin Free Antivirus Scanner Service",
+            "Provides virus scanning facilities for ClamWin Free Antivirus application");
+        optfree(opts);
+        return 0;
+    }
+
+    if (optget(opts, "uninstall")->enabled)
+    {
+        cw_uninstallservice("ClamD", 1);
+        optfree(opts);
+        return 0;
+    }
+#endif
     umask(0);
 
     /* drop privileges */
-#if (!defined(C_OS2)) && (!defined(C_WINDOWS))
+#if (!defined(C_OS2)) && (!defined(_WIN32))
     if(geteuid() == 0 && (opt = optget(opts, "User"))->enabled) {
 	if((user = getpwnam(opt->strarg)) == NULL) {
 	    fprintf(stderr, "ERROR: Can't get information about user %s.\n", opt->strarg);
@@ -279,7 +303,7 @@ int main(int argc, char **argv)
 
     logg("#clamd daemon %s (OS: "TARGET_OS_TYPE", ARCH: "TARGET_ARCH_TYPE", CPU: "TARGET_CPU_TYPE")\n", get_version());
 
-#ifndef C_WINDOWS
+#ifndef WIN32
     if(user)
 	logg("#Running as user %s (UID %u, GID %u)\n", user->pw_name, user->pw_uid, user->pw_gid);
 #endif
@@ -437,7 +461,7 @@ int main(int argc, char **argv)
 	}
 	nlsockets++;
     }
-
+#ifndef _WIN32
     if(localsock) {
 	if ((lsockets[nlsockets] = localserver(opts)) == -1) {
 	    ret = 1;
@@ -470,6 +494,11 @@ int main(int argc, char **argv)
 
     } else
         foreground = 1;
+#endif
+
+#ifdef _WIN32
+    if (optget(opts, "daemon")->enabled) cw_registerservice("ClamD");
+#endif
 
     ret = recvloop_th(lsockets, nlsockets, engine, dboptions, opts);
 
@@ -481,7 +510,7 @@ int main(int argc, char **argv)
 	closesocket(lsockets[i]);
     }
 
-#ifndef C_OS2
+#if !defined(C_OS2) && !defined(_WIN32)
     if(nlsockets && localsock) {
 	opt = optget(opts, "LocalSocket");
 	if(unlink(opt->strarg) == -1)

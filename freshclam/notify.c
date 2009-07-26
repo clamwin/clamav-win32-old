@@ -16,7 +16,6 @@
  *  MA 02110-1301, USA.
  */
 #ifdef        _MSC_VER
-#include <windows.h>
 #include <winsock.h>
 #endif
 
@@ -45,7 +44,7 @@
 #include "shared/output.h"
 #include "notify.h"
 
-#ifndef	C_WINDOWS
+#ifndef	_WIN32
 #define	closesocket(s)	close(s)
 #endif
 

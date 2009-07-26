@@ -1645,7 +1645,7 @@ static int cli_loaddbdir(const char *dirname, struct cl_engine *engine, unsigned
 #else
     while((dent = readdir(dd))) {
 #endif
-#if	(!defined(C_INTERIX)) && (!defined(C_WINDOWS))
+#if	(!defined(C_INTERIX)) && (!defined(_WIN32))
 	if(dent->d_ino)
 #endif
 	{
@@ -1723,7 +1723,11 @@ int cl_load(const char *path, struct cl_engine *engine, unsigned int *signo, uns
 
 const char *cl_retdbdir(void)
 {
+#ifdef _WIN32
+    return cw_getpath("DataDir", NULL);
+#else
     return DATADIR;
+#endif
 }
 
 int cl_statinidir(const char *dirname, struct cl_stat *dbstat)
@@ -1764,7 +1768,7 @@ int cl_statinidir(const char *dirname, struct cl_stat *dbstat)
 #else
     while((dent = readdir(dd))) {
 #endif
-#if	(!defined(C_INTERIX)) && (!defined(C_WINDOWS))
+#if	(!defined(C_INTERIX)) && (!defined(_WIN32))
 	if(dent->d_ino)
 #endif
 	{
@@ -1777,7 +1781,7 @@ int cl_statinidir(const char *dirname, struct cl_stat *dbstat)
 		    return CL_EMEM;
 		}
 
-#if defined(C_INTERIX) || defined(C_OS2)
+#if defined(C_INTERIX) || defined(C_OS2) || defined(_WIN32)
 		dbstat->statdname = (char **) cli_realloc2(dbstat->statdname, dbstat->entries * sizeof(char *));
 		if(!dbstat->statdname) {
 		    cl_statfree(dbstat);
@@ -1793,7 +1797,7 @@ int cl_statinidir(const char *dirname, struct cl_stat *dbstat)
 		    return CL_EMEM;
 		}
 		sprintf(fname, "%s/%s", dirname, dent->d_name);
-#if defined(C_INTERIX) || defined(C_OS2)
+#if defined(C_INTERIX) || defined(C_OS2) || defined(_WIN32)
 		dbstat->statdname[dbstat->entries - 1] = (char *) cli_malloc(strlen(dent->d_name) + 1);
 		if(!dbstat->statdname[dbstat->entries - 1]) {
 		    cl_statfree(dbstat);
@@ -1847,7 +1851,7 @@ int cl_statchkdir(const struct cl_stat *dbstat)
 #else
     while((dent = readdir(dd))) {
 #endif
-#if	(!defined(C_INTERIX)) && (!defined(C_WINDOWS))
+#if	(!defined(C_INTERIX)) && (!defined(_WIN32))
 	if(dent->d_ino)
 #endif
 	{
@@ -1864,7 +1868,7 @@ int cl_statchkdir(const struct cl_stat *dbstat)
 
 		found = 0;
 		for(i = 0; i < dbstat->entries; i++)
-#if defined(C_INTERIX) || defined(C_OS2)
+#if defined(C_INTERIX) || defined(C_OS2) || defined(_WIN32)
 		    if(!strcmp(dbstat->statdname[i], dent->d_name)) {
 #else
 		    if(dbstat->stattab[i].st_ino == sb.st_ino) {
@@ -1893,7 +1897,7 @@ int cl_statfree(struct cl_stat *dbstat)
 
     if(dbstat) {
 
-#if defined(C_INTERIX) || defined(C_OS2)
+#if defined(C_INTERIX) || defined(C_OS2) || defined(_WIN32)
 	    int i;
 
 	if(dbstat->statdname) {
@@ -2030,6 +2034,9 @@ int cl_engine_free(struct cl_engine *engine)
     if(engine->mempool) mpool_destroy(engine->mempool);
 #endif
     free(engine);
+#ifdef _WIN32
+    cw_heapcompact();
+#endif
     return CL_SUCCESS;
 }
 
@@ -2110,5 +2117,16 @@ int cl_engine_addref(struct cl_engine *engine)
     pthread_mutex_unlock(&cli_ref_mutex);
 #endif
 
+    return CL_SUCCESS;
+}
+
+int cl_engine_setcallback(struct cl_engine *engine, int (*callback)(int desc, int bytes))
+{
+    if (!(engine && callback))
+    {
+        cli_errmsg("cl_engine_setcallback: engine or callback == NULL\n");
+        return CL_ENULLARG;
+    }
+    engine->callback = callback;
     return CL_SUCCESS;
 }

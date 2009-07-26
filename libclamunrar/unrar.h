@@ -35,8 +35,12 @@ struct unpack_data_tag;
 #include "libclamunrar/unrarcmd.h"
 #include "libclamunrar/unrarfilter.h"
 
+#ifndef FALSE
 #define FALSE (0)
+#endif
+#ifndef TRUE
 #define TRUE (1)
+#endif
 #ifndef MIN
 #define MIN(a,b) ((a < b) ? a : b)
 #endif

@@ -18,7 +18,7 @@
 
 SUBDIRS = lzma .
 
-AM_CPPFLAGS = -I$(top_srcdir) -I@srcdir@/nsis -I@srcdir@/lzma $(LTDLINCL)
+AM_CPPFLAGS = -I$(top_srcdir) -I@srcdir@/nsis -I@srcdir@/lzma $(LTDLINCL) -I@srcdir@/7zip -D_LZMA_IN_CB
 
 lib_LTLIBRARIES =
 EXTRA_DIST =
@@ -218,6 +218,19 @@ libclamav_la_SOURCES = \
 	autoit.h \
 	unarj.c \
 	unarj.h \
+	7zip/7zip.c \
+	7zip/lzma/Archive/7z/7zAlloc.c \
+	7zip/lzma/Archive/7z/7zBuffer.c \
+	7zip/lzma/7zCrc.c \
+	7zip/lzma/Archive/7z/7zDecode.c \
+	7zip/lzma/Archive/7z/7zExtract.c \
+	7zip/lzma/Archive/7z/7zHeader.c \
+	7zip/lzma/Archive/7z/7zIn.c \
+	7zip/lzma/Archive/7z/7zItem.c \
+	7zip/lzma/Archive/7z/7zMethodID.c \
+	7zip/lzma/Compress/Lzma/LzmaDecode.c \
+	7zip/lzma/Compress/Branch/BranchX86.c \
+	7zip/lzma/Compress/Branch/BranchX86_2.c \
 	nsis/bzlib.c \
 	nsis/bzlib_private.h \
 	nsis/nsis_bzlib.h \

@@ -290,7 +290,7 @@ static int parseHeader(struct cli_bc *bc, unsigned char *buffer)
 	cli_dbgmsg("Skipping bytecode with functionality level: %u\n", flevel);
 	return CL_BREAK;
     }
-    // Optimistic parsing, check for error only at the end.
+    /* Optimistic parsing, check for error only at the end. */
     bc->verifier = readNumber(buffer, &offset, len, &ok);
     bc->sigmaker = readString(buffer, &offset, len, &ok);
     bc->id = readNumber(buffer, &offset, len, &ok);

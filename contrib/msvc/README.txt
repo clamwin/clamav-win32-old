@@ -1,0 +1,46 @@
+-- ClamAV native win32 port --
+
+Copyright (c) 2005-2009 Gianluigi Tiesi <sherpya@netfarm.it>
+
+This program is free software; you can redistribute it and/or
+modify it under the terms of the GNU Library General Public
+License as published by the Free Software Foundation; either
+version 2 of the License, or (at your option) any later version.
+
+This library is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+Library General Public License for more details.
+You should have received a copy of the GNU Library General Public
+License along with this software; if not, write to the
+Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+
+--
+
+[features]
+ * [clamav] small footprint (all distribution is around 1.5 MiB)
+ * [clamav] nice icons ;)
+ * [clamav] support for unc paths, esotic/long file names
+ * [clamscan] memory scanner
+ * [libclamav] dynamic libclamav.dll library common for all executables
+ * [libclamav] support for 7zip archives
+ * [freshclam] native dns txt query on win98/ME / DnsAPI query on Win2k+
+ * [clamd/freshclam] may also be used as Windows Services
+
+[notes]
+* You can store database and config paths in the registry using
+  clamav.reg file (I may make a nsis installer in the future),
+  paths can be also REG_EXPAND_SZ, environment variables are
+  allowed here (i.e. you can use paths like %HomeDrive%\Clamav).
+
+* To use binaries compiled with Visual Studio 2005,
+  you need the msvcrt80 side by side assembly, the "simple way" is
+  uncompress Microsoft.VC80.CRT.zip in the directory of executables,
+  the directory Microsoft.VC80.CRT must be placed as is, putting
+  directly dlls in the same directory of the executable will not work.
+  On windows 9x you should put the dll and the manifest in windows
+  system directory without the Microsoft.VC80.CRT directory.
+  For more info about this refer to the relative msdn-page.
+  You can also download the redist package directly from Microsoft.
+
+- Please report bugs to sherpya@netfarm.it and not to bugs@clamav.net -

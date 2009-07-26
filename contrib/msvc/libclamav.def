@@ -1,0 +1,181 @@
+EXPORTS
+
+; Engine management
+cl_init
+cl_load
+cl_retdbdir
+cl_engine_addref
+cl_engine_setcallback
+cl_engine_compile
+cl_engine_new
+cl_engine_set_num
+cl_engine_get_num
+cl_engine_set_str
+cl_engine_get_str
+cl_engine_free
+cl_engine_settings_copy
+cl_engine_settings_apply
+cl_engine_settings_free
+
+; Scanning
+cl_scandesc
+cl_scanfile
+
+; Versions
+cl_retflevel
+cl_retver
+get_version
+
+; CVD handlers
+cl_cvdhead
+cl_cvdparse
+cl_cvdverify
+cl_cvdfree
+
+; Database stat functions
+cl_statinidir
+cl_statchkdir
+cl_statfree
+
+; Logging functions
+cl_debug
+cl_strerror
+
+; ClamWin specific
+cw_getplatform
+cw_normalizepath
+cw_stat
+cw_rmdirs
+cw_iswow64
+cw_fsredirection
+;cw_movefile
+;cw_movefileex
+cw_unlink
+cw_strerror
+cw_perror
+
+cw_gethelpers               @50 NONAME
+cw_getpath                  @51 NONAME
+;cw_async_noalert            @52 NONAME
+cw_leerrno                  @53 NONAME
+cw_wseterrno                @54 NONAME
+
+; win32 portability layer
+fcntl                       @70 NONAME
+opendir                     @71 NONAME
+closedir                    @72 NONAME
+readdir                     @73 NONAME
+mkstemp                     @74 NONAME
+tcgetattr                   @75 NONAME
+tcsetattr                   @76 NONAME
+
+; win32 snprintf is b0rked
+gnulib_snprintf             @90 NONAME
+gnulib_vsnprintf            @91 NONAME
+strptime                    @92 NONAME
+ftruncate                   @93 NONAME
+
+; Internals
+cli_calloc                  @100 NONAME
+cli_chomp                   @101 NONAME
+cli_ctime                   @102 NONAME
+cli_cvdunpack               @103 NONAME
+cli_dbgmsg_internal         @104 NONAME
+cli_debug_flag              @105 NONAME
+cli_errmsg                  @106 NONAME
+cli_filetype2               @107 NONAME
+cli_ftw                     @108 NONAME
+cli_gentemp                 @109 NONAME
+cli_gentempfd               @110 NONAME
+cli_gettempdir              @111 NONAME
+cli_isnumber                @112 NONAME
+cli_malloc                  @113 NONAME
+cli_matchregex              @114 NONAME
+cli_md5file                 @115 NONAME
+cli_md5stream               @116 NONAME
+cli_ole2_extract            @117 NONAME
+cli_ppt_vba_read            @118 NONAME
+cli_readn                   @119 NONAME
+cli_rndnum                  @120 NONAME
+cli_scancpio_newc           @121 NONAME
+cli_scancpio_odc            @122 NONAME
+cli_scancpio_old            @123 NONAME
+cli_scanmacho               @124 NONAME
+cli_str2hex                 @125 NONAME
+cli_strbcasestr             @126 NONAME
+cli_strerror                @127 NONAME
+cli_strtok                  @128 NONAME
+cli_utf16toascii            @129 NONAME
+cli_vba_inflate             @130 NONAME
+cli_vba_readdir             @131 NONAME
+cli_vm_execute              @132 NONAME
+cli_wm_decrypt_macro        @133 NONAME
+cli_wm_readdir              @134 NONAME
+cli_writen                  @135 NONAME
+
+html_normalise_fd           @140 NONAME
+uniq_get                    @141 NONAME
+
+; inlined pthreads-win32
+pthread_attr_destroy        @200 NONAME
+pthread_attr_init           @201 NONAME
+pthread_attr_setdetachstate @202 NONAME
+pthread_cond_broadcast      @203 NONAME
+pthread_cond_destroy        @204 NONAME
+pthread_cond_init           @205 NONAME
+pthread_cond_signal         @206 NONAME
+pthread_cond_timedwait      @207 NONAME
+pthread_cond_wait           @208 NONAME
+pthread_create              @209 NONAME
+pthread_getspecific         @210 NONAME
+pthread_key_create          @211 NONAME
+pthread_mutex_destroy       @212 NONAME
+pthread_mutex_init          @213 NONAME
+pthread_mutex_lock          @214 NONAME
+pthread_mutex_unlock        @215 NONAME
+pthread_once                @216 NONAME
+pthread_setspecific         @217 NONAME
+pthread_join                @218 NONAME
+
+; zlib
+gzopen                      @250 NONAME
+gzclose                     @251 NONAME
+gzwrite                     @252 NONAME
+
+; shared variables
+logg_file                   @300 NONAME DATA
+logg_lock                   @301 NONAME DATA
+logg_nowarn                 @302 NONAME DATA
+logg_size                   @303 NONAME DATA
+logg_time                   @304 NONAME DATA
+logg_verbose                @305 NONAME DATA
+mprintf_disabled            @306 NONAME DATA
+mprintf_nowarn              @307 NONAME DATA
+mprintf_quiet               @308 NONAME DATA
+mprintf_stdout              @309 NONAME DATA
+mprintf_verbose             @310 NONAME DATA
+mprintf_send_timeout        @311 NONAME DATA
+action                      @312 NONAME DATA
+notremoved                  @313 NONAME DATA
+notmoved                    @314 NONAME DATA
+
+; shared functions
+actsetup                    @400 NONAME
+cdiff_apply                 @401 NONAME
+cfg_tcpsock                 @402 NONAME
+filecopy                    @403 NONAME
+filelist                    @404 NONAME
+freshdbdir                  @405 NONAME
+logg                        @406 NONAME
+logg_close                  @407 NONAME
+mdprintf                    @408 NONAME
+mprintf                     @409 NONAME
+optfree                     @410 NONAME
+optget                      @411 NONAME
+optparse                    @412 NONAME
+print_version               @413 NONAME
+r_gethostbyname             @414 NONAME
+sha256_final                @415 NONAME
+sha256_init                 @416 NONAME
+sha256_update               @417 NONAME
+tar_addfile                 @418 NONAME

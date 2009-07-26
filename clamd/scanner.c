@@ -71,7 +71,7 @@
 dev_t procdev; /* /proc device */
 #endif
 
-#ifndef	C_WINDOWS
+#ifndef	_WIN32
 #define	closesocket(s)	close(s)
 #endif
 

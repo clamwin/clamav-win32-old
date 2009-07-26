@@ -35,7 +35,6 @@ void *rar_malloc(size_t size)
 
     if(!alloc) {
 	fprintf(stderr, "UNRAR: rar_malloc(): Can't allocate memory (%lu bytes).\n", size);
-	perror("malloc_problem");
 	return NULL;
     } else return alloc;
 }
@@ -54,7 +53,6 @@ void *rar_realloc2(void *ptr, size_t size)
 
     if(!alloc) {
 	fprintf(stderr, "UNRAR: rar_realloc2(): Can't allocate memory (%lu bytes).\n", size);
-	perror("rar_realloc2");
 	if(ptr)
 	    free(ptr);
 	return NULL;

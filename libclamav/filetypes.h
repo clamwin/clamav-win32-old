@@ -54,6 +54,7 @@ typedef enum {
     CL_TYPE_BZ,
     CL_TYPE_RAR,
     CL_TYPE_ARJ,
+    CL_TYPE_7ZIP,
     CL_TYPE_MSSZDD,
     CL_TYPE_MSOLE2,
     CL_TYPE_MSCAB,

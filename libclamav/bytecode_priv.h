@@ -74,7 +74,7 @@ struct cli_bc_func {
     uint8_t numArgs;
     uint16_t numLocals;
     uint32_t numInsts;
-    uint32_t numValues;//without constants
+    uint32_t numValues; /* without constants */
     uint32_t numConstants;
     uint16_t numBB;
     uint16_t *types;

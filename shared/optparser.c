@@ -118,6 +118,19 @@ const struct clam_option clam_options[] = {
     { NULL, "non-default", 'n', TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_CLAMCONF, "", "" },
     { NULL, "generate-config", 'g', TYPE_STRING, NULL, -1, NULL, 0, OPT_CLAMCONF, "", "" },
 
+    { NULL, "show-progress", 0, TYPE_BOOL, NULL, 0, NULL, 0, OPT_CLAMSCAN, "", "" },
+    { NULL, "keep-mbox", 0, TYPE_BOOL, NULL, 0, NULL, 0, OPT_CLAMSCAN, "", "" },
+
+#ifdef _WIN32
+    { NULL, "install", 0, TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_CLAMD | OPT_FRESHCLAM, "", "" },
+    { NULL, "uninstall", 0, TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_CLAMD | OPT_FRESHCLAM, "", "" },
+    { NULL, "daemon", 'd', TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_CLAMD, "", "" },
+
+    { NULL, "memory", 0, TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_CLAMSCAN, "", "" },
+    { NULL, "kill", 'k', TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_CLAMSCAN, "", "" },
+    { NULL, "unload", 'u', TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_CLAMSCAN, "", "" },
+#endif
+
     /* cmdline only - deprecated */
     { NULL, "http-proxy", 0, TYPE_STRING, NULL, 0, NULL, 0, OPT_FRESHCLAM | OPT_DEPRECATED, "", "" },
     { NULL, "proxy-user", 0, TYPE_STRING, NULL, 0, NULL, 0, OPT_FRESHCLAM | OPT_DEPRECATED, "", "" },
@@ -417,7 +430,7 @@ const struct clam_option clam_options[] = {
 
     { NULL, NULL, 0, 0, NULL, 0, NULL, 0, 0, NULL, NULL }
 };
-
+#ifndef _WIN32
 const struct optstruct *optget(const struct optstruct *opts, const char *name)
 {
     while(opts) {
@@ -427,7 +440,7 @@ const struct optstruct *optget(const struct optstruct *opts, const char *name)
     }
     return NULL;
 }
-
+#endif
 static struct optstruct *optget_i(struct optstruct *opts, const char *name)
 {
     while(opts) {
@@ -691,7 +704,7 @@ struct optstruct *optparse(const char *cfgfile, int argc, char **argv, int verbo
     }
 
     if(cfgfile) {
-	if((fs = fopen(cfgfile, "rb")) == NULL) {
+	if((fs = fopen(cfgfile, "r")) == NULL) {
 	    /* don't print error messages here! */
 	    optfree(opts);
 	    return NULL;

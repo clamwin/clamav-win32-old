@@ -395,7 +395,7 @@ int cli_vm_execute(const struct cli_bc *bc, struct cli_bc_ctx *ctx, const struct
 		stack_entry = allocate_stack(&stack, stack_entry, func2, func, value,
 					     bb, bb_inst);
 		values = stack_entry->values;
-//		cli_dbgmsg("Executing %d\n", inst->u.ops.funcid);
+/*		cli_dbgmsg("Executing %d\n", inst->u.ops.funcid); */
 		for (i=0;i<func2->numArgs;i++)
 		    values[i] = old_values[inst->u.ops.ops[i]];
 		func = func2;

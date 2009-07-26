@@ -695,7 +695,7 @@ sanitiseName(char *name)
 		 * I don't know if spaces are legal in OS/2.
 		 */
 		if(strchr("%/*?<>|\\\"+=,;:\t ~", *name))
-#elif defined(C_WINDOWS)
+#elif defined(_WIN32)
 		if(strchr("%/*?<>|\\\"+=,;:\t~", *name))
 #else
 		if(*name == '/')

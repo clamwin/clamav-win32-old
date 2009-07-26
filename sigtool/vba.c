@@ -17,6 +17,10 @@
  *  MA 02110-1301, USA.
  */
 
+#if HAVE_CONFIG_H
+#include "clamav-config.h"
+#endif
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -970,7 +974,10 @@ static int sigtool_scandir (const char *dirname, int hex_output)
 
     if ((dd = opendir (dirname)) != NULL) {
 	while ((dent = readdir (dd))) {
-	    if (dent->d_ino) {
+#ifndef _WIN32
+	    if (dent->d_ino)
+#endif
+        {
 		if (strcmp (dent->d_name, ".") && strcmp (dent->d_name, "..")) {
 		    /* build the full name */
 		    fname = (char *) cli_calloc (strlen (dirname) + strlen (dent->d_name) + 2, sizeof (char));
@@ -987,14 +994,7 @@ static int sigtool_scandir (const char *dirname, int hex_output)
 			} else {
 			    if (S_ISREG (statbuf.st_mode)) {
 			        struct uniq *vba = NULL;
-				tmpdir = getenv ("TMPDIR");
-
-				if (tmpdir == NULL)
-#ifdef P_tmpdir
-				    tmpdir = P_tmpdir;
-#else
-				    tmpdir = "/tmp";
-#endif
+				tmpdir = cli_gettempdir();
 
 				/* generate the temporary directory */
 				dir = cli_gentemp (tmpdir);
@@ -1003,7 +1003,7 @@ static int sigtool_scandir (const char *dirname, int hex_output)
 				    return CL_ETMPDIR;
 				}
 
-				if ((desc = open (fname, O_RDONLY)) == -1) {
+				if ((desc = open (fname, O_RDONLY|O_BINARY)) == -1) {
 				    printf ("Can't open file %s\n", fname);
 				    return 1;
 				}
@@ -1130,7 +1130,10 @@ int sigtool_vba_scandir (const char *dirname, int hex_output, struct uniq *U)
 
     if ((dd = opendir (dirname)) != NULL) {
 	while ((dent = readdir (dd))) {
-	    if (dent->d_ino) {
+#ifndef _WIN32
+	    if (dent->d_ino)
+#endif
+        {
 		if (strcmp (dent->d_name, ".") && strcmp (dent->d_name, "..")) {
 		    /* build the full name */
 		    fullname = calloc (strlen (dirname) + strlen (dent->d_name) + 2, sizeof (char));

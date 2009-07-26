@@ -16,6 +16,7 @@ CLAMAV_PUBLIC {
     cl_engine_settings_free;
     cl_engine_compile;
     cl_engine_addref;
+    cl_engine_setcallback;
     cl_engine_free;
     cl_load;
     cl_retdbdir;
@@ -32,6 +33,11 @@ CLAMAV_PUBLIC {
 };
 CLAMAV_PRIVATE {
   global:
+
+    cli_gettempdir;
+    cli_filetype2;
+    cli_matchregex;
+
     cli_strtok;
     cli_strtokenize;
     cli_cvdunpack;

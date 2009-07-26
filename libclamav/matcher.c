@@ -336,6 +336,9 @@ int cli_scandesc(int desc, cli_ctx *ctx, cli_file_t ftype, uint8_t ftonly, struc
     upt = buff;
     while((bytes = cli_readn(desc, buff + shift, SCANBUFF - shift)) > 0) {
 
+    if (ctx->engine->callback && !ctx->engine->callback(desc, bytes))
+        return CL_EUSERABORT;
+
 	if(ctx->scanned)
 	    *ctx->scanned += bytes / CL_COUNT_PRECISION;
 
