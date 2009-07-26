@@ -23,8 +23,14 @@
 
 #include "shared/optparser.h"
 
+#ifdef _WIN32
+extern LIBCLAMAV_API void (*action)(const char *);
+extern LIBCLAMAV_API unsigned int notremoved, notmoved;
+#else
 extern void (*action)(const char *);
-int actsetup(const struct optstruct *opts);
 extern unsigned int notremoved, notmoved;
+#endif
+
+int actsetup(const struct optstruct *opts);
 
 #endif

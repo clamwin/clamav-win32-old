@@ -40,7 +40,7 @@
 #endif
 #include <time.h>
 #include <fcntl.h>
-#ifndef	C_WINDOWS
+#ifdef HAVE_PWD_H	
 #include <pwd.h>
 #endif
 #include <errno.h>
@@ -222,6 +222,8 @@ const char *cl_strerror(int clerror)
 	    return "Can't verify database integrity";
 	case CL_EUNPACK:
 	    return "Can't unpack some data";
+	case CL_EUSERABORT:
+	    return "Aborted by user";
 
 	/* I/O and memory errors */
 	case CL_EOPEN:
@@ -292,6 +294,7 @@ struct cl_engine *cl_engine_new(void)
     new->min_cc_count = CLI_DEFAULT_MIN_CC_COUNT;
     new->min_ssn_count = CLI_DEFAULT_MIN_SSN_COUNT;
 
+    new->callback = NULL;
     new->refcount = 1;
     new->ac_only = 0;
     new->ac_mindepth = CLI_DEFAULT_AC_MINDEPTH;
@@ -666,6 +669,7 @@ char *cli_md5file(const char *filename)
 /* Function: unlink
         unlink() with error checking
 */
+#ifndef _WIN32 /* mapped to cw_unlink */
 int cli_unlink(const char *pathname)
 {
 	if (unlink(pathname)==-1) {
@@ -675,6 +679,7 @@ int cli_unlink(const char *pathname)
 	}
 	return 0;
 }
+#endif
 
 #ifdef	C_WINDOWS
 /*
@@ -748,7 +753,7 @@ cli_rmdirs(const char *name)
 
     return rc;	
 }
-#else
+#elif !defined(_WIN32)
 int cli_rmdirs(const char *dirname)
 {
 	DIR *dd;
@@ -839,8 +844,12 @@ int cli_rmdirs(const char *dirname)
 
 #define BITS_PER_CHAR (8)
 #define BITSET_DEFAULT_SIZE (1024)
+#ifndef FALSE
 #define FALSE (0)
+#endif
+#ifndef TRUE
 #define TRUE (1)
+#endif
 
 static unsigned long nearest_power(unsigned long num)
 {

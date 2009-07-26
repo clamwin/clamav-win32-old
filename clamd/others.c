@@ -87,7 +87,7 @@
 #include "others.h"
 #include "misc.h"
 
-#ifdef	C_WINDOWS
+#ifdef	_WIN32
 void virusaction(const char *filename, const char *virname, const struct optstruct *opts)
 {
     if(optget(opts, "VirusEvent")->enabled)
@@ -166,7 +166,7 @@ void virusaction(const char *filename, const char *virname, const struct optstru
 	free(buffer_file);
 	free(buffer_vir);
 }
-#endif /* C_WINDOWS */
+#endif /* _WIN32 */
 
 /* Function: writen
 	Try hard to write the specified number of bytes
@@ -211,7 +211,7 @@ static int realloc_polldata(struct fd_data *data)
 #endif
     return 0;
 }
-
+#ifndef _WIN32
 int poll_fd(int fd, int timeout_sec, int check_signals)
 {
     int ret;
@@ -225,7 +225,7 @@ int poll_fd(int fd, int timeout_sec, int check_signals)
     fds_free(&fds);
     return ret;
 }
-
+#endif
 void fds_cleanup(struct fd_data *data)
 {
     struct fd_buf *newbuf;
@@ -253,7 +253,7 @@ void fds_cleanup(struct fd_data *data)
 	data->buf = newbuf;/* non-fatal if shrink fails */
 }
 
-static int read_fd_data(struct fd_buf *buf)
+int read_fd_data(struct fd_buf *buf)
 {
     ssize_t n;
 
@@ -361,7 +361,7 @@ static int buf_init(struct fd_buf *buf, int listen_only, int timeout)
     return 0;
 }
 
-int fds_add(struct fd_data *data, int fd, int listen_only, int timeout)
+int fds_add(struct fd_data *data, long long fd, int listen_only, int timeout)
 {
     struct fd_buf *buf;
     unsigned n;
@@ -391,6 +391,23 @@ int fds_add(struct fd_data *data, int fd, int listen_only, int timeout)
     if (buf_init(&data->buf[n-1], listen_only, timeout) < 0)
 	return -1;
     data->buf[n-1].fd = fd;
+#ifdef _WIN32
+    if (listen_only == 2)
+    {
+        data->buf[n-1].event = (HANDLE) fd;
+        data->buf[n-1].fd = 0;
+    }
+    else
+    {
+        data->buf[n-1].event = WSACreateEvent();
+        if (WSAEventSelect((SOCKET) fd, data->buf[n-1].event, listen_only ? FD_ACCEPT : (FD_READ|FD_CLOSE)) == SOCKET_ERROR)
+        {
+            logg("!add_fd: wsaeventselect failed() %d\n", WSAGetLastError());
+            CloseHandle(data->buf[n-1].event);
+            return -1;
+        }
+    }
+#endif
     return 0;
 }
 
@@ -406,7 +423,7 @@ static inline void fds_unlock(struct fd_data *data)
 	pthread_mutex_unlock(data->buf_mutex);
 }
 
-void fds_remove(struct fd_data *data, int fd)
+void fds_remove(struct fd_data *data, long long fd)
 {
     size_t i;
     fds_lock(data);
@@ -421,9 +438,6 @@ void fds_remove(struct fd_data *data, int fd)
     fds_unlock(data);
 }
 
-#ifndef	C_WINDOWS
-#define	closesocket(s)	close(s)
-#endif
 #define BUFFSIZE 1024
 /* Wait till data is available to be read on any of the fds,
  * read available data on all fds, and mark them as appropriate.
@@ -434,6 +448,9 @@ void fds_remove(struct fd_data *data, int fd)
  * Must be called with buf_mutex lock held.
  */
 /* TODO: handle ReadTimeout */
+#ifdef _WIN32
+extern int fds_poll_recv(struct fd_data *data, int timeout, int check_signals);
+#else
 int fds_poll_recv(struct fd_data *data, int timeout, int check_signals)
 {
     unsigned fdsok = data->nfds;
@@ -643,6 +660,7 @@ int fds_poll_recv(struct fd_data *data, int timeout, int check_signals)
 
     return retval;
 }
+#endif /* _WIN32 */
 
 void fds_free(struct fd_data *data)
 {

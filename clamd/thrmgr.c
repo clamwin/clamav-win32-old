@@ -40,8 +40,12 @@
 #include <malloc.h>
 #endif
 
+#ifndef FALSE
 #define FALSE (0)
+#endif
+#ifndef TRUE
 #define TRUE (1)
+#endif
 
 /* BSD and HP-UX need a bigger stacksize than the system default */
 #if defined (C_BSD) || defined (C_HPUX) || defined(C_AIX)
@@ -591,6 +595,10 @@ static void *thrmgr_worker(void *arg)
 	void *job_data;
 	int retval, must_exit = FALSE, stats_inited = FALSE;
 	struct timespec timeout;
+
+#ifdef _WIN32
+    cw_fsredirection(FALSE);
+#endif
 
 	/* loop looking for work */
 	for (;;) {

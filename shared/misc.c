@@ -78,7 +78,11 @@ char *freshdbdir(void)
 
     /* try to find the most up-to-date db directory */
     dbdir = cl_retdbdir();
+#ifdef _WIN32
+    if((opts = optparse(cw_getpath("ConfigDir", "freshclam.conf"), 0, NULL, 0, OPT_FRESHCLAM, 0, NULL))) {
+#else
     if((opts = optparse(CONFDIR"/freshclam.conf", 0, NULL, 0, OPT_FRESHCLAM, 0, NULL))) {
+#endif
 	if((opt = optget(opts, "DatabaseDirectory"))->enabled) {
 	    if(strcmp(dbdir, opt->strarg)) {
 		    char *daily = (char *) malloc(strlen(opt->strarg) + strlen(dbdir) + 30);
@@ -225,7 +229,7 @@ int filecopy(const char *src, const char *dest)
 
 int daemonize(void)
 {
-#if defined(C_OS2) || defined(C_WINDOWS)
+#if defined(C_OS2) || defined(_WIN32)
     fputs("Background mode is not supported on your operating system\n", stderr);
     return -1;
 #else
@@ -270,7 +274,7 @@ int daemonize(void)
     return 0;
 #endif
 }
-
+#ifndef _WIN32
 #ifndef CL_NOLIBCLAMAV
 int match_regex(const char *filename, const char *pattern)
 {
@@ -309,6 +313,8 @@ int match_regex(const char *filename, const char *pattern)
 	return match;
 }
 #endif
+#endif /* _WIN32 */
+
 
 int cfg_tcpsock(const struct optstruct *opts, struct sockaddr_in *tcpsock, in_addr_t defaultbind)
 {

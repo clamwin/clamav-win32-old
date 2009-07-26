@@ -34,7 +34,9 @@
 #ifdef HAVE_SYS_LIMITS_H
 #include <sys/limits.h>
 #endif
+#ifdef HAVE_SYS_SELECT_H
 #include <sys/select.h>
+#endif
 #include <sys/un.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -46,6 +48,10 @@
 
 #ifdef HAVE_SYS_UIO_H
 #include <sys/uio.h>
+#endif
+
+#ifndef _WIN32
+#define closesocket close
 #endif
 
 #include "shared/optparser.h"
@@ -82,6 +88,7 @@ static int isremote(const struct optstruct *opts) {
 	logg("!Can't parse clamd configuration file %s\n", clamd_conf);
 	return 0;
     }
+#ifndef _WIN32
     if((opt = optget(clamdopts, "LocalSocket"))->enabled) {
 	memset((void *)&nixsock, 0, sizeof(nixsock));
 	nixsock.sun_family = AF_UNIX;
@@ -92,6 +99,7 @@ static int isremote(const struct optstruct *opts) {
 	optfree(clamdopts);
 	return 0;
     }
+#endif
     if(!(opt = optget(clamdopts, "TCPSocket"))->enabled) {
 	optfree(clamdopts);
 	return 0;
@@ -110,7 +118,7 @@ static int isremote(const struct optstruct *opts) {
     testsock.sin_port = htons(INADDR_ANY);
     if(!(s = socket(testsock.sin_family, SOCK_STREAM, 0))) return 0;
     ret = (bind(s, (struct sockaddr *)&testsock, sizeof(testsock)) != 0);
-    close(s);
+    closesocket(s);
     return ret;
 }
 
@@ -118,6 +126,9 @@ static int isremote(const struct optstruct *opts) {
 /* Turns a relative path into an absolute one
  * Returns a pointer to the path (which must be 
  * freed by the caller) or NULL on error */
+#ifdef _WIN32
+#define makeabs cw_normalizepath
+#else
 static char *makeabs(const char *basepath) {
     int namelen;
     char *ret;
@@ -140,6 +151,7 @@ static char *makeabs(const char *basepath) {
     ret[PATH_MAX] = '\0';
     return ret;
 }
+#endif
 
 /* Recursively scans a path with the given scantype
  * Returns non zero for serious errors, zero otherwise */
@@ -169,7 +181,7 @@ int get_clamd_version(const struct optstruct *opts)
     recvlninit(&rcv, sockd);
 
     if(sendln(sockd, "zVERSION", 9)) {
-	close(sockd);
+	closesocket(sockd);
 	return 2;
     }
 
@@ -181,7 +193,7 @@ int get_clamd_version(const struct optstruct *opts)
 	printf("%s\n", buff);
     }
 
-    close(sockd);
+    closesocket(sockd);
     return 0;
 }
 
@@ -197,16 +209,16 @@ int reload_clamd_database(const struct optstruct *opts)
     recvlninit(&rcv, sockd);
 
     if(sendln(sockd, "zRELOAD", 8)) {
-	close(sockd);
+	closesocket(sockd);
 	return 2;
     }
 
     if(!(len = recvln(&rcv, &buff, NULL)) || len < 10 || memcmp(buff, "RELOADING", 9)) {
 	logg("!Clamd did not reload the database\n");
-	close(sockd);
+	closesocket(sockd);
 	return 2;
     }
-    close(sockd);
+    closesocket(sockd);
     return 0;
 }
 
@@ -261,7 +273,7 @@ int client(const struct optstruct *opts, int *infected)
 	    *infected = ret;
 	else
 	    errors = 1;
-	if(sockd >= 0) close(sockd);
+	if(sockd >= 0) closesocket(sockd);
     } else if(opts->filename || optget(opts, "file-list")->enabled) {
 	if(opts->filename && optget(opts, "file-list")->enabled)
 	    logg("^Only scanning files from --file-list (files passed at cmdline are ignored)\n");

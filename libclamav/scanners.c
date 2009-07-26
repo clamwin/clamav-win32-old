@@ -102,6 +102,8 @@
 #include <stddef.h>
 #endif
 
+extern int cli_scan7zip(int fd, cli_ctx *ctx);
+
 static int cli_scanfile(const char *filename, cli_ctx *ctx);
 
 static int cli_scandir(const char *dirname, cli_ctx *ctx, cli_file_t container)
@@ -128,7 +130,7 @@ static int cli_scandir(const char *dirname, cli_ctx *ctx, cli_file_t container)
 #else
 	while((dent = readdir(dd))) {
 #endif
-#if	(!defined(C_INTERIX)) && (!defined(C_WINDOWS))
+#if	(!defined(C_INTERIX)) && (!defined(_WIN32))
 	    if(dent->d_ino)
 #endif
 	    {
@@ -901,7 +903,7 @@ static int cli_vba_scandir(const char *dirname, cli_ctx *ctx, struct uniq *U)
 #else
 	while((dent = readdir(dd))) {
 #endif
-#if	(!defined(C_INTERIX)) && (!defined(C_WINDOWS))
+#if	(!defined(C_INTERIX)) && (!defined(_WIN32))
 	    if(dent->d_ino)
 #endif
 	    {
@@ -1866,7 +1868,7 @@ static int cli_scanraw(int desc, cli_ctx *ctx, cli_file_t type, uint8_t typercg,
 
 int cli_magic_scandesc(int desc, cli_ctx *ctx)
 {
-	int ret = CL_CLEAN;
+	int ret = CL_CLEAN, ret2 = CL_CLEAN;
 	cli_file_t type, dettype = 0;
 	struct stat sb;
 	uint8_t typercg = 1;
@@ -1932,6 +1934,11 @@ int cli_magic_scandesc(int desc, cli_ctx *ctx)
 	case CL_TYPE_RAR:
 	    if(have_rar && SCAN_ARCHIVE && (DCONF_ARCH & ARCH_CONF_RAR))
 		ret = cli_scanrar(desc, ctx, 0, NULL);
+	    break;
+
+	case CL_TYPE_7ZIP:
+	    if(SCAN_ARCHIVE)
+		ret = cli_scan7zip(desc, ctx);
 	    break;
 
 	case CL_TYPE_ZIP:
@@ -2098,9 +2105,11 @@ int cli_magic_scandesc(int desc, cli_ctx *ctx)
 
     /* CL_TYPE_HTML: raw HTML files are not scanned, unless safety measure activated via DCONF */
     if(type != CL_TYPE_IGNORED && (type != CL_TYPE_HTML || !(DCONF_DOC & DOC_CONF_HTML_SKIPRAW)) && !ctx->engine->sdb) {
-	if(cli_scanraw(desc, ctx, type, typercg, &dettype) == CL_VIRUS)
+	if(((ret2 = cli_scanraw(desc, ctx, type, typercg, &dettype)) == CL_VIRUS))
 	    return CL_VIRUS;
     }
+
+    if (ret2 == CL_EUSERABORT) return ret;
 
     ctx->recursion++;
     lseek(desc, 0, SEEK_SET);

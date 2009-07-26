@@ -89,7 +89,7 @@
 #define	O_BINARY	0
 #endif
 
-#ifndef C_WINDOWS
+#ifndef _WIN32
 #define	closesocket(s)	close(s)
 #endif
 
@@ -688,7 +688,7 @@ int submitstats(const char *clamdcfg, const struct optstruct *opts)
 	*pt2 = 0;
 	pt2 += 2;
 
-#ifdef C_WINDOWS
+#ifdef _WIN32
 	if((pt = strrchr(pt, '\\')))
 #else
 	if((pt = strrchr(pt, '/')))
@@ -1157,7 +1157,8 @@ static int getfile(const char *srcfile, const char *destfile, const char *hostna
     close(fd);
 
     if(totalsize > 0)
-        logg("Downloading %s [%i%%]\n", srcfile, percentage);
+     /* FIMXE: Sherpya this is not correct but needed by ClamWin */
+        mprintf("\n");
     else
         logg("Downloading %s [*]\n", srcfile);
 
@@ -1413,7 +1414,7 @@ static int buildcld(const char *tmpdir, const char *dbname, const char *newfile,
     }
 
     while((dent = readdir(dir))) {
-#if !defined(C_INTERIX) && !defined(C_WINDOWS)
+#if !defined(C_INTERIX) && !defined(_WIN32)
 	if(dent->d_ino)
 #endif
 	{
@@ -1684,7 +1685,7 @@ static int updatedb(const char *dbname, const char *hostname, char *ip, int *sig
 	return 53;
     }
 
-#ifdef C_WINDOWS
+#ifdef _WIN32
     if(!access(newdb, R_OK) && unlink(newdb)) {
 	logg("!Can't unlink %s. Please fix the problem manually and try again.\n", newdb);
 	unlink(newfile);

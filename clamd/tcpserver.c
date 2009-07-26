@@ -52,7 +52,7 @@
 #include "server.h"
 #include "tcpserver.h"
 #include "misc.h"
-#ifndef	C_WINDOWS
+#ifndef	_WIN32
 #define	closesocket(s)	close(s)
 #endif
 

@@ -1,0 +1,12 @@
+!clamav-config.h
+*.pdb
+*.ncb
+*.suo
+*.vcproj.*.user
+config.*
+Debug
+Release
+x64
+*.idc
+pingme.txt
+*.gz

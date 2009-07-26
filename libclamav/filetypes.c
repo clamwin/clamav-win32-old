@@ -63,6 +63,7 @@ static const struct ftmap_s {
     { "CL_TYPE_BZ",		CL_TYPE_BZ		},
     { "CL_TYPE_RAR",		CL_TYPE_RAR		},
     { "CL_TYPE_ARJ",		CL_TYPE_ARJ		},
+    { "CL_TYPE_7ZIP",       CL_TYPE_7ZIP    },
     { "CL_TYPE_MSSZDD",		CL_TYPE_MSSZDD		},
     { "CL_TYPE_MSOLE2",		CL_TYPE_MSOLE2		},
     { "CL_TYPE_MSCAB",		CL_TYPE_MSCAB		},
@@ -119,6 +120,8 @@ cli_file_t cli_filetype(const unsigned char *buf, size_t buflen, const struct cl
 {
 	struct cli_ftype *ftype = engine->ftypes;
 
+    /* 7zip detection hijack */
+    if (!memcmp(buf, "\x37\x7a\xbc\xaf", 4)) return CL_TYPE_7ZIP;
 
     while(ftype) {
 	if(ftype->offset + ftype->length <= buflen) {

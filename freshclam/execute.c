@@ -58,7 +58,7 @@ void execute( const char *type, const char *text, const struct optstruct *opts )
 	return;
     }
 
-#ifdef        C_WINDOWS
+#ifdef _WIN32
 	if(active_children < MAX_CHILDREN) {
 		if(spawnlp(P_DETACH, text, text, NULL) == -1) {
 			logg("^%s: couldn't execute \"%s\".\n", type, text);

@@ -38,7 +38,7 @@
 #endif
 #include <sys/stat.h>
 #include <fcntl.h>
-#ifndef	C_WINDOWS
+#ifdef	HAVE_PWD_H
 #include <pwd.h>
 #include <grp.h>
 #endif
@@ -131,9 +131,11 @@ static void help(void)
     mprintf("\n");
     mprintf("    --config-file=FILE                   read configuration from FILE.\n");
     mprintf("    --log=FILE           -l FILE         log into FILE\n");
+#ifndef _WIN32
     mprintf("    --daemon             -d              run in daemon mode\n");
     mprintf("    --pid=FILE           -p FILE         save daemon's pid in FILE\n");
     mprintf("    --user=USER          -u USER         run as USER\n");
+#endif
     mprintf("    --no-dns                             force old non-DNS verification method\n");
     mprintf("    --checks=#n          -c #n           number of checks per day, 1 <= n <= 50\n");
     mprintf("    --datadir=DIRECTORY                  download new databases into DIRECTORY\n");
@@ -146,6 +148,13 @@ static void help(void)
     mprintf("    --on-outdated-execute=COMMAND        execute COMMAND when software is outdated\n");
     mprintf("    --list-mirrors                       print mirrors from mirrors.dat\n");
     mprintf("    --submit-stats[=/path/clamd.conf]    only submit detection statistics\n");
+
+#ifdef _WIN32
+    mprintf("\nWindows Service:\n");
+    mprintf("    --daemon                             Start in Service mode (internal)\n");
+    mprintf("    --install                            Install Windows Service\n");
+    mprintf("    --uninstall                          Uninstall Windows Service\n");
+#endif
 
     mprintf("\n");
 }
@@ -215,6 +224,23 @@ int main(int argc, char **argv)
 	return 1;
     }
 
+#ifdef _WIN32
+    if (optget(opts, "install")->enabled)
+    {
+        cw_installservice("FreshClam", "ClamWin Free Antivirus Database Updater",
+            "Updates virus pattern database for ClamWin Free Antivirus application");
+        optfree(opts);
+        return 0;
+    }
+
+    if (optget(opts, "uninstall")->enabled)
+    {
+        cw_uninstallservice("FreshClam", 1);
+        optfree(opts);
+        return 0;
+    }
+#endif
+
     if(optget(opts, "help")->enabled) {
     	help();
 	optfree(opts);
@@ -254,7 +280,7 @@ int main(int argc, char **argv)
 	    return 56;
 	}
 
-#ifndef C_WINDOWS
+#ifndef _WIN32
 	if(statbuf.st_mode & (S_IRGRP | S_IWGRP | S_IXGRP | S_IROTH | S_IWOTH | S_IXOTH)) {
 	    logg("^Insecure permissions (for HTTPProxyPassword): %s must have no more than 0700 permissions.\n", cfgfile);
 	    optfree(opts);
@@ -263,7 +289,7 @@ int main(int argc, char **argv)
 #endif
     }
 
-#if !defined(C_OS2) && !defined(C_WINDOWS)
+#if !defined(C_OS2) && !defined(_WIN32)
     /* freshclam shouldn't work with root privileges */
     dbowner = optget(opts, "DatabaseOwner")->strarg;
 
@@ -417,7 +443,7 @@ int main(int argc, char **argv)
 
 	bigsleep = 24 * 3600 / checks;
 
-#if !defined(C_OS2) && !defined(C_WINDOWS)
+#if !defined(C_OS2) && !defined(_WIN32)
 	if(!optget(opts, "Foreground")->enabled) {
 	    if(daemonize() == -1) {
 		logg("!daemonize() failed\n");
@@ -427,6 +453,11 @@ int main(int argc, char **argv)
             foreground = 0;
 	    mprintf_disabled = 1;
         }
+#endif
+
+#ifdef _WIN32
+        mprintf_disabled = 1;
+        cw_registerservice("FreshClam");
 #endif
 
 	if((opt = optget(opts, "PidFile"))->enabled) {
@@ -472,7 +503,7 @@ int main(int argc, char **argv)
 	    sigaction(SIGUSR1, &sigact, &oldact);
 #endif
 
-#ifdef	C_WINDOWS
+#ifdef	_WIN32
 	    sleep(bigsleep);
 #else   
 	    time(&wakeup);

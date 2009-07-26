@@ -34,10 +34,13 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#ifndef _WIN32
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#define closesocket close
+#endif
 #include <sys/wait.h>
 #include <dirent.h>
 
@@ -61,6 +64,10 @@
 #include "libclamav/ole2_extract.h"
 #include "libclamav/htmlnorm.h"
 #include "libclamav/default.h"
+
+#ifndef	O_BINARY
+#define	O_BINARY	0
+#endif
 
 #define MAX_DEL_LOOKAHEAD   200
 
@@ -153,6 +160,12 @@ static int md5sig(const struct optstruct *opts, unsigned int mdb)
 	    } else {
 		if((sb.st_mode & S_IFMT) == S_IFREG) {
 		    if((md5 = cli_md5file(opts->filename[i]))) {
+#ifdef _WIN32 /* clamav will stop at : */
+            {
+                char *p = opts->filename[i];
+                while (*p) { if ((*p == ':') || (*p == '\\')) *p = '_'; p++; }
+            }
+#endif
 			if(mdb)
 			    mprintf("%u:%s:%s\n", (unsigned int) sb.st_size, md5, opts->filename[i]);
 			else
@@ -325,7 +338,7 @@ static char *getdsig(const char *host, const char *user, const unsigned char *da
     server.sin_port = htons(33101);
 
     if(connect(sockd, (struct sockaddr *) &server, sizeof(struct sockaddr_in)) < 0) {
-        close(sockd);
+        closesocket(sockd);
 	perror("connect()");
 	mprintf("!getdsig: Can't connect to ClamAV Signing Service at %s\n", host);
 	memset(pass, 0, sizeof(pass));
@@ -343,9 +356,9 @@ static char *getdsig(const char *host, const char *user, const unsigned char *da
     memcpy(pt, data, datalen);
     len += datalen;
 
-    if(write(sockd, cmd, len) < 0) {
+    if(send(sockd, cmd, len, 0) < 0) {
 	mprintf("!getdsig: Can't write to socket\n");
-	close(sockd);
+	closesocket(sockd);
 	memset(cmd, 0, sizeof(cmd));
 	memset(pass, 0, sizeof(pass));
 	return NULL;
@@ -359,18 +372,18 @@ static char *getdsig(const char *host, const char *user, const unsigned char *da
 	if(!strstr(buff, "Signature:")) {
 	    mprintf("!getdsig: Error generating digital signature\n");
 	    mprintf("!getdsig: Answer from remote server: %s\n", buff);
-	    close(sockd);
+	    closesocket(sockd);
 	    return NULL;
 	} else {
 	    mprintf("Signature received (length = %lu)\n", strlen(buff) - 10);
 	}
     } else {
 	mprintf("!getdsig: Communication error with remote server\n");
-	close(sockd);
+	closesocket(sockd);
 	return NULL;
     }
 
-    close(sockd);
+    closesocket(sockd);
 
     pt = buff;
     pt += 10;
@@ -987,7 +1000,7 @@ static int listdir(const char *dirname)
     }
 
     while((dent = readdir(dd))) {
-#ifndef C_INTERIX
+#if !defined(C_INTERIX) && !defined(_WIN32)
 	if(dent->d_ino)
 #endif
 	{
@@ -1061,15 +1074,7 @@ static int listdb(const char *filename)
 	free(buffer);
 	fclose(fh);
 
-	tmpdir = getenv("TMPDIR");
-	if(tmpdir == NULL)
-#ifdef P_tmpdir
-	    tmpdir = P_tmpdir;
-#else
-	    tmpdir = "/tmp";
-#endif
-
-	if(!(dir = cli_gentemp(tmpdir))) {
+	if(!(dir = cli_gentemp(NULL))) {
 	    mprintf("!listdb: Can't generate temporary name\n");
 	    return -1;
 	}
@@ -1219,7 +1224,7 @@ static int vbadump(const struct optstruct *opts)
 	pt = optget(opts, "vba")->strarg;
     }
  
-    if((fd = open(pt, O_RDONLY)) == -1) {
+    if((fd = open(pt, O_RDONLY|O_BINARY)) == -1) {
 	mprintf("!vbadump: Can't open file %s\n", pt);
 	return -1;
     }
@@ -1469,7 +1474,7 @@ static int dircopy(const char *src, const char *dest)
     }
 
     while((dent = readdir(dd))) {
-#if (!defined(C_INTERIX)) && (!defined(C_WINDOWS))
+#if (!defined(C_INTERIX)) && (!defined(_WIN32))
 	if(dent->d_ino)
 #endif
 	{
@@ -1617,7 +1622,7 @@ static int diffdirs(const char *old, const char *new, const char *patch)
     }
 
     while((dent = readdir(dd))) {
-#ifndef C_INTERIX
+#if !defined(C_INTERIX) && !defined(_WIN32)
 	if(dent->d_ino)
 #endif
 	{
@@ -1645,7 +1650,7 @@ static int diffdirs(const char *old, const char *new, const char *patch)
     }
 
     while((dent = readdir(dd))) {
-#ifndef C_INTERIX
+#if !defined(C_INTERIX) && !defined(_WIN32)
 	if(dent->d_ino)
 #endif
 	{

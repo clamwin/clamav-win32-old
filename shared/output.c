@@ -18,7 +18,6 @@
  *  MA 02110-1301, USA.
  */
 #ifdef _MSC_VER
-#include <windows.h>
 #include <winsock.h>
 #endif
 
@@ -332,9 +331,15 @@ int logg(const char *str, ...)
 	    } else if(*buff == '*' || *buff == '$') {
 		    fprintf(logg_fp, "%s", buff + 1);
 	    } else if(*buff == '#' || *buff == '~') {
+#ifndef _WIN32 /* Sherpya : Hack here */
 		fprintf(logg_fp, "%s", buff + 1);
 	    } else
 		fprintf(logg_fp, "%s", buff);
+#else
+		fprintf(logg_fp, "%s", PATH_PLAIN((buff + 1)));
+	    } else
+		fprintf(logg_fp, "%s", PATH_PLAIN(buff));
+#endif
 
 	    fflush(logg_fp);
 	}
@@ -435,8 +440,13 @@ void mprintf(const char *str, ...)
 	    if(mprintf_verbose)
 		fprintf(fd, "%s", &buff[1]);
 	} else if(buff[0] == '~') {
+#ifndef _WIN32 /* Sherpya : Hack here */
 	    fprintf(fd, "%s", &buff[1]);
 	} else fprintf(fd, "%s", buff);
+#else
+	    fprintf(fd, "%s", PATH_PLAIN((&buff[1])));
+	} else fprintf(fd, "%s", PATH_PLAIN(buff));
+#endif
     }
 
     if(fd == stdout)

@@ -20,7 +20,7 @@ dnl   MA 02110-1301, USA.
 AC_PREREQ([2.59])
 dnl For a release change [devel] to the real version [0.xy]
 dnl also change VERSION below
-AC_INIT([clamav], [devel], [http://bugs.clamav.net/])
+AC_INIT([clamav], [0.95.2], [http://bugs.clamav.net/])
 
 dnl put configure auxiliary into config
 AC_CONFIG_AUX_DIR([config])
@@ -38,9 +38,7 @@ dnl we told automake to not define these, since we want to include
 dnl the date in the version
 AC_DEFINE([PACKAGE], PACKAGE_NAME, [Name of package])
 
-dnl change this on a release
-VERSION="devel-`date +%Y%m%d`"
-dnl VERSION="0.94rc1"
+VERSION="0.95.2"
 AC_DEFINE_UNQUOTED([VERSION],"$VERSION",[Version number of package])
 
 LC_CURRENT=6

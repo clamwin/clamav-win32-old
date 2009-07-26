@@ -161,7 +161,7 @@ typedef	enum {
 #endif
 #endif
 
-#ifndef	C_WINDOWS
+#ifndef	_WIN32
 #define	closesocket(s)	close(s)
 #define	SOCKET	int
 #endif
@@ -3719,22 +3719,7 @@ rfc1341(message *m, const char *dir)
 	if(id == NULL)
 		return -1;
 
-/* do we need this for C_WINDOWS?
-#ifdef  C_CYGWIN
-	if((tmpdir = getenv("TEMP")) == (char *)NULL)
-		if((tmpdir = getenv("TMP")) == (char *)NULL)
-			if((tmpdir = getenv("TMPDIR")) == (char *)NULL)
-				tmpdir = "C:\\";
-#else
-*/
-	if((tmpdir = getenv("TMPDIR")) == (char *)NULL)
-		if((tmpdir = getenv("TMP")) == (char *)NULL)
-			if((tmpdir = getenv("TEMP")) == (char *)NULL)
-#ifdef	P_tmpdir
-				tmpdir = P_tmpdir;
-#else
-				tmpdir = "/tmp";
-#endif
+	tmpdir = cli_gettempdir();
 
 	snprintf(pdir, sizeof(pdir) - 1, "%s/clamav-partial", tmpdir);
 
@@ -3859,7 +3844,7 @@ rfc1341(message *m, const char *dir)
 					int nblanks;
 					struct stat statb;
 					const char *dentry_idpart;
-#ifndef C_WINDOWS
+#ifndef _WIN32
 					if(dent->d_ino == 0)
 						continue;
 #endif

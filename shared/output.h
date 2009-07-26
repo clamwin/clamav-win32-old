@@ -40,9 +40,15 @@ int logg(const char *str, ...);
 #endif
 
 void logg_close(void);
+#ifdef _WIN32
+extern LIBCLAMAV_API short int logg_verbose, logg_nowarn, logg_lock, logg_time;
+extern LIBCLAMAV_API unsigned int logg_size;
+extern LIBCLAMAV_API const char *logg_file;
+#else
 extern short int logg_verbose, logg_nowarn, logg_lock, logg_time;
 extern unsigned int logg_size;
 extern const char *logg_file;
+#endif
 
 #if defined(USE_SYSLOG) && !defined(C_AIX)
 extern short logg_syslog;
@@ -55,6 +61,10 @@ void mprintf(const char *str, ...) __attribute__((format(printf, 1, 2)));
 void mprintf(const char *str, ...);
 #endif
 
+#ifdef _WIN32
+extern LIBCLAMAV_API short int mprintf_disabled, mprintf_verbose, mprintf_quiet, mprintf_nowarn, mprintf_stdout, mprintf_send_timeout;
+#else
 extern short int mprintf_disabled, mprintf_verbose, mprintf_quiet, mprintf_nowarn, mprintf_stdout, mprintf_send_timeout;
+#endif
 
 #endif

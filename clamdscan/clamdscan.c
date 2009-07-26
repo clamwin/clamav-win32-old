@@ -127,6 +127,10 @@ int main(int argc, char **argv)
 
     gettimeofday(&t1, &tz);
 
+#ifdef _WIN32
+    cw_fsredirection(FALSE);
+#endif
+
     ret = client(opts, &infected);
 
     /* TODO: Implement STATUS in clamd */

@@ -64,6 +64,10 @@
 #include "libclamav/readdb.h"
 #include "libclamav/cltypes.h"
 
+#ifdef _WIN32 /* scan memory */
+extern int scanmem(struct cl_engine *trie, const struct optstruct *opts, int options);
+#endif
+
 #ifdef C_LINUX
 dev_t procdev;
 #endif
@@ -77,11 +81,58 @@ dev_t procdev;
 #define	O_BINARY    0
 #endif
 
+#ifndef min
+#define min(a,b) ((a < b) ? a : b)
+#endif
+
+/* Callback */
+typedef struct _cb_data_t
+{
+    const char *filename;
+    size_t size, count;
+    int oldvalue;
+
+    int fd;
+    int condition;
+} cb_data_t;
+
+cb_data_t cbdata;
+
+static const char *rotation = "|/-\\";
+
+/* Callback function for scanning */
+int scancallback(int desc, int bytes)
+{
+    if (desc == cbdata.fd)
+    {
+        int percent;
+        cbdata.count += bytes;
+        percent = min(100, (int) (((double) cbdata.count) * 100.0f / ((double) cbdata.size)));
+        if(percent != cbdata.oldvalue)
+        {
+            mprintf("~%s: [%3i%%]\r", cbdata.filename, percent);
+            cbdata.oldvalue = percent;
+        }
+    }
+    else /* archives or stdin */
+    {
+        int rotator = (int) time(NULL) % sizeof(rotation);
+        if(rotator != cbdata.oldvalue)
+        {
+            mprintf("~%s: [%c]\r", cbdata.filename, rotation[rotator]);
+            cbdata.oldvalue = rotator;
+        }
+    }
+
+    return cbdata.condition;
+}
+
 static int scanfile(const char *filename, struct cl_engine *engine, const struct optstruct *opts, unsigned int options)
 {
   int ret = 0, fd, included, printclean = 1, fsize;
 	const struct optstruct *opt;
 	const char *virname;
+	cli_file_t type;
 #ifdef C_LINUX
 	struct stat sb;
 
@@ -138,12 +189,22 @@ static int scanfile(const char *filename, struct cl_engine *engine, const struct
 	}
 #endif
 
+#ifdef _WIN32
+    cw_scanning(filename);
+#endif
     logg("*Scanning %s\n", filename);
 
     if((fd = open(filename, O_RDONLY|O_BINARY)) == -1) {
-	logg("^Can't open file %s\n", filename);
+	logg("~%s: %s\n", filename, strerror(errno));
 	return 54;
     }
+
+    cbdata.count = 0;
+    cbdata.fd = fd;
+    cbdata.oldvalue = 0;
+    cbdata.filename = filename;
+    cbdata.size = lseek(fd, 0, SEEK_END);
+    lseek(fd, 0, SEEK_SET);
 
     info.files++;
 
@@ -156,14 +217,19 @@ static int scanfile(const char *filename, struct cl_engine *engine, const struct
 
     } else if(ret == CL_CLEAN) {
 	if(!printinfected && printclean)
-	    mprintf("~%s: OK\n", filename);
+	    mprintf("~%s: OK    \n", filename);
     } else
 	if(!printinfected)
 	    logg("~%s: %s ERROR\n", filename, cl_strerror(ret));
 
+    lseek(fd, 0, SEEK_SET);
+    type = cli_filetype2(fd, engine);
     close(fd);
 
     if(ret == CL_VIRUS && action)
+    if (optget(opts, "keep-mbox")->enabled && (type == CL_TYPE_MAIL))
+        logg("~%s: no action performed on a mailbox\n", filename);
+    else
 	action(filename);
 
     return ret;
@@ -214,7 +280,7 @@ static int scandirs(const char *dirname, struct cl_engine *engine, const struct 
 
     if((dd = opendir(dirname)) != NULL) {
 	while((dent = readdir(dd))) {
-#if !defined(C_INTERIX) && !defined(C_WINDOWS)
+#if !defined(C_INTERIX) && !defined(_WIN32)
 	    if(dent->d_ino)
 #endif
 	    {
@@ -225,7 +291,9 @@ static int scandirs(const char *dirname, struct cl_engine *engine, const struct 
 			sprintf(fname, "/%s", dent->d_name);
 		    else
 			sprintf(fname, "%s/%s", dirname, dent->d_name);
-
+#ifdef _WIN32
+            NORMALIZE_PATH(fname, 1, continue);
+#endif
 		    /* stat the file */
 		    if(lstat(fname, &statbuf) != -1) {
 			if(S_ISDIR(statbuf.st_mode) && !S_ISLNK(statbuf.st_mode) && recursion) {
@@ -264,19 +332,17 @@ static int scanstdin(const struct cl_engine *engine, const struct optstruct *opt
 	size_t bread;
 	FILE *fs;
 
+    cbdata.count = 0;
+    cbdata.oldvalue = 0;
+    cbdata.fd = fileno(stdin);
+    cbdata.filename = "stdin";
+    cbdata.size = -1;
+
     if(optget(opts, "tempdir")->enabled) {
 	tmpdir = optget(opts, "tempdir")->strarg;
-    } else {
+    } else
 	/* check write access */
-	tmpdir = getenv("TMPDIR");
-
-	if(tmpdir == NULL)
-#ifdef P_tmpdir
-	    tmpdir = P_tmpdir;
-#else
-	    tmpdir = "/tmp";
-#endif
-    }
+	tmpdir = cli_gettempdir();
 
     if(checkaccess(tmpdir, CLAMAVUSER, W_OK) != 1) {
 	logg("!Can't write to temporary directory\n");
@@ -314,7 +380,7 @@ static int scanstdin(const struct cl_engine *engine, const struct optstruct *opt
 
     } else if(ret == CL_CLEAN) {
 	if(!printinfected)
-	    mprintf("stdin: OK\n");
+	    mprintf("stdin: OK   \n");
     } else
 	if(!printinfected)
 	    logg("stdin: %s ERROR\n", cl_strerror(ret));
@@ -448,6 +514,13 @@ int scanmanager(const struct optstruct *opts)
 	logg("!Database initialization error: %s\n", cl_strerror(ret));;
 	cl_engine_free(engine);
 	return 50;
+    }
+
+    /* setup callback */
+    if(optget(opts, "show-progress")->enabled) {
+        cl_engine_setcallback(engine, scancallback);
+        memset(&cbdata, 0, sizeof(cb_data_t));
+        cbdata.condition = 1;
     }
 
     /* set limits */
@@ -586,7 +659,14 @@ int scanmanager(const struct optstruct *opts)
     if(stat("/proc", &sb) != -1 && !sb.st_size)
 	procdev = sb.st_dev;
 #endif
+#ifdef _WIN32
+    cw_fsredirection(FALSE);
 
+    /* scan only memory */
+    if (optget(opts, "memory")->enabled && (!opts->filename && !optget(opts, "file-list")->enabled))
+        ret = scanmem(engine, opts, options);
+    else
+#endif
     /* check filetype */
     if(!opts->filename && !optget(opts, "file-list")->enabled) {
 	/* we need full path for some reasons (eg. archive handling) */
@@ -602,8 +682,15 @@ int scanmanager(const struct optstruct *opts)
     } else {
 	if(opts->filename && optget(opts, "file-list")->enabled)
 	    logg("^Only scanning files from --file-list (files passed at cmdline are ignored)\n");
-
+#ifdef _WIN32
+    /* scan first memory if requested */
+    if (optget(opts, "memory")->enabled)
+        ret = scanmem(engine, opts, options);
+#endif
 	while((filename = filelist(opts, &ret)) && (file = strdup(filename))) {
+#ifdef _WIN32
+        NORMALIZE_PATH(file, 1, continue);
+#endif
 	    if((fmodeint = fileinfo(file, 2)) == -1) {
 		logg("^Can't access file %s\n", file);
 		perror(file);
