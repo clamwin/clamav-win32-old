@@ -386,7 +386,7 @@ int serial_client_scan(char *file, int scantype, int *infected, int maxlevel, in
     cdata.scantype = scantype;
     data.data = &cdata;
 
-    ftw = cli_ftw(file, flags, maxlevel ? maxlevel : INT_MAX, serial_callback, &data);
+    ftw = cli_ftw(file, flags, maxlevel ? maxlevel : INT_MAX, serial_callback, &data, NULL);
     *infected += cdata.infected;
 
     if(ftw == CL_SUCCESS || ftw == CL_BREAK) {
@@ -569,7 +569,7 @@ int parallel_client_scan(char *file, int scantype, int *infected, int maxlevel, 
     cdata.printok = printinfected^1;
     data.data = &cdata;
 
-    ftw = cli_ftw(file, flags, maxlevel ? maxlevel : INT_MAX, parallel_callback, &data);
+    ftw = cli_ftw(file, flags, maxlevel ? maxlevel : INT_MAX, parallel_callback, &data, NULL);
 
     if(ftw != CL_SUCCESS) {
 	*infected += cdata.infected;
