@@ -8,6 +8,11 @@
 
 #ifdef _WIN32
 #include <windows.h>
+/* conflicts between zlib.h and Types.h, but defining Z_PREFIX
+   Byte becomes a macro and can be undefined */
+#ifdef Byte
+#undef Byte
+#endif
 #endif
 
 #define SZ_OK 0
