@@ -43,7 +43,6 @@
 #else
 #include <pwd.h>
 #include <grp.h>
-#include <signal.h>
 #endif
 
 #if defined(USE_SYSLOG) && !defined(C_AIX)
