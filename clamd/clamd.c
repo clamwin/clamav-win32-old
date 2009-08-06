@@ -29,6 +29,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <signal.h>
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #include <sys/time.h>
