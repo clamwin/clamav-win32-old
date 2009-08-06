@@ -1,4 +1,4 @@
-DEFINES=-DLIBCLAMAV_EXPORTS -D_LZMA_IN_CB -DPTW32_BUILD_INLINED -DPTW32_STATIC_LIB -DCLEANUP=__CLEANUP_C
+DEFINES=-DLIBCLAMAV_EXPORTS -DPTW32_BUILD_INLINED -DPTW32_STATIC_LIB -DCLEANUP=__CLEANUP_C
 include common.mak
 
 gnulib_SOURCES=$(wildcard $(msvc)/gnulib/*.c)
@@ -30,19 +30,7 @@ libclamav_SOURCES+=$(wildcard $(msvc)/src/dllmain/*.c)
 libclamav_SOURCES+=$(wildcard $(msvc)/zlib/*.c)
 libclamav_SOURCES+=$(wildcard $(msvc)/bzip2/*.c)
 
-libclamav_SOURCES+=$(top)/libclamav/7zip/7zip.c \
-$(top)/libclamav/7zip/lzma/Archive/7z/7zAlloc.c \
-$(top)/libclamav/7zip/lzma/Archive/7z/7zBuffer.c \
-$(top)/libclamav/7zip/lzma/7zCrc.c \
-$(top)/libclamav/7zip/lzma/Archive/7z/7zDecode.c \
-$(top)/libclamav/7zip/lzma/Archive/7z/7zExtract.c \
-$(top)/libclamav/7zip/lzma/Archive/7z/7zHeader.c \
-$(top)/libclamav/7zip/lzma/Archive/7z/7zIn.c \
-$(top)/libclamav/7zip/lzma/Archive/7z/7zItem.c \
-$(top)/libclamav/7zip/lzma/Archive/7z/7zMethodID.c \
-$(top)/libclamav/7zip/lzma/Compress/Lzma/LzmaDecode.c \
-$(top)/libclamav/7zip/lzma/Compress/Branch/BranchX86.c \
-$(top)/libclamav/7zip/lzma/Compress/Branch/BranchX86_2.c
+libclamav_SOURCES+=$(top)/libclamav/7z/LzmaDec.c
 
 # Exclusions
 libclamav_SOURCES:=$(subst $(top)/libclamav/regex/engine.c,,$(libclamav_SOURCES))

@@ -105,8 +105,6 @@
 #include <stddef.h>
 #endif
 
-extern int cli_scan7zip(int fd, cli_ctx *ctx);
-
 static int cli_scanfile(const char *filename, cli_ctx *ctx);
 
 static int cli_scandir(const char *dirname, cli_ctx *ctx, cli_file_t container)
@@ -1944,11 +1942,6 @@ int cli_magic_scandesc(int desc, cli_ctx *ctx)
 	case CL_TYPE_RAR:
 	    if(have_rar && SCAN_ARCHIVE && (DCONF_ARCH & ARCH_CONF_RAR))
 		ret = cli_scanrar(desc, ctx, 0, NULL);
-	    break;
-
-	case CL_TYPE_7ZIP:
-	    if(SCAN_ARCHIVE)
-		ret = cli_scan7zip(desc, ctx);
 	    break;
 
 	case CL_TYPE_ZIP:

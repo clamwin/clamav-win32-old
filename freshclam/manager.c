@@ -1684,18 +1684,12 @@ static int updatedb(const char *dbname, const char *hostname, char *ip, int *sig
 	return 55; /* FIXME */
     }
 
-    if(!nodb && !access(localname, R_OK) && unlink(localname)) {
-	logg("!Can't unlink %s. Please fix it and try again.\n", localname);
-	unlink(newfile);
-	free(newfile);
-	return 53;
-    }
-
 #ifdef _WIN32
     if(!access(newdb, R_OK) && unlink(newdb)) {
 	logg("!Can't unlink %s. Please fix the problem manually and try again.\n", newdb);
 	unlink(newfile);
 	free(newfile);
+	cl_cvdfree(current);
 	return 53;
     }
 #endif
@@ -1704,9 +1698,14 @@ static int updatedb(const char *dbname, const char *hostname, char *ip, int *sig
 	logg("!Can't rename %s to %s: %s\n", newfile, newdb, strerror(errno));
 	unlink(newfile);
 	free(newfile);
+	cl_cvdfree(current);
 	return 57;
     }
     free(newfile);
+
+    if(!nodb && !access(localname, R_OK) && strcmp(newdb, localname))
+	if(unlink(localname))
+	    logg("^Can't unlink the old database file %s. Please remove it manually.\n", localname);
 
     logg("%s updated (version: %d, sigs: %d, f-level: %d, builder: %s)\n", newdb, current->version, current->sigs, current->fl, current->builder);
 

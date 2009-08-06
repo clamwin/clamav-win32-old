@@ -1084,6 +1084,7 @@ irix*)
 	AC_DEFINE([CL_THREAD_SAFE],1,[thread safe])
 	AC_DEFINE([_REENTRANT],1,[thread safe])
     fi
+    LIBS="$LIBS -lgen"
     AC_DEFINE([C_IRIX],1,[os is irix])
     ;;
 interix*)
@@ -1579,7 +1580,6 @@ AM_CONDITIONAL([HAVE_CURSES],
 
 AC_OUTPUT([
 libclamav/Makefile
-libclamav/lzma/Makefile
 clamscan/Makefile
 database/Makefile
 docs/Makefile

@@ -690,58 +690,10 @@
 				</File>
 			</Filter>
 			<Filter
-				Name="7zip"
+				Name="7z"
 				>
 				<File
-					RelativePath="..\..\..\..\libclamav\7zip\lzma\Archive\7z\7zAlloc.c"
-					>
-				</File>
-				<File
-					RelativePath="..\..\..\..\libclamav\7zip\lzma\Archive\7z\7zBuffer.c"
-					>
-				</File>
-				<File
-					RelativePath="..\..\..\..\libclamav\7zip\lzma\7zCrc.c"
-					>
-				</File>
-				<File
-					RelativePath="..\..\..\..\libclamav\7zip\lzma\Archive\7z\7zDecode.c"
-					>
-				</File>
-				<File
-					RelativePath="..\..\..\..\libclamav\7zip\lzma\Archive\7z\7zExtract.c"
-					>
-				</File>
-				<File
-					RelativePath="..\..\..\..\libclamav\7zip\lzma\Archive\7z\7zHeader.c"
-					>
-				</File>
-				<File
-					RelativePath="..\..\..\..\libclamav\7zip\lzma\Archive\7z\7zIn.c"
-					>
-				</File>
-				<File
-					RelativePath="..\..\..\..\libclamav\7zip\7zip.c"
-					>
-				</File>
-				<File
-					RelativePath="..\..\..\..\libclamav\7zip\lzma\Archive\7z\7zItem.c"
-					>
-				</File>
-				<File
-					RelativePath="..\..\..\..\libclamav\7zip\lzma\Archive\7z\7zMethodID.c"
-					>
-				</File>
-				<File
-					RelativePath="..\..\..\..\libclamav\7zip\lzma\Compress\Branch\BranchX86.c"
-					>
-				</File>
-				<File
-					RelativePath="..\..\..\..\libclamav\7zip\lzma\Compress\Branch\BranchX86_2.c"
-					>
-				</File>
-				<File
-					RelativePath="..\..\..\..\libclamav\7zip\lzma\Compress\Lzma\LzmaDecode.c"
+					RelativePath="..\..\..\..\libclamav\7z\LzmaDec.c"
 					>
 				</File>
 			</Filter>
@@ -758,14 +710,6 @@
 				</File>
 				<File
 					RelativePath="..\..\..\..\libclamav\nsis\nulsft.c"
-					>
-				</File>
-			</Filter>
-			<Filter
-				Name="lzma"
-				>
-				<File
-					RelativePath="..\..\..\..\libclamav\lzma\LzmaStateDecode.c"
 					>
 				</File>
 			</Filter>

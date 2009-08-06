@@ -235,7 +235,7 @@ static int scanfile(const char *filename, struct cl_engine *engine, const struct
     return ret;
 }
 
-static int scandirs(const char *dirname, struct cl_engine *engine, const struct optstruct *opts, unsigned int options, unsigned int depth)
+static int scandirs(const char *dirname, struct cl_engine *engine, const struct optstruct *opts, unsigned int options, unsigned int depth, dev_t dev)
 {
 	DIR *dd;
 	struct dirent *dent;
@@ -296,8 +296,16 @@ static int scandirs(const char *dirname, struct cl_engine *engine, const struct 
 #endif
 		    /* stat the file */
 		    if(lstat(fname, &statbuf) != -1) {
+			if(!optget(opts, "cross-fs")->enabled) {
+			    if(statbuf.st_dev != dev) {
+				if(!printinfected)
+				    logg("~%s: Excluded\n", fname);
+				free(fname);
+				continue;
+			    }
+			}
 			if(S_ISDIR(statbuf.st_mode) && !S_ISLNK(statbuf.st_mode) && recursion) {
-			    if(scandirs(fname, engine, opts, options, depth) == 1)
+			    if(scandirs(fname, engine, opts, options, depth, dev) == 1)
 				scanret++;
 			} else {
 			    if(S_ISREG(statbuf.st_mode))
@@ -673,8 +681,10 @@ int scanmanager(const struct optstruct *opts)
 	if(!getcwd(cwd, sizeof(cwd))) {
 	    logg("!Can't get absolute pathname of current working directory\n");
 	    ret = 57;
-	} else
-	    ret = scandirs(cwd, engine, opts, options, 1);
+	} else {
+	    stat(cwd, &sb);
+	    ret = scandirs(cwd, engine, opts, options, 1, sb.st_dev);
+	}
 
     } else if(opts->filename && !optget(opts, "file-list")->enabled && !strcmp(opts->filename[0], "-")) { /* read data from stdin */
 	ret = scanstdin(engine, opts, options);
@@ -711,7 +721,8 @@ int scanmanager(const struct optstruct *opts)
 			break;
 
 		    case S_IFDIR:
-			ret = scandirs(file, engine, opts, options, 1);
+			stat(file, &sb);
+			ret = scandirs(file, engine, opts, options, 1, sb.st_dev);
 			break;
 
 		    default:
