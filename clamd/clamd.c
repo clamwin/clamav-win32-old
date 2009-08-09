@@ -44,6 +44,7 @@
 #include <pwd.h>
 #include <grp.h>
 #endif
+#include <signal.h>
 
 #if defined(USE_SYSLOG) && !defined(C_AIX)
 #include <syslog.h>
