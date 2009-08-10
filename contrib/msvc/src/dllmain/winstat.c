@@ -89,6 +89,6 @@ int cw_stat(const char *path, struct stat *buf)
 
     buf->st_dev = buf->st_rdev = dev;
     if (fi.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
-        buf->st_mode = _S_IFDIR;
+        buf->st_mode = (buf->st_mode & ~_S_IFMT) | _S_IFDIR;
     return res;
 }
