@@ -30,7 +30,8 @@ libclamav_SOURCES+=$(wildcard $(msvc)/src/dllmain/*.c)
 libclamav_SOURCES+=$(wildcard $(msvc)/zlib/*.c)
 libclamav_SOURCES+=$(wildcard $(msvc)/bzip2/*.c)
 
-libclamav_SOURCES+=$(top)/libclamav/7z/LzmaDec.c
+libclamav_SOURCES+=$(wildcard $(top)/libclamav/7z/*.c)
+libclamav_SOURCES+=$(wildcard $(top)/libclamav/7z/Archive/7z/*.c)
 
 # Exclusions
 libclamav_SOURCES:=$(subst $(top)/libclamav/regex/engine.c,,$(libclamav_SOURCES))
