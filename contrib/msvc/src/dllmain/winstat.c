@@ -32,6 +32,11 @@ int cw_stat(const char *path, struct stat *buf)
     HANDLE hFile = INVALID_HANDLE_VALUE;
     BY_HANDLE_FILE_INFORMATION fi;
 
+    /* set device to the drive letter for cross-fs option
+       network path device is always 0, there is no easy
+       way to map a network path to 32bit integer */
+    dev_t dev = PATH_ISNET(path) ? 0 : tolower(PATH_PLAIN(path)[0]) - 'a';
+
     memset(buf, 0, sizeof(struct stat));
     if ((hFile = CreateFileA(path,
         GENERIC_READ,
@@ -64,6 +69,7 @@ int cw_stat(const char *path, struct stat *buf)
         FindClose(hFile);
         buf->st_mode = (fdata.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) ? _S_IFDIR : _S_IFREG;
         buf->st_size = fdata.nFileSizeLow;
+        buf->st_dev = buf->st_rdev = dev;
 
         return 0;
     }
@@ -80,6 +86,8 @@ int cw_stat(const char *path, struct stat *buf)
 
     res = fstat(fd, buf);
     _close(fd);
+
+    buf->st_dev = buf->st_rdev = dev;
     if (fi.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
         buf->st_mode = _S_IFDIR;
     return res;
