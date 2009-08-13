@@ -305,7 +305,13 @@ static char *getdsig(const char *host, const char *user, const unsigned char *da
 	    return NULL;
 	}
 #endif
+#ifdef __GLIBC__
 	if(scanf("%as", &pt) == EOF) {
+#else
+    pt = cli_malloc(30);
+    if(scanf("%30s", pt) != 1) {
+        free(pt);
+#endif
 	    mprintf("!getdsig: Can't get password\n");
 #ifdef HAVE_TERMIOS_H
 	    tcsetattr(0, TCSAFLUSH, &old);
@@ -368,7 +374,7 @@ static char *getdsig(const char *host, const char *user, const unsigned char *da
     memset(pass, 0, sizeof(pass));
     memset(buff, 0, sizeof(buff));
 
-    if((bread = cli_readn(sockd, buff, sizeof(buff))) > 0) {
+    if((bread = recv(sockd, buff, sizeof(buff), 0)) > 0) {
 	if(!strstr(buff, "Signature:")) {
 	    mprintf("!getdsig: Error generating digital signature\n");
 	    mprintf("!getdsig: Answer from remote server: %s\n", buff);
@@ -604,8 +610,10 @@ static int build(const struct optstruct *opts)
 	mprintf("!build: There are no signatures in database files\n");
     } else {
 	for(i = 0; dblist[i].name; i++)
+    {
 	    if(dblist[i].count && strstr(dblist[i].name, dbname) && !access(dblist[i].name, R_OK))
 		lines += countlines(dblist[i].name);
+    }
 
 	if(lines != sigs)
 	    mprintf("^build: Signatures in %s db files: %u, loaded by libclamav: %u\n", dbname, lines, sigs);
@@ -692,7 +700,13 @@ static int build(const struct optstruct *opts)
 	builder[sizeof(builder)-1]='\0';
     } else {
 	mprintf("Builder name: ");
+#ifdef __GLIBC__
 	if(scanf("%as", &pt) == EOF) {
+#else
+    pt = cli_malloc(32);
+    if(scanf("%32s", pt) != 1) {
+        free(pt);
+#endif
 	    mprintf("!build: Can't get builder name\n");
 	    return -1;
 	}
