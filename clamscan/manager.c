@@ -226,11 +226,12 @@ static int scanfile(const char *filename, struct cl_engine *engine, const struct
     type = cli_filetype2(fd, engine);
     close(fd);
 
-    if(ret == CL_VIRUS && action)
+    if(ret == CL_VIRUS && action) {
     if (optget(opts, "keep-mbox")->enabled && (type == CL_TYPE_MAIL))
         logg("~%s: no action performed on a mailbox\n", filename);
     else
 	action(filename);
+    }
 
     return ret;
 }
