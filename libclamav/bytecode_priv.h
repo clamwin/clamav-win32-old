@@ -22,12 +22,15 @@
 
 #ifndef BYTECODE_PRIV_H
 #define BYTECODE_PRIV_H
+
+#include "type_desc.h"
 typedef uint32_t operand_t;
 typedef uint16_t bbid_t;
 typedef uint16_t funcid_t;
 
 struct cli_bc_callop {
     operand_t* ops;
+    uint16_t* opsizes;
     uint8_t numOps;
     funcid_t funcid;
 };
@@ -38,21 +41,17 @@ struct branch {
     bbid_t br_false;
 };
 
-#define MAX_OP (operand_t)(~0u)
-#define CONSTANT_OP (MAX_OP-1)
-#define ARG_OP (MAX_OP-1)
-struct cli_bc_value {
-    uint64_t v;
-    operand_t ref;/* this has CONSTANT_OP value for constants, and ARG_op for arguments */
+struct cli_bc_cast {
+    uint64_t mask;
+    operand_t source;
+    uint8_t size;/* 0: 1-bit, 1: 8b, 2: 16b, 3: 32b, 4: 64b */
 };
 
-struct cli_bc_cast {
-    operand_t source;
-    uint64_t mask;
-};
+typedef uint8_t interp_op_t;
 struct cli_bc_inst {
     enum bc_opcode opcode;
     uint16_t type;
+    interp_op_t interp_op;/* opcode for interpreter */
     operand_t dest;
     union {
 	operand_t unaryop;
@@ -74,21 +73,24 @@ struct cli_bc_func {
     uint8_t numArgs;
     uint16_t numLocals;
     uint32_t numInsts;
-    uint32_t numValues; /* without constants */
+    uint32_t numValues;/* without constants */
     uint32_t numConstants;
+    uint32_t numBytes;/* stack size */
     uint16_t numBB;
     uint16_t *types;
     uint32_t insn_idx;
     struct cli_bc_bb *BB;
     struct cli_bc_inst *allinsts;
-    struct cli_bc_value *constants;
+    uint64_t *constants;
 };
-
+#define MAX_OP ~0u
 struct cli_bc_ctx {
     /* id and params of toplevel function called */
     const struct cli_bc *bc;
     const struct cli_bc_func *func;
-    struct cli_bc_value *values;
+    unsigned bytes;
+    uint16_t *opsizes;
+    char *values;
     operand_t *operands;
     uint16_t funcid;
     unsigned numParams;

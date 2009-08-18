@@ -1160,6 +1160,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\..\libclamav\type_desc.h"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\..\libclamav\unarj.h"
 				>
 			</File>
