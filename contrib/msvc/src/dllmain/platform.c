@@ -125,6 +125,7 @@ static char *cw_getaltname(const char *filename)
         return NULL;
     }
 
+    FindClose(hf);
     free(name_a);
     if (wcslen(wfdw.cAlternateFileName) && (!(name_a = cw_wc2mb(wfdw.cAlternateFileName, 0))))
     {
