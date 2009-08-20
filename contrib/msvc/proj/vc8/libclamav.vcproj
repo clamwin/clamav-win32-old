@@ -390,6 +390,14 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\..\libclamav\bytecode_api.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\bytecode_api_decl.c"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\..\libclamav\bytecode_vm.c"
 				>
 			</File>
@@ -877,6 +885,10 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\libclamav\bytecode.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\bytecode_api.h"
 				>
 			</File>
 			<File
