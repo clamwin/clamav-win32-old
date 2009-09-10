@@ -661,20 +661,21 @@ int cli_ac_chklsig(const char *expr, const char *end, uint32_t *lsigcnt, unsigne
 	    break;							\
 									\
 	case CLI_MATCH_ALTERNATIVE:					\
-	    match = 0;							\
 	    alt = pattern->alttable[altcnt];				\
+	    match = alt->negative;					\
 	    if(alt->chmode) {						\
 		for(j = 0; j < alt->num; j++) {				\
 		    if(alt->str[j] == b) {				\
-			match = 1;					\
+			match = !alt->negative;				\
 			break;						\
-		    }							\
+		    } else if(alt->str[j] > b)				\
+			break;						\
 		}							\
 	    } else {							\
 		while(alt) {						\
 		    if(bp + alt->len <= length) {			\
 			if(!memcmp(&buffer[bp], alt->str, alt->len)) {	\
-			    match = 1;					\
+			    match = !alt->negative;			\
 			    bp += alt->len - 1;				\
 			    break;					\
 			}						\
@@ -1156,6 +1157,11 @@ int cli_ac_scanbuff(const unsigned char *buffer, uint32_t length, const char **v
     return (mode & AC_SCAN_FT) ? type : CL_CLEAN;
 }
 
+static int qcompare(const void *a, const void *b)
+{
+    return *(unsigned char *)a - *(unsigned char *)b;
+}
+
 /* FIXME: clean up the code */
 int cli_ac_addsig(struct cli_matcher *root, const char *virname, const char *hexsig, uint32_t sigid, uint16_t parts, uint16_t partno, uint16_t rtype, uint16_t type, uint32_t mindist, uint32_t maxdist, const char *offset, const uint32_t *lsigid, unsigned int options)
 {
@@ -1298,25 +1304,29 @@ int cli_ac_addsig(struct cli_matcher *root, const char *virname, const char *hex
 		error = CL_EMALFDB;
 		break;
 	    }
-
-	    strcat(hexnew, start);
-	    strcat(hexnew, "()");
-
-	    if(!(start = strchr(pt, ')'))) {
-		error = CL_EMALFDB;
-		break;
-	    }
-	    *start++ = 0;
-
 	    newalt = (struct cli_ac_alt *) mpool_calloc(root->mempool, 1, sizeof(struct cli_ac_alt));
 	    if(!newalt) {
 		cli_errmsg("cli_ac_addsig: Can't allocate newalt\n");
 		error = CL_EMEM;
 		break;
 	    }
+	    if(pt >= hexcpy + 2) {
+		if(pt[-2] == '!') {
+		    newalt->negative = 1;
+		    pt[-2] = 0;
+		}
+	    }
+	    strcat(hexnew, start);
+	    strcat(hexnew, "()");
+
+	    if(!(start = strchr(pt, ')'))) {
+		mpool_free(root->mempool, newalt);
+		error = CL_EMALFDB;
+		break;
+	    }
+	    *start++ = 0;
 
 	    new->alt++;
-
 	    newtable = (struct cli_ac_alt **) mpool_realloc(root->mempool, new->alttable, new->alt * sizeof(struct cli_ac_alt *));
 	    if(!newtable) {
 		new->alt--;
@@ -1388,6 +1398,8 @@ int cli_ac_addsig(struct cli_matcher *root, const char *virname, const char *hex
 
 		free(h);
 	    }
+	    if(newalt->chmode)
+		cli_qsort(newalt->str, newalt->num, sizeof(unsigned char), qcompare);
 
 	    if(error)
 		break;
