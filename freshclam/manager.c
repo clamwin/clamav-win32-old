@@ -1933,5 +1933,5 @@ int downloadmanager(const struct optstruct *opts, const char *hostname, const ch
     if(newver)
 	free(newver);
 
-    return updated ? 0 : 1;
+    return 0;
 }
