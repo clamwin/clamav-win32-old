@@ -610,10 +610,8 @@ static int build(const struct optstruct *opts)
 	mprintf("!build: There are no signatures in database files\n");
     } else {
 	for(i = 0; dblist[i].name; i++)
-    {
 	    if(dblist[i].count && strstr(dblist[i].name, dbname) && !access(dblist[i].name, R_OK))
 		lines += countlines(dblist[i].name);
-    }
 
 	if(lines != sigs)
 	    mprintf("^build: Signatures in %s db files: %u, loaded by libclamav: %u\n", dbname, lines, sigs);
