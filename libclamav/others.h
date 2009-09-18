@@ -50,7 +50,7 @@
  * in re-enabling affected modules.
  */
 
-#define CL_FLEVEL 47
+#define CL_FLEVEL 48
 #define CL_FLEVEL_DCONF	CL_FLEVEL
 
 #ifdef _WIN32
