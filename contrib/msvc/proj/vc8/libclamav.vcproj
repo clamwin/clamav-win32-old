@@ -1245,10 +1245,6 @@
 					>
 				</File>
 				<File
-					RelativePath="..\..\clamav-config.h"
-					>
-				</File>
-				<File
 					RelativePath="..\..\include\cwdefs.h"
 					>
 				</File>
@@ -1258,6 +1254,10 @@
 				</File>
 				<File
 					RelativePath="..\..\include\dirent.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\include\exeScanner.h"
 					>
 				</File>
 				<File
@@ -1286,6 +1286,10 @@
 				</File>
 				<File
 					RelativePath="..\..\include\safe_ctype.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\include\socket_inline.h"
 					>
 				</File>
 				<File
