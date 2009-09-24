@@ -2098,6 +2098,9 @@ int cl_engine_free(struct cl_engine *engine)
     if(engine->mempool) mpool_destroy(engine->mempool);
 #endif
     free(engine);
+#ifdef _WIN32
+    cw_heapcompact();
+#endif
     return CL_SUCCESS;
 }
 
@@ -2178,5 +2181,16 @@ int cl_engine_addref(struct cl_engine *engine)
     pthread_mutex_unlock(&cli_ref_mutex);
 #endif
 
+    return CL_SUCCESS;
+}
+
+int cl_engine_setcallback(struct cl_engine *engine, int (*callback)(int desc, int bytes))
+{
+    if (!(engine && callback))
+    {
+        cli_errmsg("cl_engine_setcallback: engine or callback == NULL\n");
+        return CL_ENULLARG;
+    }
+    engine->callback = callback;
     return CL_SUCCESS;
 }
