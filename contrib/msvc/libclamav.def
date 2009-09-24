@@ -157,3 +157,14 @@ _htonl@4                    @302 NONAME
 _htons@4                    @303 NONAME
 _gethostbyname@4            @304 NONAME
 
+cli_regfree
+cli_regexec
+cli_regcomp
+cli_gettmpdir
+sha256_final
+sha256_update
+sha256_init
+mp_clear
+cli_decodesig
+mp_read_radix
+mp_init

@@ -50,7 +50,7 @@ char *txtquery_compat(const char *domain, unsigned int *ttl);
     /* printf("DNS Resolver: Need %d bytes - Have %d bytes\n", len, numbytes - (seek - reply)); */ \
     if (((seek + len) - reply) > numbytes) \
     { \
-        cli_errmsg("DNS Resolver: Bound Check failed - Bad packet\n"); \
+        logg("!DNS Resolver: Bound Check failed - Bad packet\n"); \
         return NULL; \
     }
 
@@ -148,14 +148,14 @@ static char *get_dns(void)
             return get_dns_fromreg();
         default:
             GlobalFree(FixedInfo);
-            cli_errmsg("DNS Resolver: [1] Call to GetNetworkParams() failed %d\n", res);
+            logg("!DNS Resolver: [1] Call to GetNetworkParams() failed %d\n", res);
             return NULL;
     }
 
     if ((res = GetNetworkParams(FixedInfo, &ulOutBufLen) != NO_ERROR))
     {
         GlobalFree(FixedInfo);
-        cli_errmsg("DNS Resolver: [2] Call to GetNetworkParams() failed %d\n", res);
+        logg("!DNS Resolver: [2] Call to GetNetworkParams() failed %d\n", res);
         return NULL;
     }
 
@@ -191,7 +191,7 @@ static char *do_query(struct hostent *he, const char *domain, unsigned int *ttl)
 
     if ((sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1)
     {
-        cli_errmsg("DNS Resolver: socket() failed, %s\n", strerror(errno));
+        logg("!DNS Resolver: socket() failed, %s\n", strerror(errno));
         return NULL;
     }
 
@@ -243,7 +243,7 @@ static char *do_query(struct hostent *he, const char *domain, unsigned int *ttl)
 
     if ((numbytes = sendto(sockfd, packet, (int) len, 0, (struct sockaddr *) &dns, sizeof(struct sockaddr))) == -1)
     {
-        cli_errmsg("DNS Resolver: sendto() failed, %s\n", strerror(errno));
+        logg("!DNS Resolver: sendto() failed, %s\n", strerror(errno));
         free(packet);
         return NULL;
     }
@@ -252,7 +252,7 @@ static char *do_query(struct hostent *he, const char *domain, unsigned int *ttl)
     addr_len = sizeof(struct sockaddr);
     if ((numbytes = recvfrom(sockfd, reply, NS_PACKETSZ, 0, (struct sockaddr *) &dns, &addr_len)) == -1)
     {
-        cli_errmsg("DNS Resolver: recvfrom() failed, %s\n", strerror(errno));
+        logg("!DNS Resolver: recvfrom() failed, %s\n", strerror(errno));
         return NULL;
     }
 
@@ -260,7 +260,7 @@ static char *do_query(struct hostent *he, const char *domain, unsigned int *ttl)
 
     if (numbytes <= sizeof(simple_dns_query))
     {
-        cli_errmsg("DNS Resolver: Short Reply\n");
+        logg("!DNS Resolver: Short Reply\n");
         return NULL;
     }
 
@@ -270,20 +270,20 @@ static char *do_query(struct hostent *he, const char *domain, unsigned int *ttl)
     /* All your replies are belong to us? */
     if (ntohs(res->transaction_id) != tid)
     {
-        cli_errmsg("DNS Resolver: Bad TID expected 0x%04x got 0x%04x\n", tid, ntohs(res->transaction_id));
+        logg("!DNS Resolver: Bad TID expected 0x%04x got 0x%04x\n", tid, ntohs(res->transaction_id));
         return NULL;
     }
 
     /* Is a reply and result is ok */
     if (!(ntohs(res->flags) >> 15) || (ntohs(res->flags) & 0x000f))
     {
-        cli_errmsg("DNS Resolver: Bad Reply\n");
+        logg("!DNS Resolver: Bad Reply\n");
         return NULL;
     }
 
     if (ntohs(res->ans_rrs) < 1)
     {
-        cli_errmsg("DNS Resolver: No replies :(\n");
+        logg("!DNS Resolver: No replies :(\n");
         return NULL;
     }
 
@@ -294,7 +294,7 @@ static char *do_query(struct hostent *he, const char *domain, unsigned int *ttl)
     NEED(sizeof(uint16_t));
     if (GETUINT16(seek) != ns_t_txt)
     {
-        cli_errmsg("DNS Resolver: Dns query in reply is not TXT\n");
+        logg("!DNS Resolver: Dns query in reply is not TXT\n");
         return NULL;
     }
     seek += sizeof(uint16_t);
@@ -302,7 +302,7 @@ static char *do_query(struct hostent *he, const char *domain, unsigned int *ttl)
     NEED(sizeof(uint16_t));
     if (GETUINT16(seek) != NS_INT8SZ)
     {
-        cli_errmsg("DNS Resolver: Dns query in reply has a different Class\n");
+        logg("!DNS Resolver: Dns query in reply has a different Class\n");
         return NULL;
     }
     seek += sizeof(uint16_t);
@@ -311,7 +311,7 @@ static char *do_query(struct hostent *he, const char *domain, unsigned int *ttl)
     NEED(sizeof(uint16_t));
     if (GETUINT16(seek) != ns_t_txt)
     {
-        cli_errmsg("DNS Resolver: Dns reply Type is not TXT\n");
+        logg("!DNS Resolver: Dns reply Type is not TXT\n");
         return NULL;
     }
     seek += sizeof(uint16_t);
@@ -319,7 +319,7 @@ static char *do_query(struct hostent *he, const char *domain, unsigned int *ttl)
     NEED(sizeof(uint16_t));
     if (GETUINT16(seek) != NS_INT8SZ)
     {
-        cli_errmsg("DNS Resolver: Dns reply has a different Class\n");
+        logg("!DNS Resolver: Dns reply has a different Class\n");
         return NULL;
     }
     seek += sizeof(uint16_t);
@@ -333,7 +333,7 @@ static char *do_query(struct hostent *he, const char *domain, unsigned int *ttl)
 
     if (len > NS_PACKETSZ)
     {
-        cli_errmsg("DNS Resolver: Oversized reply\n");
+        logg("!DNS Resolver: Oversized reply\n");
         return NULL;
     }
     seek += sizeof(uint16_t); /* Len */
@@ -343,7 +343,7 @@ static char *do_query(struct hostent *he, const char *domain, unsigned int *ttl)
     seek++;
     if (!*seek)
     {
-        cli_errmsg("DNS Resolver: NULL txt reply, very weird\n");
+        logg("!DNS Resolver: NULL txt reply, very weird\n");
         return NULL;
     }
 
@@ -362,13 +362,13 @@ char *txtquery_compat(const char *domain, unsigned int *ttl)
 
     if ((nameserver = get_dns()) == NULL)
     {
-        cli_errmsg("DNS Resolver: Cannot find a dns server\n");
+        logg("!DNS Resolver: Cannot find a dns server\n");
         return NULL;
     }
 
     if ((he = gethostbyname(nameserver)) == NULL)
     {
-        cli_errmsg("DNS Resolver: gethostbyname() failed\n");
+        logg("!DNS Resolver: gethostbyname() failed\n");
         return NULL;
     }
 
@@ -409,21 +409,21 @@ char *txtquery_dnsapi(const char *domain, unsigned int *ttl)
 
     if (!(hDnsApi = LoadLibraryA("dnsapi.dll")))
     {
-        cli_errmsg("DNS Resolver: Cannot load dnsapi.dll: %lu\n", GetLastError());
+        logg("!DNS Resolver: Cannot load dnsapi.dll: %lu\n", GetLastError());
         return txtquery_compat(domain, ttl);
     }
 
     if (!(pDnsQuery = (fnDnsQuery) GetProcAddress(hDnsApi, "DnsQuery_A")) ||
         !(pDnsRecordListFree = (fnDnsRecordListFree) GetProcAddress(hDnsApi, "DnsRecordListFree")))
     {
-        cli_errmsg("DNS Resolver: Cannot find needed exports in dnsapi.dll\n");
+        logg("!DNS Resolver: Cannot find needed exports in dnsapi.dll\n");
         FreeLibrary(hDnsApi);
         return txtquery_compat(domain, ttl);
     }
 
     if (pDnsQuery(domain, DNS_TYPE_TEXT, DNS_QUERY_STANDARD | DNS_QUERY_BYPASS_CACHE, NULL, &pRec, NULL) != ERROR_SUCCESS)
     {
-        cli_errmsg("DNS Resolver: Can't query %s\n", domain);
+        logg("!DNS Resolver: Can't query %s\n", domain);
         FreeLibrary(hDnsApi);
         return NULL;
     }
@@ -445,7 +445,7 @@ char *txtquery_dnsapi(const char *domain, unsigned int *ttl)
         }
         pRec = pRec->pNext;
     }
-    if (!txt) cli_errmsg("DNS Resolver: Broken DNS reply.\n");
+    if (!txt) logg("!DNS Resolver: Broken DNS reply.\n");
     pDnsRecordListFree(pRecOrig, DnsFreeRecordList);
     FreeLibrary(hDnsApi);
     /* printf("DNS Resolver: Query Done using DnsApi Method\n"); */

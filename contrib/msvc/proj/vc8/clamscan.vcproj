@@ -411,6 +411,10 @@
 				RelativePath="..\..\src\shared\win32actions.c"
 				>
 			</File>
+			<File
+				RelativePath="..\..\src\shared\win32optparser.c"
+				>
+			</File>
 		</Filter>
 		<Filter
 			Name="Shared"

@@ -27,9 +27,8 @@
 #ifdef EXESCANNER_STANDALONE
 #define DUMP_SIGNATURE
 #include <windows.h>
-#define cli_errmsg printf
-#define cli_dbgmsg printf
-
+#define logg printf
+#define elogg printf
 typedef unsigned __int8  uint8_t;
 typedef unsigned __int16 uint16_t;
 typedef unsigned __int32 uint32_t;
@@ -38,6 +37,7 @@ typedef __int16 int16_t;
 #include <osdeps.h>
 #include <output.h>
 #include <others.h>
+static inline elogg(const char *fmt, ...) {};
 #endif /* EXESCANNER_STANDALONE */
 
 #define ENTROPY_THRESHOLD   4.0

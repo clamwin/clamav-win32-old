@@ -371,3 +371,6 @@
 #endif
 
 #include <osdeps.h>
+
+/* fake to avoid stdint.h include */
+#define IN_LIBINTL

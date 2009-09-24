@@ -359,6 +359,10 @@
 				RelativePath="..\..\..\..\clamdscan\proto.c"
 				>
 			</File>
+			<File
+				RelativePath="..\..\src\shared\win32optparser.c"
+				>
+			</File>
 		</Filter>
 		<Filter
 			Name="Header Files"

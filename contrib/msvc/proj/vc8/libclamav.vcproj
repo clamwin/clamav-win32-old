@@ -1308,30 +1308,6 @@
 					RelativePath="..\..\include\zlib.h"
 					>
 				</File>
-				<Filter
-					Name="sys"
-					>
-					<File
-						RelativePath="..\..\include\sys\mman.h"
-						>
-					</File>
-					<File
-						RelativePath="..\..\include\sys\resource.h"
-						>
-					</File>
-					<File
-						RelativePath="..\..\include\sys\socket.h"
-						>
-					</File>
-					<File
-						RelativePath="..\..\include\sys\time.h"
-						>
-					</File>
-					<File
-						RelativePath="..\..\include\sys\un.h"
-						>
-					</File>
-				</Filter>
 			</Filter>
 			<Filter
 				Name="Source Files"

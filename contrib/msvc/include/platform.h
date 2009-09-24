@@ -40,7 +40,7 @@
 
 #include <cwhelpers.h>
 #include <posix-errno.h>
-#include <socket_emu.h>
+#include <socket_inline.h>
 
 #include <sys/types.h>
 
@@ -298,6 +298,6 @@ static inline ssize_t pread(int fd, void *buf, size_t count, off_t offset)
     return ((lseek(fd, lastpos, SEEK_SET) == -1) ? -1 : res);
 }
 
-#include "../../../platform.h"
+#include "../../../platform.h.in"
 
 #endif /* _PLATFORM_H */

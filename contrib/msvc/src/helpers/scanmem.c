@@ -136,7 +136,7 @@ int EnablePrivilege(LPCSTR PrivilegeName, DWORD yesno)
 
     if (!h->av32.ok)
     {
-        cli_errmsg("EnablePrivilege functions are missing\n");
+        logg("^EnablePrivilege functions are missing\n");
         return 0;
     }
 
@@ -219,7 +219,7 @@ int walkmodules_th(proc_callback callback, void *data)
 
     if (!h->k32.ok)
     {
-        cli_errmsg("ToolHelp not available\n");
+        logg("^ToolHelp not available\n");
         return -1;
     }
 
@@ -327,7 +327,7 @@ int walkmodules_psapi(proc_callback callback, void *data)
 
     if (!h->psapi.ok)
     {
-        cli_errmsg("PsApi not available\n");
+        logg("^PsApi not available\n");
         return -1;
     }
 
@@ -392,7 +392,7 @@ int kill_process(DWORD pid)
     HANDLE hProc;
     if (GetCurrentProcessId() == pid)
     {
-        cli_errmsg("Don't want to kill myself\n");
+        logg("^Don't want to kill myself\n");
         return 1;
     }
 
@@ -400,11 +400,11 @@ int kill_process(DWORD pid)
     {
         TerminateProcess(hProc, 0);
         if (WaitForSingleObject(hProc, TIMEOUT_MODULE) != WAIT_OBJECT_0)
-            cli_errmsg("Unable to unload process from memory\n");
+            logg("^Unable to unload process from memory\n");
         CloseHandle(hProc);
     }
     else
-        cli_errmsg("OpenProcess() failed %lu\n", GetLastError());
+        logg("^OpenProcess() failed %lu\n", GetLastError());
     return 1; /* Skip to next process anyway */
 }
 
@@ -418,7 +418,7 @@ int unload_module(DWORD pid, HANDLE hModule)
 
     if (GetCurrentProcessId() == pid)
     {
-        cli_errmsg("Don't want to unload modules from myself\n");
+        logg("^Don't want to unload modules from myself\n");
         return 1;
     }
 
@@ -427,7 +427,7 @@ int unload_module(DWORD pid, HANDLE hModule)
 
     if (!hProc)
     {
-        cli_errmsg("OpenProcess() failed %lu\n", GetLastError());
+        logg("^OpenProcess() failed %lu\n", GetLastError());
         return 1; /* Skip to next process */
     }
 
@@ -448,12 +448,12 @@ int unload_module(DWORD pid, HANDLE hModule)
         DWORD res = GetLastError();
         if (res == ERROR_CALL_NOT_IMPLEMENTED)
         {
-            cli_errmsg("Module unloading is not supported on this OS\n");
+            logg("^Module unloading is not supported on this OS\n");
             rc = -1; /* Don't complain about removing/moving the file */
         }
         else
         {
-            cli_errmsg("CreateRemoteThread() failed %lu\n", res);
+            logg("!CreateRemoteThread() failed %lu\n", res);
             rc = 1; /* Skip to next process */
         }
     }
@@ -465,7 +465,7 @@ int unload_module(DWORD pid, HANDLE hModule)
 #define FILLBYTES(dst) \
     if (IsBadReadPtr(seek, sizeof(dst))) \
     { \
-        cli_errmsg("ScanMem Align: Bad pointer!!!\n"); \
+        logg("!ScanMem Align: Bad pointer!!!\n"); \
         return 1; \
     } \
     memcpy(&dst, seek, sizeof(dst))
@@ -484,7 +484,7 @@ int align_pe(unsigned char *buffer, size_t size)
     FILLBYTES(e_mz);
     if (e_mz != IMAGE_DOS_SIGNATURE)
     {
-        cli_dbgmsg("ScanMem Align: DOS Signature not found\n");
+        /* cli_dbgmsg("ScanMem Align: DOS Signature not found\n"); */
         return 0;
     }
 
@@ -493,7 +493,7 @@ int align_pe(unsigned char *buffer, size_t size)
     FILLBYTES(e_lfanew);
     if (!e_lfanew)
     {
-        cli_dbgmsg("ScanMem Align: Invalid PE offset\n");
+        /* cli_dbgmsg("ScanMem Align: Invalid PE offset\n"); */
         return 0;
     }
     seek = buffer + e_lfanew;
@@ -502,7 +502,7 @@ int align_pe(unsigned char *buffer, size_t size)
     FILLBYTES(e_magic);
     if (e_magic != IMAGE_NT_SIGNATURE)
     {
-        cli_dbgmsg("ScanMem Align: PE Signature not found\n");
+        /* cli_dbgmsg("ScanMem Align: PE Signature not found\n"); */
         return 0;
     }
     seek += sizeof(e_magic);
@@ -518,7 +518,7 @@ int align_pe(unsigned char *buffer, size_t size)
     /* Invalid sections number */
     if ((pehdr->NumberOfSections < 1) || (pehdr->NumberOfSections > 32))
     {
-        cli_dbgmsg("ScanMem Align: Invalid sections number\n");
+        /* cli_dbgmsg("ScanMem Align: Invalid sections number\n"); */
         return 0;
     }
 
@@ -558,10 +558,13 @@ int dump_pe(const char *filename, PROCESSENTRY32 ProcStruct, MODULEENTRY32 me32)
     CloseHandle(hProc);
 
     /* PE Realignment */
+    align_pe(buffer, me32.modBaseSize);
+    /*
     if (align_pe(buffer, me32.modBaseSize))
         cli_dbgmsg("ScanMem Align: File aligned\n");
     else
         cli_dbgmsg("ScanMem Align: Realign failed\n");
+    */
 
     hFile = CreateFile(filename, GENERIC_READ | GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
     if (hFile == INVALID_HANDLE_VALUE)
@@ -585,7 +588,7 @@ static inline int excluded(const char *filename, const struct optstruct *opts)
     {
         while(opt)
         {
-            cli_dbgmsg("Matching %s vs %s\n", filename, opt->strarg);
+            /* cli_dbgmsg("Matching %s vs %s\n", filename, opt->strarg); */
             if (cli_matchregex(filename, opt->strarg) == 1)
             {
                 logg("~%s: Excluded\n", filename);
@@ -688,7 +691,7 @@ int scanmem_cb(PROCESSENTRY32 ProcStruct, MODULEENTRY32 me32, void *data)
         {
             char *dumped = cli_gentemp(NULL);
             int fd = -1;
-            cli_dbgmsg("%s: appears to be compressed, saving from computer memory\n", modulename);
+            /* cli_dbgmsg("%s: appears to be compressed, saving from computer memory\n", modulename); */
             if ((fd = dump_pe(dumped, ProcStruct, me32)) > 0)
             {
                 close(fd);
