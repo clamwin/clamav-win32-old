@@ -47,7 +47,6 @@
 #include "getopt.h"
 
 #define MAXCMDOPTS  100
-#define MAX(a,b) (a > b ? a : b)
 
 #define MATCH_NUMBER "^[0-9]+$"
 #define MATCH_SIZE "^[0-9]+[KM]?$"
@@ -399,6 +398,8 @@ const struct clam_option clam_options[] = {
     { "RejectMsg", NULL, 0, TYPE_STRING, NULL, -1, NULL, 0, OPT_MILTER, "This option allows to set a specific rejection reason for infected messages\nand it's therefore only useful together with \"OnInfected Reject\"\nThe string \"%v\", if present, will be replaced with the virus name.", "MTA specific" },
 
     { "AddHeader", NULL, 0, TYPE_STRING, "^(No|Replace|Yes|Add)$", -1, "no", 0, OPT_MILTER, "If this option is set to \"Replace\" (or \"Yes\"), an \"X-Virus-Scanned\" and an\n\"X-Virus-Status\" headers will be attached to each processed message, possibly\nreplacing existing headers.\nIf it is set to Add, the X-Virus headers are added possibly on top of the\nexisting ones.\nNote that while \"Replace\" can potentially break DKIM signatures, \"Add\" may\nconfuse procmail and similar filters.", "Replace" },
+
+    { "ReportHostname", NULL, 0, TYPE_STRING, NULL, -1, NULL, 0, OPT_MILTER, "When AddHeader is in use, this option allows to arbitrary set the reported\nhostname. This may be desirable in order to avoid leaking internal names.\nIf unset the real machine name is used.", "my.mail.server.name" },
 
     { "Chroot", NULL, 0, TYPE_STRING, NULL, -1, NULL, 0, OPT_MILTER, "Chroot to the specified directory.\nChrooting is performed just after reading the config file and before\ndropping privileges.", "/newroot" },
 

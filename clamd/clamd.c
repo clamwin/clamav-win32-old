@@ -479,9 +479,7 @@ int main(int argc, char **argv)
 
     } else
         foreground = 1;
-#endif
-
-#ifdef _WIN32
+#else
     if (optget(opts, "daemon")->enabled) cw_registerservice("ClamD");
 #endif
 

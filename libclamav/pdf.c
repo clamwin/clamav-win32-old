@@ -42,15 +42,7 @@ static	char	const	rcsid[] = "$Id: pdf.c,v 1.61 2007/02/12 20:46:09 njh Exp $";
 #include <unistd.h>
 #endif
 
-#ifdef HAVE_SYS_MMAN_H
-#include <sys/mman.h>
-#endif
-
 #include <zlib.h>
-
-#ifdef	C_WINDOWS
-#include <io.h>
-#endif
 
 #include "clamav.h"
 #include "others.h"
@@ -58,10 +50,6 @@ static	char	const	rcsid[] = "$Id: pdf.c,v 1.61 2007/02/12 20:46:09 njh Exp $";
 #include "pdf.h"
 #include "scanners.h"
 #include "str.h"
-
-#ifndef	O_BINARY
-#define	O_BINARY	0
-#endif
 
 #ifdef	CL_DEBUG
 /*#define	SAVE_TMP	
@@ -396,7 +384,7 @@ cli_pdf(const char *dir, int desc, cli_ctx *ctx, off_t offset)
 			has_cr = 1;
 		} else
 			has_cr = 0;
-		snprintf(fullname, sizeof(fullname), "%s/pdf%02u", dir, files);
+		snprintf(fullname, sizeof(fullname), "%s"PATHSEP"pdf%02u", dir, files);
 		fout = open(fullname, O_RDWR|O_CREAT|O_EXCL|O_TRUNC|O_BINARY, 0600);
 		if(fout < 0) {
 			char err[128];

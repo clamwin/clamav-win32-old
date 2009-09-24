@@ -68,19 +68,6 @@ extern int scanmem(struct cl_engine *trie, const struct optstruct *opts, int opt
 dev_t procdev;
 #endif
 
-#ifdef C_WINDOWS
-#undef P_tmpdir
-#define P_tmpdir    "C:\\WINDOWS\\TEMP"
-#endif
-
-#ifndef	O_BINARY
-#define	O_BINARY    0
-#endif
-
-#ifndef min
-#define min(a,b) ((a < b) ? a : b)
-#endif
-
 /* Callback */
 typedef struct _cb_data_t
 {
@@ -103,7 +90,7 @@ int scancallback(int desc, int bytes)
     {
         int percent;
         cbdata.count += bytes;
-        percent = min(100, (int) (((double) cbdata.count) * 100.0f / ((double) cbdata.size)));
+        percent = MIN(100, (int) (((double) cbdata.count) * 100.0f / ((double) cbdata.size)));
         if(percent != cbdata.oldvalue)
         {
             mprintf("~%s: [%3i%%]\r", cbdata.filename, percent);
@@ -191,7 +178,7 @@ static int scanfile(const char *filename, struct cl_engine *engine, const struct
     logg("*Scanning %s\n", filename);
 
     if((fd = open(filename, O_RDONLY|O_BINARY)) == -1) {
-	logg("~%s: %s\n", filename, strerror(errno));
+	logg("^Can't open file %s: %s\n", filename, strerror(errno));
 	return 54;
     }
 

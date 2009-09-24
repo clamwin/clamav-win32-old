@@ -332,8 +332,9 @@ int cli_writen(int fd, const void *buff, unsigned int count)
 
 int cli_filecopy(const char *src, const char *dest)
 {
+
 #ifdef _WIN32
-	return (!CopyFileA(src, dest, 0));
+    return (!CopyFileA(src, dest, 0));
 #else
 	char *buffer;
 	int s, d, bytes;
@@ -360,7 +361,7 @@ int cli_filecopy(const char *src, const char *dest)
     close(s);
 
     return close(d);
-#endif /* _WIN32 */
+#endif
 }
 
 #ifndef P_tmpdir
@@ -921,7 +922,7 @@ int cli_is_abspath(const char *path) {
     int len = strlen(path);
     return (len > 2 && path[0] == '\\' && path[1] == '\\') || (len > 3 && path[1] == ':' && path[2] == '\\');
 #else
-    return strlen(path) > 1 && *path == '/';
+    return *path == '/';
 #endif
 }
 

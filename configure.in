@@ -22,6 +22,7 @@ dnl For a release change [devel] to the real version [0.xy]
 dnl also change VERSION below
 AC_INIT([ClamAV], [devel], [http://bugs.clamav.net/], [clamav], [http://www.clamav.net/])
 
+AH_BOTTOM([#include "platform.h"])
 dnl put configure auxiliary into config
 AC_CONFIG_AUX_DIR([config])
 AC_CONFIG_HEADER([clamav-config.h])
@@ -1599,6 +1600,7 @@ clambc/Makefile
 Makefile
 clamav-config
 libclamav.pc
+platform.h
 docs/man/clamav-milter.8
 docs/man/clamconf.1
 docs/man/clamd.8

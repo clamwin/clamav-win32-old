@@ -319,21 +319,6 @@ static inline void cli_writeint32(char *offset, uint32_t value)
 #endif
 #define CLI_SAR(n,s) n = CLI_SRS(n,s)
 
-#ifndef	FALSE
-#define FALSE (0)
-#endif
-
-#ifndef	TRUE
-#define TRUE (1)
-#endif
-
-#ifndef MIN
-#define MIN(a, b)	(((a) < (b)) ? (a) : (b))
-#endif
-#ifndef MAX
-#define MAX(a,b)	(((a) > (b)) ? (a) : (b))
-#endif
-
 typedef struct bitset_tag
 {
         unsigned char *bitset;
@@ -400,6 +385,7 @@ char *cli_md5file(const char *filename);
 int cli_unlink(const char *pathname);
 int cli_readn(int fd, void *buff, unsigned int count);
 int cli_writen(int fd, const void *buff, unsigned int count);
+const char *cli_gettmpdir(void);
 char *cli_gentemp(const char *dir);
 int cli_gentempfd(const char *dir, char **name, int *fd);
 unsigned int cli_rndnum(unsigned int max);
@@ -415,6 +401,7 @@ int cli_updatelimits(cli_ctx *, unsigned long);
 unsigned long cli_getsizelimit(cli_ctx *, unsigned long);
 int cli_matchregex(const char *str, const char *regex);
 void cli_qsort(void *basep, size_t nelems, size_t size, int (*comp)(const void *, const void *));
+int cli_is_abspath(const char *path);
 
 /* symlink behaviour */
 #define CLI_FTW_FOLLOW_FILE_SYMLINK 0x01

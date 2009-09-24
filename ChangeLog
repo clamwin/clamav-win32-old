@@ -1,3 +1,35 @@
+Thu Sep 24 19:43:50 CEST 2009 (acab)
+------------------------------------
+ * libclamav/others_common.c: Accept "/" as an absolute path
+
+Thu Sep 24 19:22:24 CEST 2009 (acab)
+------------------------------------
+ * merge a set of win32 patches from Gianluigi Tiesi <sherpya*netfarm.it>
+
+Thu Sep 24 19:09:38 CEST 2009 (acab)
+------------------------------------
+ * drop OS/2 "support"
+
+Thu Sep 24 19:07:59 CEST 2009 (acab)
+------------------------------------
+ * clamd, libclamav: drop INTERIX "support"
+
+Thu Sep 24 19:05:06 CEST 2009 (acab)
+------------------------------------
+ * win32 paths handling
+
+Thu Sep 24 16:22:25 CEST 2009 (acab)
+------------------------------------
+ * merge initial set of win32 patches from Gianluigi Tiesi <sherpya*netfarm.it>
+
+Thu Sep 24 01:14:50 CEST 2009 (acab)
+------------------------------------
+ * clamav-milter: Add option ReportHostname to mangle the host name in X headers
+
+Wed Sep 23 03:19:53 CEST 2009 (acab)
+------------------------------------
+ * libclamav/mpool.c: update frag sizes, small cleanup
+
 Mon Sep 21 22:05:38 CEST 2009 (tk)
 ----------------------------------
  * clamd: add support for DazukoFS (bb#1691)

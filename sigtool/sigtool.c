@@ -39,9 +39,8 @@
 #include <sys/un.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#define closesocket close
-#endif
 #include <sys/wait.h>
+#endif
 #include <dirent.h>
 
 #ifdef HAVE_TERMIOS_H
@@ -64,10 +63,6 @@
 #include "libclamav/ole2_extract.h"
 #include "libclamav/htmlnorm.h"
 #include "libclamav/default.h"
-
-#ifndef	O_BINARY
-#define	O_BINARY	0
-#endif
 
 #define MAX_DEL_LOOKAHEAD   200
 
@@ -634,9 +629,9 @@ static int build(const struct optstruct *opts)
 
     } else {
 	pt = freshdbdir();
-	snprintf(olddb, sizeof(olddb), "%s/%s.cvd", pt, dbname);
+	snprintf(olddb, sizeof(olddb), "%s"PATHSEP"%s.cvd", pt, dbname);
 	if(access(olddb, R_OK))
-	    snprintf(olddb, sizeof(olddb), "%s/%s.cld", pt, dbname);
+	    snprintf(olddb, sizeof(olddb), "%s"PATHSEP"%s.cld", pt, dbname);
 	free(pt);
     }
 
@@ -933,9 +928,9 @@ static int unpack(const struct optstruct *opts)
 
     if(optget(opts, "unpack-current")->enabled) {
 	dbdir = freshdbdir();
-	snprintf(name, sizeof(name), "%s/%s.cvd", dbdir, optget(opts, "unpack-current")->strarg);
+	snprintf(name, sizeof(name), "%s"PATHSEP"%s.cvd", dbdir, optget(opts, "unpack-current")->strarg);
 	if(access(name, R_OK)) {
-	    snprintf(name, sizeof(name), "%s/%s.cld", dbdir, optget(opts, "unpack-current")->strarg);
+	    snprintf(name, sizeof(name), "%s"PATHSEP"%s.cld", dbdir, optget(opts, "unpack-current")->strarg);
 	    if(access(name, R_OK)) {
 		mprintf("!unpack: Couldn't find %s CLD/CVD database\n", optget(opts, "unpack-current")->strarg);
 		free(dbdir);
@@ -1012,9 +1007,7 @@ static int listdir(const char *dirname)
     }
 
     while((dent = readdir(dd))) {
-#if !defined(C_INTERIX) && !defined(_WIN32)
 	if(dent->d_ino)
-#endif
 	{
 	    if(strcmp(dent->d_name, ".") && strcmp(dent->d_name, "..") &&
 	    (cli_strbcasestr(dent->d_name, ".db")  ||
@@ -1038,7 +1031,7 @@ static int listdir(const char *dirname)
 		    closedir(dd);
 		    return -1;
 		}
-		sprintf(dbfile, "%s/%s", dirname, dent->d_name);
+		sprintf(dbfile, "%s"PATHSEP"%s", dirname, dent->d_name);
 
 		if(listdb(dbfile) == -1) {
 		    mprintf("!listdb: Error listing database %s\n", dbfile);
@@ -1486,15 +1479,13 @@ static int dircopy(const char *src, const char *dest)
     }
 
     while((dent = readdir(dd))) {
-#if (!defined(C_INTERIX)) && (!defined(_WIN32))
 	if(dent->d_ino)
-#endif
 	{
 	    if(!strcmp(dent->d_name, ".") || !strcmp(dent->d_name, ".."))
 		continue;
 
-	    snprintf(spath, sizeof(spath), "%s/%s", src, dent->d_name);
-	    snprintf(dpath, sizeof(dpath), "%s/%s", dest, dent->d_name);
+	    snprintf(spath, sizeof(spath), "%s"PATHSEP"%s", src, dent->d_name);
+	    snprintf(dpath, sizeof(dpath), "%s"PATHSEP"%s", dest, dent->d_name);
 
 	    if(filecopy(spath, dpath) == -1) {
 		/* mprintf("!dircopy: Can't copy %s to %s\n", spath, dpath); */
@@ -1634,14 +1625,12 @@ static int diffdirs(const char *old, const char *new, const char *patch)
     }
 
     while((dent = readdir(dd))) {
-#if !defined(C_INTERIX) && !defined(_WIN32)
 	if(dent->d_ino)
-#endif
 	{
 	    if(!strcmp(dent->d_name, ".") || !strcmp(dent->d_name, ".."))
 		continue;
 
-	    snprintf(path, sizeof(path), "%s/%s", old, dent->d_name);
+	    snprintf(path, sizeof(path), "%s"PATHSEP"%s", old, dent->d_name);
 	    if(compare(path, dent->d_name, diff) == -1) {
 		if(chdir(cwd) == -1)
 		    mprintf("^diffdirs: Can't chdir to %s\n", cwd);
@@ -1662,14 +1651,12 @@ static int diffdirs(const char *old, const char *new, const char *patch)
     }
 
     while((dent = readdir(dd))) {
-#if !defined(C_INTERIX) && !defined(_WIN32)
 	if(dent->d_ino)
-#endif
 	{
 	    if(!strcmp(dent->d_name, ".") || !strcmp(dent->d_name, ".."))
 		continue;
 
-	    snprintf(path, sizeof(path), "%s/%s", new, dent->d_name);
+	    snprintf(path, sizeof(path), "%s"PATHSEP"%s", new, dent->d_name);
 	    if(access(path, R_OK))
 		fprintf(diff, "UNLINK %s\n", dent->d_name);
 	}

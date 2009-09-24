@@ -21,16 +21,6 @@
 
 #include "libclamunrar/unrarcmd.h"
 
-#ifndef FALSE
-#define FALSE (0)
-#endif
-#ifndef TRUE
-#define TRUE (1)
-#endif
-#ifndef MIN
-#define MIN(a,b) ((a < b) ? a : b)
-#endif
-
 #define RARVM_MEMSIZE	0x40000
 #define RARVM_MEMMASK	(RARVM_MEMSIZE-1)
 

@@ -81,10 +81,6 @@
 #define NPT NP
 #endif
 
-#ifndef MIN
-#define MIN(a,b) ((a < b) ? a : b)
-#endif
-
 #define GARBLE_FLAG     0x01
 
 #ifndef HAVE_ATTRIB_PACKED
@@ -97,10 +93,6 @@
 
 #ifdef HAVE_PRAGMA_PACK_HPPA
 #pragma pack 1
-#endif
-
-#ifndef O_BINARY
-#define O_BINARY        0
 #endif
 
 typedef struct arj_main_hdr_tag {
@@ -1068,7 +1060,7 @@ int cli_unarj_extract_file(int fd, const char *dirname, arj_metadata_t *metadata
 		return CL_SUCCESS;
 	}
 	
-	snprintf(filename, 1024, "%s/file.uar", dirname);
+	snprintf(filename, 1024, "%s"PATHSEP"file.uar", dirname);
 	cli_dbgmsg("Filename: %s\n", filename);
 	metadata->ofd = open(filename, O_RDWR|O_CREAT|O_TRUNC|O_BINARY, 0600);
 	if (metadata->ofd < 0) {
