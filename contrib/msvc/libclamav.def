@@ -80,44 +80,48 @@ cli_calloc                  @100 NONAME
 cli_chomp                   @101 NONAME
 cli_ctime                   @102 NONAME
 cli_cvdunpack               @103 NONAME
-cli_filetype2               @107 NONAME
-cli_ftw                     @108 NONAME
-cli_gentemp                 @109 NONAME
-cli_gentempfd               @110 NONAME
-cli_isnumber                @112 NONAME
-cli_malloc                  @113 NONAME
-cli_matchregex              @114 NONAME
-cli_md5file                 @115 NONAME
-cli_md5stream               @116 NONAME
-cli_ole2_extract            @117 NONAME
-cli_ppt_vba_read            @118 NONAME
-cli_readn                   @119 NONAME
-cli_rndnum                  @120 NONAME
-cli_scancpio_newc           @121 NONAME
-cli_scancpio_odc            @122 NONAME
-cli_scancpio_old            @123 NONAME
-cli_scanmacho               @124 NONAME
-cli_str2hex                 @125 NONAME
-cli_strbcasestr             @126 NONAME
-cli_strerror                @127 NONAME
-cli_strtok                  @128 NONAME
-cli_utf16toascii            @129 NONAME
-cli_vba_inflate             @130 NONAME
-cli_vba_readdir             @131 NONAME
-cli_vm_execute              @132 NONAME
-cli_wm_decrypt_macro        @133 NONAME
-cli_wm_readdir              @134 NONAME
-cli_writen                  @135 NONAME
+cli_decodesig               @104 NONAME
+cli_filetype2               @105 NONAME
+cli_ftw                     @106 NONAME
+cli_gentemp                 @107 NONAME
+cli_gentempfd               @108 NONAME
+cli_gettmpdir               @109 NONAME
+cli_isnumber                @110 NONAME
+cli_malloc                  @111 NONAME
+cli_matchregex              @112 NONAME
+cli_md5file                 @113 NONAME
+cli_md5stream               @114 NONAME
+cli_ole2_extract            @115 NONAME
+cli_ppt_vba_read            @116 NONAME
+cli_readn                   @117 NONAME
+cli_regcomp                 @118 NONAME
+cli_regexec                 @119 NONAME
+cli_regfree                 @121 NONAME
+cli_rndnum                  @122 NONAME
+cli_scancpio_newc           @123 NONAME
+cli_scancpio_odc            @124 NONAME
+cli_scancpio_old            @125 NONAME
+cli_scanmacho               @126 NONAME
+cli_str2hex                 @127 NONAME
+cli_strbcasestr             @128 NONAME
+cli_strerror                @129 NONAME
+cli_strtok                  @130 NONAME
+cli_utf16toascii            @131 NONAME
+cli_vba_inflate             @132 NONAME
+cli_vba_readdir             @133 NONAME
+cli_vm_execute              @134 NONAME
+cli_wm_decrypt_macro        @135 NONAME
+cli_wm_readdir              @136 NONAME
+cli_writen                  @137 NONAME
 
-;cli_decodesig
-;sha256_final
-;sha256_update
-;sha256_init
-;mp_clear
-;mp_read_radix
-;mp_init
-html_normalise_fd           @140 NONAME
-uniq_get                    @141 NONAME
+html_normalise_fd           @150 NONAME
+mp_clear                    @151 NONAME
+mp_init                     @152 NONAME
+mp_read_radix               @153 NONAME
+sha256_final                @154 NONAME
+sha256_init                 @155 NONAME
+sha256_update               @156 NONAME
+uniq_get                    @157 NONAME
 
 ; inlined pthreads-win32 @ 200
 pthread_attr_destroy        @200 NONAME
@@ -149,21 +153,8 @@ gzwrite                     @254 NONAME
 
 ; forward winsock to avoid linking winsock
 ; if not needed
-
 _select@20                  @300 NONAME
 _send@16                    @301 NONAME
 _htonl@4                    @302 NONAME
 _htons@4                    @303 NONAME
 _gethostbyname@4            @304 NONAME
-
-cli_regfree
-cli_regexec
-cli_regcomp
-cli_gettmpdir
-sha256_final
-sha256_update
-sha256_init
-mp_clear
-cli_decodesig
-mp_read_radix
-mp_init
