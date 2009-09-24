@@ -24,7 +24,6 @@ cl_scanfile
 ; Versions
 cl_retflevel
 cl_retver
-;get_version
 
 ; CVD handlers
 cl_cvdhead
