@@ -18,10 +18,6 @@
  *  MA 02110-1301, USA.
  */
 
-#ifdef	_MSC_VER
-#include <winsock.h>
-#endif
-
 #if HAVE_CONFIG_H
 #include "clamav-config.h"
 #endif
@@ -61,11 +57,6 @@
 #endif
 
 #include <pthread.h>
-/* submitted by breiter@wolfereiter.com: do not use poll(2) on Interix */
-#ifdef C_INTERIX
-#undef HAVE_POLL
-#undef HAVE_POLL_H
-#endif
 
 #if HAVE_POLL
 #if HAVE_POLL_H

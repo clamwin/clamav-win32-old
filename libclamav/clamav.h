@@ -208,7 +208,6 @@ extern unsigned int cl_retflevel(void);
 extern const char *cl_retver(void);
 
 /* others */
-extern char *cli_gettempdir(void);
 extern int cli_rmdirs(const char *dirname);
 extern const char *cl_strerror(int clerror);
 

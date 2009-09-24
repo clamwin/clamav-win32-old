@@ -33,11 +33,34 @@
 #include <stdarg.h>
 #include <string.h>
 #include <sys/stat.h>
-#include <sys/time.h>
+#include <sys/types.h>
+#include <time.h>
+#include <sys/timeb.h>
 #include <fcntl.h>
 
 #include <cwhelpers.h>
 #include <posix-errno.h>
+#include <socket_emu.h>
+
+#include <sys/types.h>
+
+#define PROT_READ   0x1     /* Page can be read */
+#define PROT_WRITE  0x2     /* Page can be written */
+/* #define PROT_EXEC   0x4 */    /* Page can be executed */
+/* #define PROT_NONE   0x0 */    /* Page can not be accessed */
+#define PROT_EXEC   mmap_prot_exec_not_implemented
+#define PROT_NONE   mmap_prot_none_not_implemented
+
+#define MAP_SHARED  0x01    /* Share changes */
+#define MAP_PRIVATE 0x02    /* Changes are private */
+/* #define MAP_FIXED   0x10 */   /* Interpret addr exactly */
+#define MAP_FIXED   mmap_map_fixed_not_implemented
+
+/* Return value of 'mmap' in case of an error */
+#define MAP_FAILED  ((void *) -1)
+
+extern void *mmap(void *addr, size_t len, int prot, int flags, int fd, off_t offset);
+extern int munmap(void *addr, size_t len);
 
 #define DATADIRBASEKEY  "Software\\ClamAV"
 #undef IMAGE_DOS_SIGNATURE
@@ -126,6 +149,11 @@ extern int cw_unlink(const char *pathname);
 extern BOOL cw_fsredirection(BOOL value);
 extern BOOL cw_iswow64(void);
 extern size_t cw_heapcompact(void);
+
+struct timezone {
+    int tz_minuteswest; /* minutes W of Greenwich */
+    int tz_dsttime;     /* type of dst correction */
+};
 
 static inline int gettimeofday(struct timeval *tv, struct timezone *tz)
 {
@@ -269,5 +297,7 @@ static inline ssize_t pread(int fd, void *buf, size_t count, off_t offset)
     res = (ssize_t) read(fd, buf, (unsigned int) count);
     return ((lseek(fd, lastpos, SEEK_SET) == -1) ? -1 : res);
 }
+
+#include "../../../platform.h"
 
 #endif /* _PLATFORM_H */

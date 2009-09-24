@@ -1369,14 +1369,6 @@
 					>
 				</File>
 				<File
-					RelativePath="..\..\src\dllmain\win32actions.c"
-					>
-				</File>
-				<File
-					RelativePath="..\..\src\dllmain\win32optparser.c"
-					>
-				</File>
-				<File
 					RelativePath="..\..\src\dllmain\winstat.c"
 					>
 				</File>
@@ -1645,38 +1637,6 @@
 					>
 				</File>
 			</Filter>
-		</Filter>
-		<Filter
-			Name="Shared"
-			>
-			<File
-				RelativePath="..\..\..\..\shared\cdiff.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\shared\getopt.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\shared\misc.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\shared\network.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\shared\optparser.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\shared\output.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\shared\tar.c"
-				>
-			</File>
 		</Filter>
 	</Files>
 	<Globals>

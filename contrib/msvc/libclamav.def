@@ -24,7 +24,7 @@ cl_scanfile
 ; Versions
 cl_retflevel
 cl_retver
-get_version
+;get_version
 
 ; CVD handlers
 cl_cvdhead
@@ -48,19 +48,20 @@ cw_stat
 cw_rmdirs
 cw_iswow64
 cw_fsredirection
-;cw_movefile
-;cw_movefileex
+cw_movefile
+cw_movefileex
 cw_unlink
 cw_strerror
 cw_perror
 
+; clamwin internals @ 50
 cw_gethelpers               @50 NONAME
 cw_getpath                  @51 NONAME
-;cw_async_noalert            @52 NONAME
+cw_async_noalert            @52 NONAME
 cw_leerrno                  @53 NONAME
 cw_wseterrno                @54 NONAME
 
-; win32 portability layer
+; win32 portability layer @ 70
 fcntl                       @70 NONAME
 opendir                     @71 NONAME
 closedir                    @72 NONAME
@@ -69,25 +70,21 @@ mkstemp                     @74 NONAME
 tcgetattr                   @75 NONAME
 tcsetattr                   @76 NONAME
 
-; win32 snprintf is b0rked
+; gnulib @ 90
 gnulib_snprintf             @90 NONAME
 gnulib_vsnprintf            @91 NONAME
 strptime                    @92 NONAME
 ftruncate                   @93 NONAME
 
-; Internals
+; Internals @ 100
 cli_calloc                  @100 NONAME
 cli_chomp                   @101 NONAME
 cli_ctime                   @102 NONAME
 cli_cvdunpack               @103 NONAME
-cli_dbgmsg_internal         @104 NONAME
-cli_debug_flag              @105 NONAME
-cli_errmsg                  @106 NONAME
 cli_filetype2               @107 NONAME
 cli_ftw                     @108 NONAME
 cli_gentemp                 @109 NONAME
 cli_gentempfd               @110 NONAME
-cli_gettempdir              @111 NONAME
 cli_isnumber                @112 NONAME
 cli_malloc                  @113 NONAME
 cli_matchregex              @114 NONAME
@@ -113,10 +110,17 @@ cli_wm_decrypt_macro        @133 NONAME
 cli_wm_readdir              @134 NONAME
 cli_writen                  @135 NONAME
 
+;cli_decodesig
+;sha256_final
+;sha256_update
+;sha256_init
+;mp_clear
+;mp_read_radix
+;mp_init
 html_normalise_fd           @140 NONAME
 uniq_get                    @141 NONAME
 
-; inlined pthreads-win32
+; inlined pthreads-win32 @ 200
 pthread_attr_destroy        @200 NONAME
 pthread_attr_init           @201 NONAME
 pthread_attr_setdetachstate @202 NONAME
@@ -137,45 +141,19 @@ pthread_once                @216 NONAME
 pthread_setspecific         @217 NONAME
 pthread_join                @218 NONAME
 
-; zlib
-gzopen                      @250 NONAME
-gzclose                     @251 NONAME
-gzwrite                     @252 NONAME
+; zlib @ 250
+gzclose                     @250 NONAME
+gzdopen                     @251 NONAME
+gzgets                      @252 NONAME
+gzopen                      @253 NONAME
+gzwrite                     @254 NONAME
 
-; shared variables
-logg_file                   @300 NONAME DATA
-logg_lock                   @301 NONAME DATA
-logg_nowarn                 @302 NONAME DATA
-logg_size                   @303 NONAME DATA
-logg_time                   @304 NONAME DATA
-logg_verbose                @305 NONAME DATA
-mprintf_disabled            @306 NONAME DATA
-mprintf_nowarn              @307 NONAME DATA
-mprintf_quiet               @308 NONAME DATA
-mprintf_stdout              @309 NONAME DATA
-mprintf_verbose             @310 NONAME DATA
-mprintf_send_timeout        @311 NONAME DATA
-action                      @312 NONAME DATA
-notremoved                  @313 NONAME DATA
-notmoved                    @314 NONAME DATA
+; forward winsock to avoid linking winsock
+; if not needed
 
-; shared functions
-actsetup                    @400 NONAME
-cdiff_apply                 @401 NONAME
-cfg_tcpsock                 @402 NONAME
-filecopy                    @403 NONAME
-filelist                    @404 NONAME
-freshdbdir                  @405 NONAME
-logg                        @406 NONAME
-logg_close                  @407 NONAME
-mdprintf                    @408 NONAME
-mprintf                     @409 NONAME
-optfree                     @410 NONAME
-optget                      @411 NONAME
-optparse                    @412 NONAME
-print_version               @413 NONAME
-r_gethostbyname             @414 NONAME
-sha256_final                @415 NONAME
-sha256_init                 @416 NONAME
-sha256_update               @417 NONAME
-tar_addfile                 @418 NONAME
+_select@20                  @300 NONAME
+_send@16                    @301 NONAME
+_htonl@4                    @302 NONAME
+_htons@4                    @303 NONAME
+_gethostbyname@4            @304 NONAME
+

@@ -18,10 +18,6 @@
  *  MA 02110-1301, USA.
  */
 
-#ifdef	_MSC_VER
-#include <winsock.h>
-#endif
-
 #if HAVE_CONFIG_H
 #include "clamav-config.h"
 #endif
@@ -37,10 +33,10 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <time.h>
-#ifdef _WIN32
-#include <direct.h>	/* for chdir */
-#else
+#ifdef HAVE_PWD_H
 #include <pwd.h>
+#endif
+#ifdef HAVE_GRP_H
 #include <grp.h>
 #endif
 #include <signal.h>
@@ -69,10 +65,6 @@
 #include "localserver.h"
 #include "others.h"
 #include "shared.h"
-
-#ifndef _WIN32
-#define	closesocket(s)	close(s)
-#endif
 
 short debug_mode = 0, logok = 0;
 short foreground = 0;
@@ -119,12 +111,7 @@ int main(int argc, char **argv)
 	struct stat sb;
 #endif
 
-#ifdef C_WINDOWS
-    if(!pthread_win32_process_attach_np()) {
-	mprintf("!Can't start the win32 pthreads layer\n");
-        return 1;
-    }
-#else
+#ifndef _WIN32
     memset(&sa, 0, sizeof(sa));
     sa.sa_handler = SIG_IGN;
     sigaction(SIGHUP, &sa, NULL);
@@ -190,7 +177,7 @@ int main(int argc, char **argv)
     umask(0);
 
     /* drop privileges */
-#if (!defined(C_OS2)) && (!defined(_WIN32))
+#ifndef _WIN32
     if(geteuid() == 0 && (opt = optget(opts, "User"))->enabled) {
 	if((user = getpwnam(opt->strarg)) == NULL) {
 	    fprintf(stderr, "ERROR: Can't get information about user %s.\n", opt->strarg);
@@ -247,7 +234,7 @@ int main(int argc, char **argv)
     if((opt = optget(opts, "LogFile"))->enabled) {
 	char timestr[32];
 	logg_file = opt->strarg;
-	if(strlen(logg_file) < 2 || (logg_file[0] != '/' && logg_file[0] != '\\' && logg_file[1] != ':')) {
+	if(!cli_is_abspath(logg_file)) {
 	    fprintf(stderr, "ERROR: LogFile requires full path.\n");
 	    ret = 1;
 	    break;
@@ -310,7 +297,7 @@ int main(int argc, char **argv)
 
     logg("#clamd daemon %s (OS: "TARGET_OS_TYPE", ARCH: "TARGET_ARCH_TYPE", CPU: "TARGET_CPU_TYPE")\n", get_version());
 
-#ifndef WIN32
+#ifndef _WIN32
     if(user)
 	logg("#Running as user %s (UID %u, GID %u)\n", user->pw_name, user->pw_uid, user->pw_gid);
 #endif
@@ -453,15 +440,6 @@ int main(int argc, char **argv)
     }
 
     if(tcpsock) {
-#ifdef C_WINDOWS
-	    WSADATA wsaData;
-
-	if(WSAStartup(MAKEWORD(2,2), &wsaData) != NO_ERROR) {
-	    logg("!Error at WSAStartup(): %d\n", WSAGetLastError());
-	    ret = 1;
-	    break;
-	}
-#endif
 	if ((lsockets[nlsockets] = tcpserver(opts)) == -1) {
 	    ret = 1;
 	    break;
@@ -517,25 +495,13 @@ int main(int argc, char **argv)
 	closesocket(lsockets[i]);
     }
 
-#if !defined(C_OS2) && !defined(_WIN32)
+#ifndef _WIN32
     if(nlsockets && localsock) {
 	opt = optget(opts, "LocalSocket");
 	if(unlink(opt->strarg) == -1)
 	    logg("!Can't unlink the socket file %s\n", opt->strarg);
 	else
 	    logg("Socket file removed.\n");
-    }
-#endif
-
-#ifdef C_WINDOWS
-    if(tcpsock)
-	WSACleanup();
-
-    if(!pthread_win32_process_detach_np()) {
-	logg("!Can't stop the win32 pthreads layer\n");
-	logg_close();
-	optfree(opts);
-	return 1;
     }
 #endif
 

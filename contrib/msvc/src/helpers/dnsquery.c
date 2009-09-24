@@ -23,7 +23,6 @@
 #endif
 
 #include <platform.h>
-#include <sys/socket.h>
 #include <windns.h>
 #include <iphlpapi.h>
 #include <inttypes.h>
@@ -48,7 +47,7 @@ char *txtquery_compat(const char *domain, unsigned int *ttl);
 
 /* Bound checks to avoid buffer overflows */
 #define NEED(len) \
-    /* cli_dbgmsg("DNS Resolver: Need %d bytes - Have %d bytes\n", len, numbytes - (seek - reply)); */ \
+    /* printf("DNS Resolver: Need %d bytes - Have %d bytes\n", len, numbytes - (seek - reply)); */ \
     if (((seek + len) - reply) > numbytes) \
     { \
         cli_errmsg("DNS Resolver: Bound Check failed - Bad packet\n"); \
@@ -97,10 +96,7 @@ static char *get_dns_fromreg(void)
     char *keys[] = { "ClamWinNameServer", "NameServer", "DhcpNameServer", NULL };
 
     if (RegOpenKeyExA(HKEY_LOCAL_MACHINE, TCPIP_PARAMS, 0, KEY_QUERY_VALUE, &hKey) != ERROR_SUCCESS)
-    {
-        cli_dbgmsg("DNS Resolver: Cannot open Tcpip Parameters registry key\n");
         return NULL;
-    }
 
     for (i = 0; keys[i]; i++)
     {
@@ -113,18 +109,18 @@ static char *get_dns_fromreg(void)
             if ((space = strchr(data, ' '))) *space = 0;
             if (inet_addr(data) == INADDR_NONE)
             {
-                cli_dbgmsg("DNS Resolver: Found %s key: %s - invalid address\n", keys[i], data);
+                /* printf("DNS Resolver: Found %s key: %s - invalid address\n", keys[i], data); */
                 return NULL;
             }
             else
             {
-                cli_dbgmsg("DNS Resolver: Found %s key: %s\n", keys[i], data);
+                /* printf("DNS Resolver: Found %s key: %s\n", keys[i], data); */
                 return _strdup(data);
             }
         }
     }
 
-    cli_dbgmsg("DNS Resolver: No nameservers found in registry\n");
+    /* printf("DNS Resolver: No nameservers found in registry\n"); */
     RegCloseKey(hKey);
     return NULL;
 }
@@ -147,7 +143,7 @@ static char *get_dns(void)
         case NO_ERROR:
             break;
         case ERROR_NOT_SUPPORTED:
-            cli_dbgmsg("DNS Resolver: GetNetworkParams() not supported on this OS\n");
+            /* printf("DNS Resolver: GetNetworkParams() not supported on this OS\n"); */
             GlobalFree(FixedInfo);
             return get_dns_fromreg();
         default:
@@ -171,7 +167,7 @@ static char *get_dns(void)
         pIPAddr = FixedInfo->DnsServerList.Next;
         while (pIPAddr)
         {
-            cli_dbgmsg("DNS Resolver: Found additional DNS Server: %s\n", pIPAddr->IpAddress.String);
+            //printf("DNS Resolver: Found additional DNS Server: %s\n", pIPAddr->IpAddress.String);
             pIPAddr = pIPAddr->Next;
         }
     }
@@ -260,7 +256,7 @@ static char *do_query(struct hostent *he, const char *domain, unsigned int *ttl)
         return NULL;
     }
 
-    cli_dbgmsg("DNS Resolver: Received %d bytes from the DNS\n", numbytes);
+    /* printf("DNS Resolver: Received %d bytes from the DNS\n", numbytes); */
 
     if (numbytes <= sizeof(simple_dns_query))
     {
@@ -315,7 +311,7 @@ static char *do_query(struct hostent *he, const char *domain, unsigned int *ttl)
     NEED(sizeof(uint16_t));
     if (GETUINT16(seek) != ns_t_txt)
     {
-        cli_dbgmsg("DNS Resolver: Dns reply Type is not TXT\n");
+        cli_errmsg("DNS Resolver: Dns reply Type is not TXT\n");
         return NULL;
     }
     seek += sizeof(uint16_t);
@@ -383,8 +379,8 @@ char *txtquery_compat(const char *domain, unsigned int *ttl)
     }
 
     if (nameserver) free(nameserver);
-    cli_dbgmsg("DNS Resolver: Query Done using compatibility Method\n");
-    cli_dbgmsg("DNS Resolver: Result [%s]\n", txt);
+    /* printf("DNS Resolver: Query Done using compatibility Method\n"); */
+    /* printf("DNS Resolver: Result [%s]\n", txt); */
     return txt;
 }
 
@@ -452,7 +448,7 @@ char *txtquery_dnsapi(const char *domain, unsigned int *ttl)
     if (!txt) cli_errmsg("DNS Resolver: Broken DNS reply.\n");
     pDnsRecordListFree(pRecOrig, DnsFreeRecordList);
     FreeLibrary(hDnsApi);
-    cli_dbgmsg("DNS Resolver: Query Done using DnsApi Method\n");
-    cli_dbgmsg("DNS Resolver: Result [%s]\n", txt);
+    /* printf("DNS Resolver: Query Done using DnsApi Method\n"); */
+    /* printf("DNS Resolver: Result [%s]\n", txt); */
     return txt;
 }

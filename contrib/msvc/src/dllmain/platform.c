@@ -21,7 +21,6 @@
 #include <platform.h>
 #include <dirent.h>
 #include <others.h>
-#include <sys/socket.h>
 
 #include <shared/output.h>
 

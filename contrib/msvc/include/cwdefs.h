@@ -46,12 +46,7 @@
 #define S_ISREG(x) (((x) & S_IFMT) == S_IFREG)
 #define S_ISDIR(x) (((x) & S_IFMT) == S_IFDIR)
 
-typedef unsigned int sigset_t;
-
 #endif /* _MSC_VER */
-
-#define _malloc_dbg(size, d1, d2, d3) malloc(size)
-#define _calloc_dbg(nmemb, size, d1, d2, d3) calloc(nmemb, size)
 
 #define WIN32_LEAN_AND_MEAN
 #ifndef WINVER

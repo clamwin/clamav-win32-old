@@ -392,19 +392,11 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\..\shared\misc.h"
-				>
-			</File>
-			<File
 				RelativePath="..\..\..\..\freshclam\nonblock.h"
 				>
 			</File>
 			<File
 				RelativePath="..\..\..\..\freshclam\notify.h"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\shared\options.h"
 				>
 			</File>
 		</Filter>
@@ -435,6 +427,58 @@
 			</File>
 			<File
 				RelativePath="..\..\src\helpers\service.c"
+				>
+			</File>
+		</Filter>
+		<Filter
+			Name="Shared"
+			>
+			<File
+				RelativePath="..\..\..\..\shared\cdiff.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\shared\cdiff.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\shared\getopt.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\shared\getopt.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\shared\misc.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\shared\misc.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\shared\optparser.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\shared\optparser.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\shared\output.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\shared\output.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\shared\tar.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\shared\tar.h"
 				>
 			</File>
 		</Filter>

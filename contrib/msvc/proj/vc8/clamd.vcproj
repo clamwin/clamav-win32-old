@@ -436,7 +436,55 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\shared\win32optparser.c"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\helpers\win32poll.c"
+				>
+			</File>
+		</Filter>
+		<Filter
+			Name="Shared"
+			>
+			<File
+				RelativePath="..\..\..\..\shared\getopt.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\shared\getopt.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\shared\misc.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\shared\misc.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\shared\network.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\shared\network.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\shared\optparser.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\shared\optparser.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\shared\output.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\shared\output.h"
 				>
 			</File>
 		</Filter>

@@ -24,11 +24,6 @@ static	char	const	rcsid[] = "$Id: blob.c,v 1.64 2007/02/12 22:25:14 njh Exp $";
 #include "clamav-config.h"
 #endif
 
-#ifdef	C_WINDOWS
-#include "stdafx.h"
-#include <io.h>
-#endif
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -53,15 +48,7 @@ static	char	const	rcsid[] = "$Id: blob.c,v 1.64 2007/02/12 22:25:14 njh Exp $";
 #include "scanners.h"
 #include "filetypes.h"
 
-#ifndef	O_BINARY
-#define	O_BINARY	0
-#endif
-
 #include <assert.h>
-
-#if	defined(C_MINGW) || defined(C_WINDOWS)
-#include <windows.h>
-#endif
 
 /* Scehduled for rewite in 0.94 (bb#804). Disabling for now */
 /* #define	MAX_SCAN_SIZE	20*1024	/\* */
@@ -679,21 +666,9 @@ fileblobInfected(const fileblob *fb)
 void
 sanitiseName(char *name)
 {
-	while(*name) {
-#ifdef	C_DARWIN
-		*name &= '\177';
-#endif
-#if	defined(MSDOS) || defined(C_OS2)
-		/*
-		 * Don't take it from this that ClamAV supports DOS, it doesn't
-		 * I don't know if spaces are legal in OS/2.
-		 */
-		if(strchr("%/*?<>|\\\"+=,;:\t ~", *name))
-#elif defined(_WIN32)
-		if(strchr("%/*?<>|\\\"+=,;:\t~", *name))
-#else
-		if(*name == '/')
-#endif
+	char c;
+	while((c = *name)) {
+		if(c!='.' && c!='_' && (c>'z' || c<'0' || (c>'9' && c<'A') || (c>'Z' && c<'a')))
 			*name = '_';
 		name++;
 	}

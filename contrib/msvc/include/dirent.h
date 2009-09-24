@@ -26,6 +26,7 @@
 
 struct dirent {
     char *d_name;
+    off_t d_ino;
 };
 
 typedef struct dir_struct {

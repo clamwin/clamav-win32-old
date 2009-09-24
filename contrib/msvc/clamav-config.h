@@ -161,7 +161,7 @@
 #undef HAVE_DECL_CYGWIN_CONV_PATH
 
 /* Define to 1 if you have the <dirent.h> header file. */
-#undef HAVE_DIRENT_H
+#define HAVE_DIRENT_H 1
 
 /* Define if you have the GNU dld library. */
 #undef HAVE_DLD
@@ -206,7 +206,7 @@
 #define HAVE_GETPAGESIZE 1
 
 /* Define to 1 if you have the <grp.h> header file. */
-#define HAVE_GRP_H 1
+#undef HAVE_GRP_H
 
 /* iconv() available */
 #undef HAVE_ICONV
@@ -221,10 +221,10 @@
 #define HAVE_INTTYPES_H 1
 
 /* in_addr_t is defined */
-#define HAVE_IN_ADDR_T 1
+#undef HAVE_IN_ADDR_T
 
 /* in_port_t is defined */
-#define HAVE_IN_PORT_T 1
+#undef HAVE_IN_PORT_T
 
 /* Define to '1' if you have the check.h library */
 #undef HAVE_LIBCHECK
@@ -344,7 +344,7 @@
 #undef HAVE_STDBOOL_H
 
 /* Define to 1 if you have the <stdint.h> header file. */
-#define HAVE_STDINT_H 1
+#undef HAVE_STDINT_H
 
 /* Define to 1 if you have the <stdlib.h> header file. */
 #define HAVE_STDLIB_H 1
@@ -386,7 +386,7 @@
 #undef HAVE_SYS_INT_TYPES_H
 
 /* Define to 1 if you have the <sys/mman.h> header file. */
-#define HAVE_SYS_MMAN_H 1
+#undef HAVE_SYS_MMAN_H
 
 /* Define to 1 if you have the <sys/param.h> header file. */
 #undef HAVE_SYS_PARAM_H

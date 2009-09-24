@@ -20,7 +20,6 @@
 
 #include <platform.h>
 #include <pthread.h>
-#include <sys/socket.h>
 
 static uint32_t platform = 0;
 static helpers_t helpers;

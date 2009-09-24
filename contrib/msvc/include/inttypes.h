@@ -22,6 +22,10 @@
 #define _INTTYPES_H_
 #include <sys/stat.h>
 
+#ifdef __GNUC__
+#include <stdint.h>
+#else
+
 typedef unsigned __int64 uint64_t;
 typedef signed   __int64 int64_t;
 
@@ -42,7 +46,6 @@ typedef uint8_t  u_int8_t;
 typedef unsigned long int uintmax_t;
 typedef long int intmax_t;
 
-#ifndef __GNUC__
 typedef uint32_t mode_t;
 
 #ifdef  _WIN64
@@ -51,10 +54,6 @@ typedef __int64 ssize_t;
 typedef int ssize_t;
 #endif
 
-#ifndef PID_T_DEFINED
-#define PID_T_DEFINED
-typedef uint32_t pid_t;
-#endif
-#endif
+#endif /* __GNUC__ */
 
 #endif /* _INTTYPES_H */

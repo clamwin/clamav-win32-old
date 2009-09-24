@@ -19,10 +19,6 @@
  *  MA 02110-1301, USA.
  */
 
-#ifdef	_MSC_VER
-#include <winsock.h>
-#endif
-
 #if HAVE_CONFIG_H
 #include "clamav-config.h"
 #endif
@@ -60,17 +56,7 @@
 #include "libclamav/readdb.h"
 #include "libclamav/cltypes.h"
 
-#ifndef	_WIN32
-#define	closesocket(s)	close(s)
-#endif
-
 #define BUFFSIZE 1024
-#ifndef	FALSE
-#define FALSE (0)
-#endif
-#ifndef	TRUE
-#define TRUE (1)
-#endif
 
 int progexit = 0;
 pthread_mutex_t exit_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -633,7 +619,7 @@ static const unsigned char* parse_dispatch_cmd(client_conn_t *conn, struct fd_bu
     return cmd;
 }
 
-/*static const unsigned char* parse_dispatch_cmd(client_conn_t *conn, struct fd_buf *buf, size_t *ppos, int *error, const struct optstruct *opts, int readtimeout)*/
+//static const unsigned char* parse_dispatch_cmd(client_conn_t *conn, struct fd_buf *buf, size_t *ppos, int *error, const struct optstruct *opts, int readtimeout)
 static int handle_stream(client_conn_t *conn, struct fd_buf *buf, const struct optstruct *opts, int *error, size_t *ppos, int readtimeout)
 {
     int rc;

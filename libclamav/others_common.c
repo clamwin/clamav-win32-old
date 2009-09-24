@@ -33,10 +33,10 @@
 #endif
 #include <sys/types.h>
 #include <sys/stat.h>
-#ifndef	C_WINDOWS
+#include <dirent.h>
+#ifndef	_WIN32
 #include <sys/wait.h>
 #include <sys/time.h>
-#include <dirent.h>
 #endif
 #include <time.h>
 #include <fcntl.h>
@@ -45,17 +45,11 @@
 #endif
 #include <errno.h>
 #include "target.h"
-#ifndef	C_WINDOWS
-#include <sys/time.h>
-#endif
 #ifdef	HAVE_SYS_PARAM_H
 #include <sys/param.h>
 #endif
 #ifdef	HAVE_MALLOC_H
 #include <malloc.h>
-#endif
-#if	defined(_MSC_VER) && defined(_DEBUG)
-#include <crtdbg.h>
 #endif
 
 #include "clamav.h"
@@ -66,10 +60,6 @@
 #include "ltdl.h"
 #include "matcher-ac.h"
 #include "md5.h"
-
-#ifndef	O_BINARY
-#define	O_BINARY	0
-#endif
 
 static unsigned char name_salt[16] = { 16, 38, 97, 12, 8, 4, 72, 196, 217, 144, 33, 124, 18, 11, 17, 253 };
 
@@ -140,11 +130,7 @@ void *cli_malloc(size_t size)
 	return NULL;
     }
 
-#if defined(_MSC_VER) && defined(_DEBUG)
-    alloc = _malloc_dbg(size, _NORMAL_BLOCK, __FILE__, __LINE__);
-#else
     alloc = malloc(size);
-#endif
 
     if(!alloc) {
 	cli_errmsg("cli_malloc(): Can't allocate memory (%lu bytes).\n", (unsigned long int) size);
@@ -163,11 +149,7 @@ void *cli_calloc(size_t nmemb, size_t size)
 	return NULL;
     }
 
-#if defined(_MSC_VER) && defined(_DEBUG)
-    alloc = _calloc_dbg(nmemb, size, _NORMAL_BLOCK, __FILE__, __LINE__);
-#else
     alloc = calloc(nmemb, size);
-#endif
 
     if(!alloc) {
 	cli_errmsg("cli_calloc(): Can't allocate memory (%lu bytes).\n", (unsigned long int) (nmemb * size));
@@ -226,11 +208,7 @@ char *cli_strdup(const char *s)
         return NULL;
     }
 
-#if defined(_MSC_VER) && defined(_DEBUG)
-    alloc = _strdup_dbg(s, _NORMAL_BLOCK, __FILE__, __LINE__);
-#else
     alloc = strdup(s);
-#endif
 
     if(!alloc) {
         cli_errmsg("cli_strdup(): Can't allocate memory (%u bytes).\n", (unsigned int) strlen(s));
@@ -385,18 +363,23 @@ int cli_filecopy(const char *src, const char *dest)
 #endif /* _WIN32 */
 }
 
-char *cli_gettempdir(void)
-{
-    char *tmpdir = NULL;
-
-    if (((tmpdir = getenv("TMPDIR")) == NULL) &&
-        ((tmpdir = getenv("TEMP")) == NULL) &&
-        ((tmpdir = getenv("TMP")) == NULL))
-#if defined(_WIN32)
-        tmpdir = "c:\\";
+#ifndef P_tmpdir
+#ifdef _WIN32
+#define P_tmpdir "C:\\"
 #else
-        tmpdir = "/tmp";
+#define P_tmpdir "/tmp"
+#endif /* _WIN32 */
+#endif /* P_tmpdir */
+
+const char *cli_gettmpdir(void) {
+	const char *tmpdir;
+    if(
+#ifdef _WIN32
+	!(tmpdir = getenv("TEMP")) && !(tmpdir = getenv("TMP"))
+#else
+	!(tmpdir = getenv("TMPDIR"))
 #endif
+    ) tmpdir = P_tmpdir;
     return tmpdir;
 }
 
@@ -543,9 +526,9 @@ int cli_ftw(char *path, int flags, int maxdepth, cli_ftw_cb callback, struct cli
 	char *pathend;
 	/* trim slashes so that dir and dir/ behave the same when
 	 * they are symlinks, and we are not following symlinks */
-	while (path[0] == '/' && path[1] == '/') path++;
+	while (path[0] == *PATHSEP && path[1] == *PATHSEP) path++;
 	pathend = path + strlen(path);
-	while (pathend > path && pathend[-1] == '/') --pathend;
+	while (pathend > path && pathend[-1] == *PATHSEP) --pathend;
 	*pathend = '\0';
 #endif
     }
@@ -639,10 +622,10 @@ static int cli_ftw_dir(const char *dirname, int flags, int maxdepth, cli_ftw_cb 
 		if (ret != CL_SUCCESS)
 		    break;
 	    }
-            if(!strcmp(dirname, "/"))
-		sprintf(fname, "/%s", dent->d_name);
+            if(!strcmp(dirname, PATHSEP))
+		sprintf(fname, PATHSEP"%s", dent->d_name);
 	    else
-		sprintf(fname, "%s/%s", dirname, dent->d_name);
+		sprintf(fname, "%s"PATHSEP"%s", dirname, dent->d_name);
 #ifdef _WIN32
         NORMALIZE_PATH(fname, 1, continue);
 #endif
@@ -787,7 +770,7 @@ char *cli_gentemp(const char *dir)
 	int i;
     size_t len;
 
-    mdir = dir ? dir : cli_gettempdir();
+    mdir = dir ? dir : cli_gettmpdir();
 
     len = strlen(mdir) + 76;
     name = (char *) cli_calloc(len, sizeof(char));
@@ -817,7 +800,7 @@ char *cli_gentemp(const char *dir)
 	return NULL;
     }
 
-	snprintf(name, len, "%s/clamav-%s.%08x.clamtmp", mdir, tmp, getpid());
+	snprintf(name, len, "%s"PATHSEP"clamav-%s.%08x.clamtmp", mdir, tmp, getpid());
     free(tmp);
 
     return(name);
@@ -932,3 +915,13 @@ void cli_qsort(void *basep, size_t nelems, size_t size, int (*comp)(const void *
 	}
     }
 }
+
+int cli_is_abspath(const char *path) {
+#ifdef _WIN32
+    int len = strlen(path);
+    return (len > 2 && path[0] == '\\' && path[1] == '\\') || (len > 3 && path[1] == ':' && path[2] == '\\');
+#else
+    return strlen(path) > 1 && *path == '/';
+#endif
+}
+

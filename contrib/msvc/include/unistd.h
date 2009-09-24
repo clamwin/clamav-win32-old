@@ -22,7 +22,6 @@
 #define _UNISTD_H
 
 #include <io.h>
-#include <sys/un.h>
 #include <sys/stat.h>
 
 #ifndef __GNUC__

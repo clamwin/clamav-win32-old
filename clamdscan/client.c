@@ -30,28 +30,26 @@
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <sys/socket.h>
 #ifdef HAVE_SYS_LIMITS_H
 #include <sys/limits.h>
 #endif
 #ifdef HAVE_SYS_SELECT_H
 #include <sys/select.h>
 #endif
+#ifndef _WIN32
+#include <sys/socket.h>
 #include <sys/un.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <utime.h>
+#endif
 #include <errno.h>
 #include <dirent.h>
 #include <fcntl.h>
 
 #ifdef HAVE_SYS_UIO_H
 #include <sys/uio.h>
-#endif
-
-#ifndef _WIN32
-#define closesocket close
 #endif
 
 #include "shared/optparser.h"
@@ -71,7 +69,9 @@
 struct sockaddr *mainsa = NULL;
 int mainsasz;
 unsigned long int maxstream;
+#ifndef _WIN32
 static struct sockaddr_un nixsock;
+#endif
 static struct sockaddr_in tcpsock;
 
 
@@ -137,14 +137,14 @@ static char *makeabs(const char *basepath) {
 	logg("^Can't make room for fullpath.\n");
 	return NULL;
     }
-    if(*basepath != '/') { /* FIXME: to be unified */
+    if(!cli_is_abspath(basepath)) {
 	if(!getcwd(ret, PATH_MAX)) {
 	    logg("^Can't get absolute pathname of current working directory.\n");
 	    free(ret);
 	    return NULL;
 	}
 	namelen = strlen(ret);
-	snprintf(&ret[namelen], PATH_MAX - namelen, "/%s", basepath);
+	snprintf(&ret[namelen], PATH_MAX - namelen, PATHSEP"%s", basepath);
     } else {
 	strncpy(ret, basepath, PATH_MAX);
     }

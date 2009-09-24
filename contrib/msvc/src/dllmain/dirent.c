@@ -35,6 +35,7 @@
     d->init = 0; \
     d->pattern = NULL; \
     d->dent.d_name = NULL; \
+    d->dent.d_ino = -1; \
 }
 
 DIR *opendir(const char *dirname)

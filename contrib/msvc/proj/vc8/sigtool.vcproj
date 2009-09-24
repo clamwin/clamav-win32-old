@@ -367,18 +367,6 @@
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
 			<File
-				RelativePath="..\..\..\..\shared\cdiff.h"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\shared\misc.h"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\shared\options.h"
-				>
-			</File>
-			<File
 				RelativePath="..\..\..\..\sigtool\vba.h"
 				>
 			</File>
@@ -402,6 +390,58 @@
 			</File>
 			<File
 				RelativePath="..\..\src\helpers\cw_main.c"
+				>
+			</File>
+		</Filter>
+		<Filter
+			Name="Shared"
+			>
+			<File
+				RelativePath="..\..\..\..\shared\cdiff.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\shared\cdiff.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\shared\getopt.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\shared\getopt.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\shared\misc.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\shared\misc.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\shared\optparser.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\shared\optparser.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\shared\output.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\shared\output.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\shared\tar.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\shared\tar.h"
 				>
 			</File>
 		</Filter>

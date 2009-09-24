@@ -15,9 +15,6 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
  *  MA 02110-1301, USA.
  */
-#ifdef	_MSC_VER
-#include <winsock.h>
-#endif
 
 #if HAVE_CONFIG_H
 #include "clamav-config.h"
@@ -33,13 +30,15 @@
 #include <signal.h>
 #include <time.h>
 #include <sys/types.h>
-#ifndef	C_WINDOWS
+#ifndef	_WIN32
 #include <sys/wait.h>
 #endif
 #include <sys/stat.h>
 #include <fcntl.h>
 #ifdef	HAVE_PWD_H
 #include <pwd.h>
+#endif
+#ifdef HAVE_GRP_H
 #include <grp.h>
 #endif
 
@@ -211,7 +210,7 @@ int main(int argc, char **argv)
 	struct sigaction sigact;
 	struct sigaction oldact;
 #endif
-#if !defined(C_OS2) && !defined(C_WINDOWS)
+#ifdef HAVE_PWD_H
 	const char *dbowner;
 	struct passwd *user;
 #endif
@@ -265,14 +264,6 @@ int main(int argc, char **argv)
 	return 0;
     }
 
-#ifdef C_WINDOWS
-    if(!pthread_win32_process_attach_np()) {
-	mprintf("!Can't start the win32 pthreads layer\n");
-	optfree(opts);
-	return 63;
-    }
-#endif
-
     if(optget(opts, "HTTPProxyPassword")->enabled) {
 	if(stat(cfgfile, &statbuf) == -1) {
 	    logg("^Can't stat %s (critical error)\n", cfgfile);
@@ -289,7 +280,7 @@ int main(int argc, char **argv)
 #endif
     }
 
-#if !defined(C_OS2) && !defined(_WIN32)
+#ifdef HAVE_PWD_H
     /* freshclam shouldn't work with root privileges */
     dbowner = optget(opts, "DatabaseOwner")->strarg;
 
@@ -404,18 +395,6 @@ int main(int argc, char **argv)
 	return 0;
     }
 
-#ifdef	C_WINDOWS
-    {
-	    WSADATA wsaData;
-
-	if(WSAStartup(MAKEWORD(2,2), &wsaData) != NO_ERROR) {
-	    logg("!Error at WSAStartup(): %d\n", WSAGetLastError());
-	    optfree(opts);
-	    return 1;
-	}
-    }
-#endif
-
     if(optget(opts, "daemon")->enabled) {
 	    int bigsleep, checks;
 #ifndef	C_WINDOWS
@@ -443,7 +422,7 @@ int main(int argc, char **argv)
 
 	bigsleep = 24 * 3600 / checks;
 
-#if !defined(C_OS2) && !defined(_WIN32)
+#ifndef _WIN32
 	if(!optget(opts, "Foreground")->enabled) {
 	    if(daemonize() == -1) {
 		logg("!daemonize() failed\n");
@@ -469,7 +448,7 @@ int main(int argc, char **argv)
 
 	logg("#freshclam daemon %s (OS: "TARGET_OS_TYPE", ARCH: "TARGET_ARCH_TYPE", CPU: "TARGET_CPU_TYPE")\n", get_version());
 
-#ifdef	C_WINDOWS
+#ifdef _WIN32
 	signal(SIGINT, daemon_sighandler);
 	terminate = 0;
 #else
@@ -555,15 +534,6 @@ int main(int argc, char **argv)
     }
 
     optfree(opts);
-
-#ifdef C_WINDOWS
-    WSACleanup();
-
-    if(!pthread_win32_process_detach_np()) {
-	mprintf("!Can't stop the win32 pthreads layer\n");
-	return 63;
-    }
-#endif
 
     return(ret);
 }

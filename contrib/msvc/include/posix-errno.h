@@ -21,8 +21,8 @@
 #ifndef _POSIX_ERRNO_H
 #define _POSIX_ERRNO_H
 
+#include <winsock2.h>
 #include <windows.h>
-#include <winsock.h>
 #include <errno.h>
 
 #undef ETIMEDOUT
