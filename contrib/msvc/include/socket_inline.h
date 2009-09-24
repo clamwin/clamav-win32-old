@@ -31,10 +31,6 @@ extern int gnulib_snprintf(char *str, size_t size, const char *format, ...);
 
 typedef int socklen_t;
 
-/* <netinet/in.h> */
-typedef uint32_t in_addr_t;
-typedef uint16_t in_port_t;
-
 /* <sys/socket.h> */
 #define SHUT_RD     SD_RECEIVE
 #define SHUT_WR     SD_SEND
