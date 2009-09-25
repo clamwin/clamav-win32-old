@@ -1,13 +1,19 @@
 include common.mak
 
+shared_SOURCES+=$(wildcard $(top)/shared/*.c)
+shared_SOURCES+=$(wildcard $(msvc)/src/shared/*.c)
+shared_SOURCES:=$(subst $(top)/shared/actions.c,,$(shared_SOURCES))
+shared_OBJECTS=$(shared_SOURCES:.c=.o)
+
 clamd_SOURCES=$(wildcard $(top)/clamd/*.c)
 clamd_SOURCES+=$(msvc)/src/helpers/cw_main.c
 clamd_SOURCES+=$(msvc)/src/helpers/service.c
 clamd_SOURCES+=$(msvc)/src/helpers/win32poll.c
 clamd_SOURCES:=$(subst $(top)/clamd/localserver.c,,$(clamd_SOURCES))
+clamd_SOURCES:=$(subst $(top)/clamd/dazukofs.c,,$(clamd_SOURCES))
 clamd_OBJECTS=$(clamd_SOURCES:.c=.o)
 clamd_OBJECTS+=$(msvc)/resources/clamd-rc.o
-clamd.exe: libclamav.dll $(clamd_OBJECTS)
+clamd.exe: libclamav.dll $(clamd_OBJECTS) $(shared_OBJECTS)
 	$(CC) $(LDFLAGS) $^ -o $@ libclamav.dll.a -lws2_32
 
 clamdscan_SOURCES=$(wildcard $(top)/clamdscan/*.c)
@@ -15,7 +21,7 @@ clamdscan_SOURCES+=$(msvc)/src/helpers/cw_main.c
 clamdscan_SOURCES+=$(msvc)/src/helpers/dresult.c
 clamdscan_OBJECTS=$(clamdscan_SOURCES:.c=.o)
 clamdscan_OBJECTS+=$(msvc)/resources/clamdscan-rc.o
-clamdscan.exe: libclamav.dll $(clamdscan_OBJECTS)
+clamdscan.exe: libclamav.dll $(clamdscan_OBJECTS) $(shared_OBJECTS)
 	$(CC) $(LDFLAGS) $^ -o $@ libclamav.dll.a -lws2_32
 
 clamscan_SOURCES=$(wildcard $(top)/clamscan/*.c)
@@ -24,7 +30,7 @@ clamscan_SOURCES+=$(msvc)/src/helpers/scanmem.c
 clamscan_SOURCES+=$(msvc)/src/helpers/exeScanner.c
 clamscan_OBJECTS=$(clamscan_SOURCES:.c=.o)
 clamscan_OBJECTS+=$(msvc)/resources/clamscan-rc.o
-clamscan.exe: libclamav.dll $(clamscan_OBJECTS)
+clamscan.exe: libclamav.dll $(clamscan_OBJECTS) $(shared_OBJECTS) -lws2_32
 	$(CC) $(LDFLAGS) $^ -o $@ libclamav.dll.a
 
 freshclam_SOURCES=$(wildcard $(top)/freshclam/*.c)
@@ -34,14 +40,14 @@ freshclam_SOURCES+=$(msvc)/src/helpers/dnsquery.c
 freshclam_SOURCES:=$(subst $(top)/freshclam/dns.c,,$(freshclam_SOURCES))
 freshclam_OBJECTS=$(freshclam_SOURCES:.c=.o)
 freshclam_OBJECTS+=$(msvc)/resources/freshclam-rc.o
-freshclam.exe: libclamav.dll $(freshclam_OBJECTS)
+freshclam.exe: libclamav.dll $(freshclam_OBJECTS) $(shared_OBJECTS)
 	$(CC) $(LDFLAGS) $^ -o $@ libclamav.dll.a -lws2_32 -lz -liphlpapi
 
 sigtool_SOURCES=$(wildcard $(top)/sigtool/*.c)
 sigtool_SOURCES+=$(msvc)/src/helpers/cw_main.c
 sigtool_OBJECTS=$(sigtool_SOURCES:.c=.o)
 sigtool_OBJECTS+=$(msvc)/resources/sigtool-rc.o
-sigtool.exe: libclamav.dll $(sigtool_OBJECTS)
+sigtool.exe: libclamav.dll $(sigtool_OBJECTS) $(shared_OBJECTS)
 	$(CC) $(LDFLAGS) $^ -o $@ libclamav.dll.a -lws2_32 -lz
 
 profiler_SOURCES=$(msvc)/tools/profiler.c

@@ -37,7 +37,7 @@ typedef __int16 int16_t;
 #include <osdeps.h>
 #include <output.h>
 #include <others.h>
-static inline elogg(const char *fmt, ...) {};
+static inline void elogg(const char *fmt, ...) {};
 #endif /* EXESCANNER_STANDALONE */
 
 #define ENTROPY_THRESHOLD   4.0

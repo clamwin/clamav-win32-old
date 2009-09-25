@@ -22,8 +22,6 @@ libclamav_SOURCES+=$(wildcard $(top)/libclamav/regex/*.c)
 libclamav_SOURCES+=$(wildcard $(top)/libclamav/lzma/*.c)
 libclamav_SOURCES+=$(wildcard $(top)/libclamav/nsis/*.c)
 libclamav_SOURCES+=$(wildcard $(top)/libclamav/jsparse/js-norm.c)
-libclamav_SOURCES+=$(wildcard $(top)/shared/*.c)
-libclamav_SOURCES:=$(subst $(top)/shared/actions.c,,$(libclamav_SOURCES))
 libclamav_SOURCES+=$(msvc)/pthreads/pthread.c
 libclamav_SOURCES+=$(wildcard $(msvc)/src/dllmain/*.c)
 
