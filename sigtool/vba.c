@@ -37,6 +37,7 @@
 #include "libclamav/others.h"
 #include "libclamav/cltypes.h"
 #include "libclamav/ole2_extract.h"
+#include "shared/output.h"
 
 typedef struct mac_token_tag
 {

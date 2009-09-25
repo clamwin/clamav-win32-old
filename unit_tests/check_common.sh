@@ -21,7 +21,8 @@ killclamd() {
     kill -0 $pid 2>/dev/null &&
     sleep 9 &&
     kill -0 $pid 2>/dev/null &&
-    kill -KILL $pid || true
+    echo "Killing stuck clamd!" &&
+    kill -KILL $pid && exit 109 || true
 }
 
 error()
