@@ -150,11 +150,3 @@ gzdopen                     @251 NONAME
 gzgets                      @252 NONAME
 gzopen                      @253 NONAME
 gzwrite                     @254 NONAME
-
-; forward winsock to avoid linking winsock
-; if not needed
-_select@20                  @300 NONAME
-_send@16                    @301 NONAME
-_htonl@4                    @302 NONAME
-_htons@4                    @303 NONAME
-_gethostbyname@4            @304 NONAME
