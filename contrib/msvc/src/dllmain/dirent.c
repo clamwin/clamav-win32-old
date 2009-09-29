@@ -179,11 +179,11 @@ void rewinddir(DIR *d)
 
     if (d->dent.d_name) free(d->dent.d_name);
     d->dent.d_name = NULL;
-    d->hdir = INVALID_HANDLE_VALUE;
     d->nfiles = 0;
 
     DIRENT_ASSERT((!d->init || (d->hdir != INVALID_HANDLE_VALUE)), EBADF,;);
     if (!FindClose(d->hdir)) errno = EBADF;
+    d->hdir = INVALID_HANDLE_VALUE;
 }
 
 int telldir(DIR *d)
