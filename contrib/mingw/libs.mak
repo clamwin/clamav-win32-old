@@ -1,4 +1,3 @@
-DEFINES=-DLIBCLAMAV_EXPORTS -DPTW32_BUILD_INLINED -DPTW32_STATIC_LIB -DCLEANUP=__CLEANUP_C
 include common.mak
 
 gnulib_SOURCES=$(wildcard $(msvc)/gnulib/*.c)

@@ -44,12 +44,6 @@
 /* re-route main to cw_main to handle some startup code */
 #define main cw_main
 
-#ifdef LIBCLAMAV_EXPORTS
-#define LIBCLAMAV_API
-#else
-#define LIBCLAMAV_API __declspec(dllimport)
-#endif
-
 /* errno remap */
 #define strerror cw_strerror
 #define perror cw_perror
