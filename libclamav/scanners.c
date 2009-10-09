@@ -2116,7 +2116,7 @@ int cli_magic_scandesc(int desc, cli_ctx *ctx)
 
     /* CL_TYPE_HTML: raw HTML files are not scanned, unless safety measure activated via DCONF */
     if(type != CL_TYPE_IGNORED && (type != CL_TYPE_HTML || !(DCONF_DOC & DOC_CONF_HTML_SKIPRAW)) && !ctx->engine->sdb) {
-	if((ret2 = cli_scanraw(ctx, type, typercg, &dettype)) == CL_VIRUS)) {
+	if((ret2 = cli_scanraw(ctx, type, typercg, &dettype)) == CL_VIRUS) {
 	    ret =  cli_checkfp(desc, ctx) ? CL_CLEAN : CL_VIRUS;
 	    funmap(*ctx->fmap);
 	    ctx->fmap--; 
