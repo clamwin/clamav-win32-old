@@ -450,6 +450,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\..\libclamav\fmap.c"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\..\libclamav\fsg.c"
 				>
 			</File>
@@ -977,6 +981,10 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\libclamav\filetypes_int.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\fmap.h"
 				>
 			</File>
 			<File

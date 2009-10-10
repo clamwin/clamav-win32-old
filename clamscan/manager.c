@@ -205,8 +205,9 @@ static int scanfile(const char *filename, struct cl_engine *engine, const struct
 	if(!printinfected)
 	    logg("~%s: %s ERROR\n", filename, cl_strerror(ret));
 
+    /* FIXME: Sherpya */
     lseek(fd, 0, SEEK_SET);
-    type = cli_filetype2(fd, engine);
+    type = 0; /* cli_filetype2(fd, engine); */
     close(fd);
 
     if(ret == CL_VIRUS && action) {

@@ -114,7 +114,7 @@ cli_wm_decrypt_macro        @135 NONAME
 cli_wm_readdir              @136 NONAME
 cli_writen                  @137 NONAME
 
-html_normalise_fd           @150 NONAME
+html_normalise_map          @150 NONAME
 mp_clear                    @151 NONAME
 mp_init                     @152 NONAME
 mp_read_radix               @153 NONAME
@@ -122,6 +122,10 @@ sha256_final                @154 NONAME
 sha256_init                 @155 NONAME
 sha256_update               @156 NONAME
 uniq_get                    @157 NONAME
+
+; fmap
+fmap                        @160 NONAME
+funmap                      @161 NONAME
 
 ; inlined pthreads-win32 @ 200
 pthread_attr_destroy        @200 NONAME

@@ -6,7 +6,7 @@
 #undef AC_APPLE_UNIVERSAL_BUILD
 
 /* mmap flag for anonymous maps */
-#undef ANONYMOUS_MAP
+#define ANONYMOUS_MAP MAP_ANONYMOUS
 
 /* enable bind8 compatibility */
 #undef BIND_8_COMPAT

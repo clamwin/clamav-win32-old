@@ -51,7 +51,13 @@ void *mmap(void *addr, size_t len, int prot, int flags, int fd, off_t offset)
         mf = FILE_MAP_READ;
     }
 
-    if (fd >= 0)
+    if ((flags & MAP_ANONYMOUS) && (len <= 0))
+    {
+        fprintf(stderr, "[mmap] MAP_ANONYMOUS needs a size\n");
+        return MAP_FAILED;
+    }
+        
+    if ((fd >= 0) && !(flags & MAP_ANONYMOUS))
         hFile = (HANDLE) _get_osfhandle(fd);
 
     if (!(hMap = CreateFileMappingA(hFile, NULL, cf, 0, len, NULL)))

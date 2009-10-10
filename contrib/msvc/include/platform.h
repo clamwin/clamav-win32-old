@@ -51,13 +51,16 @@
 #define PROT_EXEC   mmap_prot_exec_not_implemented
 #define PROT_NONE   mmap_prot_none_not_implemented
 
-#define MAP_SHARED  0x01    /* Share changes */
-#define MAP_PRIVATE 0x02    /* Changes are private */
-/* #define MAP_FIXED   0x10 */   /* Interpret addr exactly */
-#define MAP_FIXED   mmap_map_fixed_not_implemented
+#define MAP_SHARED    0x01    /* Share changes */
+#define MAP_PRIVATE   0x02    /* Changes are private */
+#define MAP_FIXED     0x10    /* Interpret addr exactly */ /* IGNORED on win32 */
+#define MAP_ANONYMOUS 0x20    /* don't use a file */
 
 /* Return value of 'mmap' in case of an error */
 #define MAP_FAILED  ((void *) -1)
+
+/* IGNORED on win32 */
+#define madvise(a, b, c)
 
 extern void *mmap(void *addr, size_t len, int prot, int flags, int fd, off_t offset);
 extern int munmap(void *addr, size_t len);
