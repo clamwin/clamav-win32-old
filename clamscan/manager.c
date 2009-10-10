@@ -115,7 +115,6 @@ static int scanfile(const char *filename, struct cl_engine *engine, const struct
   int ret = 0, fd, included, printclean = 1, fsize;
 	const struct optstruct *opt;
 	const char *virname;
-	cli_file_t type;
 #ifdef C_LINUX
 	struct stat sb;
 
@@ -205,18 +204,16 @@ static int scanfile(const char *filename, struct cl_engine *engine, const struct
 	if(!printinfected)
 	    logg("~%s: %s ERROR\n", filename, cl_strerror(ret));
 
-    /* FIXME: Sherpya */
-    lseek(fd, 0, SEEK_SET);
-    type = 0; /* cli_filetype2(fd, engine); */
-    close(fd);
-
     if(ret == CL_VIRUS && action) {
+        fmap_t *maptype = fmap(fd, 0, 0);
+        cli_file_t type = cli_filetype2(maptype, engine);
+        funmap(maptype);
     if (optget(opts, "keep-mbox")->enabled && (type == CL_TYPE_MAIL))
         logg("~%s: no action performed on a mailbox\n", filename);
     else
 	action(filename);
     }
-
+    close(fd);   
     return ret;
 }
 
