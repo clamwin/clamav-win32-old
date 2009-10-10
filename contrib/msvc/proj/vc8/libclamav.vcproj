@@ -1281,10 +1281,6 @@
 					>
 				</File>
 				<File
-					RelativePath="..\..\include\nonansi.h"
-					>
-				</File>
-				<File
 					RelativePath="..\..\include\osdeps.h"
 					>
 				</File>

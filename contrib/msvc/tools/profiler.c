@@ -33,10 +33,6 @@
 
 extern int gnulib_snprintf(char *str, size_t size, const char *format, ...);
 
-#if defined(__MINGW32__) && defined(__STRICT_ANSI__)
-#include <nonansi.h>
-#endif
-
 /*
     On my TB 1.2Ghz
     Average speed: 1.608 mb/s - main + daily

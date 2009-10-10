@@ -31,10 +31,6 @@
 #ifndef ZLIB_H
 #define ZLIB_H
 
-#if defined(__MINGW32__) && defined(__STRICT_ANSI__)
-#include <nonansi.h>
-#endif
-
 #include "zconf.h"
 
 #ifdef __cplusplus

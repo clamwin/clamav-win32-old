@@ -61,10 +61,6 @@
 #define strcasecmp _stricmp
 #define strncasecmp _strnicmp
 
-#if defined(__MINGW32__) && defined(__STRICT_ANSI__)
-#include <nonansi.h>
-#endif
-
 #include <windows.h>
 
 #endif /* _CWDEFS_H_ */

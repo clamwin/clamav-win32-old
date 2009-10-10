@@ -27,10 +27,6 @@
 #pragma warning(disable: 4996)              /* Deprecated stuff */
 #endif
 
-#if defined(__MINGW32__) && defined(__STRICT_ANSI__)
-#include <nonansi.h>
-#endif
-
 #include <stdlib.h>
 
 #ifndef BZ_NO_STDIO
