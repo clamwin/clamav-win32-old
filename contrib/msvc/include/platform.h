@@ -36,34 +36,12 @@
 #include <sys/types.h>
 #include <time.h>
 #include <sys/timeb.h>
+#include <sys/types.h>
 #include <fcntl.h>
 
 #include <cwhelpers.h>
 #include <posix-errno.h>
 #include <socket_inline.h>
-
-#include <sys/types.h>
-
-#define PROT_READ   0x1     /* Page can be read */
-#define PROT_WRITE  0x2     /* Page can be written */
-/* #define PROT_EXEC   0x4 */    /* Page can be executed */
-/* #define PROT_NONE   0x0 */    /* Page can not be accessed */
-#define PROT_EXEC   mmap_prot_exec_not_implemented
-#define PROT_NONE   mmap_prot_none_not_implemented
-
-#define MAP_SHARED    0x01    /* Share changes */
-#define MAP_PRIVATE   0x02    /* Changes are private */
-#define MAP_FIXED     0x10    /* Interpret addr exactly */ /* IGNORED on win32 */
-#define MAP_ANONYMOUS 0x20    /* don't use a file */
-
-/* Return value of 'mmap' in case of an error */
-#define MAP_FAILED  ((void *) -1)
-
-/* IGNORED on win32 */
-#define madvise(a, b, c)
-
-extern void *mmap(void *addr, size_t len, int prot, int flags, int fd, off_t offset);
-extern int munmap(void *addr, size_t len);
 
 #define DATADIRBASEKEY  "Software\\ClamAV"
 #undef IMAGE_DOS_SIGNATURE

@@ -1341,10 +1341,6 @@
 					>
 				</File>
 				<File
-					RelativePath="..\..\src\dllmain\mmap.c"
-					>
-				</File>
-				<File
 					RelativePath="..\..\src\dllmain\platform.c"
 					>
 				</File>

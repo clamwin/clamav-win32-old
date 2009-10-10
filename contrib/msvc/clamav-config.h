@@ -6,7 +6,7 @@
 #undef AC_APPLE_UNIVERSAL_BUILD
 
 /* mmap flag for anonymous maps */
-#define ANONYMOUS_MAP MAP_ANONYMOUS
+#undef ANONYMOUS_MAP
 
 /* enable bind8 compatibility */
 #undef BIND_8_COMPAT
@@ -276,7 +276,7 @@
 
 /* Define to 1 if you have a working `mmap' system call that supports
    MAP_PRIVATE. */
-#define HAVE_MMAP 1
+#undef HAVE_MMAP
 
 /* Define to 1 if you have the <ndir.h> header file. */
 #undef HAVE_NDIR_H
