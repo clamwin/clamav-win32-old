@@ -411,7 +411,8 @@ int cli_fmap_scandesc(cli_ctx *ctx, cli_file_t ftype, uint8_t ftonly, struct cli
 	    break;
 	if(ctx->scanned)
 	    *ctx->scanned += bytes / CL_COUNT_PRECISION;
-
+    if (ctx->engine->callback && !ctx->engine->callback(map->fd, bytes))
+        return CL_EUSERABORT;
 	if(troot) {
 	    if(troot->ac_only || (ret = cli_bm_scanbuff(buff, bytes, ctx->virname, NULL, troot, offset, map, bm_offmode ? &toff : NULL)) != CL_VIRUS)
 		ret = cli_ac_scanbuff(buff, bytes, ctx->virname, NULL, NULL, troot, &tdata, offset, ftype, ftoffset, acmode, NULL);
