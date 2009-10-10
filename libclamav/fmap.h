@@ -23,8 +23,6 @@
 
 #include "cltypes.h"
 
-/* #define FMAPDEBUG */
-
 typedef struct {
     int fd;
     unsigned int dumb;
@@ -35,14 +33,12 @@ typedef struct {
     unsigned int hdrsz;
     unsigned int pgsz;
     unsigned int paged;
-#ifdef FMAPDEBUG
-    unsigned int page_needs;
-    unsigned int page_reads;
-    unsigned int page_locks;
-    unsigned int page_unlocks;
-    unsigned int page_unmaps;
+#ifdef __WIN32
+    HANDLE fh;
+    HANDLE mh;
+    void *data;
 #endif
-    uint32_t bitmap[]; /* FIXME: do not use flexible arrays */
+    uint32_t placeholder_for_bitmap;
 } fmap_t;
 
 fmap_t *fmap(int fd, off_t offset, size_t len);
