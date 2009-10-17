@@ -89,7 +89,7 @@
 #define	O_BINARY	0
 #endif
 
-#ifndef C_WINDOWS
+#ifndef _WIN32
 #define	closesocket(s)	close(s)
 #endif
 
@@ -688,7 +688,7 @@ int submitstats(const char *clamdcfg, const struct optstruct *opts)
 	*pt2 = 0;
 	pt2 += 2;
 
-#ifdef C_WINDOWS
+#ifdef _WIN32
 	if((pt = strrchr(pt, '\\')))
 #else
 	if((pt = strrchr(pt, '/')))
@@ -1419,7 +1419,7 @@ static int buildcld(const char *tmpdir, const char *dbname, const char *newfile,
     }
 
     while((dent = readdir(dir))) {
-#if !defined(C_INTERIX) && !defined(C_WINDOWS)
+#if !defined(C_INTERIX) && !defined(_WIN32)
 	if(dent->d_ino)
 #endif
 	{

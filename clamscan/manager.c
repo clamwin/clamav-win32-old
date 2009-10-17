@@ -180,7 +180,7 @@ static int scanfile(const char *filename, struct cl_engine *engine, const struct
 	return 0;
     }
     info.rblocks += fsize / CL_COUNT_PRECISION;
-#ifndef C_WINDOWS
+#ifndef _WIN32
     if(geteuid())
 	if(checkaccess(filename, NULL, R_OK) != 1) {
 	    if(!printinfected)
