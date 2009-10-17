@@ -40,7 +40,7 @@
 #endif
 #include <time.h>
 #include <fcntl.h>
-#ifndef	C_WINDOWS
+#ifdef	HAVE_PWD_H
 #include <pwd.h>
 #endif
 #include <errno.h>
@@ -118,9 +118,11 @@ void cli_dbgmsg_internal(const char *str, ...)
 int cli_matchregex(const char *str, const char *regex)
 {
 	regex_t reg;
-	int match;
-
-    if(cli_regcomp(&reg, regex, REG_EXTENDED | REG_NOSUB) == 0) {
+	int match, flags = REG_EXTENDED | REG_NOSUB;
+#ifdef _WIN32
+    flags |= REG_ICASE;
+#endif
+    if(cli_regcomp(&reg, regex, flags) == 0) {
 	match = (cli_regexec(&reg, str, 0, NULL, 0) == REG_NOMATCH) ? 0 : 1;
 	cli_regfree(&reg);
 	return match;
@@ -352,6 +354,9 @@ int cli_writen(int fd, const void *buff, unsigned int count)
 
 int cli_filecopy(const char *src, const char *dest)
 {
+#ifdef _WIN32
+	return (!CopyFileA(src, dest, 0));
+#else
 	char *buffer;
 	int s, d, bytes;
 
@@ -377,7 +382,24 @@ int cli_filecopy(const char *src, const char *dest)
     close(s);
 
     return close(d);
+#endif /* _WIN32 */
 }
+
+char *cli_gettempdir(void)
+{
+    char *tmpdir = NULL;
+
+    if (((tmpdir = getenv("TMPDIR")) == NULL) &&
+        ((tmpdir = getenv("TEMP")) == NULL) &&
+        ((tmpdir = getenv("TMP")) == NULL))
+#if defined(_WIN32)
+        tmpdir = "c:\\";
+#else
+        tmpdir = "/tmp";
+#endif
+    return tmpdir;
+}
+
 struct dirent_data {
     char *filename;
     const char *dirname;
@@ -763,18 +785,12 @@ char *cli_gentemp(const char *dir)
         const char *mdir;
 	unsigned char salt[16 + 32];
 	int i;
+    size_t len;
 
-    if(!dir) {
-	if((mdir = getenv("TMPDIR")) == NULL)
-#ifdef P_tmpdir
-	    mdir = P_tmpdir;
-#else
-	    mdir = "/tmp";
-#endif
-    } else
-	mdir = dir;
+    mdir = dir ? dir : cli_gettempdir();
 
-    name = (char *) cli_calloc(strlen(mdir) + 1 + 32 + 1 + 7, sizeof(char));
+    len = strlen(mdir) + 76;
+    name = (char *) cli_calloc(len, sizeof(char));
     if(!name) {
 	cli_dbgmsg("cli_gentemp('%s'): out of memory\n", mdir);
 	return NULL;
@@ -801,12 +817,7 @@ char *cli_gentemp(const char *dir)
 	return NULL;
     }
 
-#ifdef	C_WINDOWS
-	sprintf(name, "%s\\clamav-", mdir);
-#else
-	sprintf(name, "%s/clamav-", mdir);
-#endif
-    strncat(name, tmp, 32);
+	snprintf(name, len, "%s/clamav-%s.%08x.clamtmp", mdir, tmp, getpid());
     free(tmp);
 
     return(name);
