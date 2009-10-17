@@ -249,6 +249,7 @@ int dsresult(int sockd, int scantype, const char *filename, int *printok) {
     int infected = 0, len, beenthere = 0;
     char *bol, *eol;
     struct RCVLN rcv;
+    struct stat sb;
 
     recvlninit(&rcv, sockd);
 
@@ -315,8 +316,11 @@ int dsresult(int sockd, int scantype, const char *filename, int *printok) {
 	}
     }
     if(!beenthere) {
-	logg("~%s: no reply from clamd\n", filename ? filename : "STDIN");
-	return -1;
+	stat(filename, &sb);
+	if(!S_ISDIR(sb.st_mode)) {
+	    logg("~%s: no reply from clamd\n", filename ? filename : "STDIN");
+	    return -1;
+	}
     }
     return infected;
 }
@@ -328,6 +332,8 @@ struct client_serial_data {
     int infected;
     int scantype;
     int printok;
+    int files;
+    int errors;
 };
 
 /* FTW callback for scanning in non IDSESSION mode
@@ -339,17 +345,20 @@ static int serial_callback(struct stat *sb, char *filename, const char *path, en
 
     switch(reason) {
     case error_stat:
-	logg("^Can't access file %s\n", path);
+	logg("!Can't access file %s\n", path);
+	c->errors++;
 	return CL_SUCCESS;
     case error_mem:
-	logg("^Memory allocation failed in ftw\n");
+	logg("!Memory allocation failed in ftw\n");
+	c->errors++;
 	return CL_EMEM;
     case warning_skipped_dir:
 	logg("^Directory recursion limit reached\n");
     case warning_skipped_link:
 	return CL_SUCCESS;
     case warning_skipped_special:
-	logg("~%s: Not supported file type. ERROR\n", path);
+	logg("!%s: Not supported file type\n", path);
+	c->errors++;
 	return CL_SUCCESS;
     case visit_directory_toplev:
 	if(c->scantype >= STREAM)
@@ -369,6 +378,7 @@ static int serial_callback(struct stat *sb, char *filename, const char *path, en
     closesocket(sockd);
     if(ret < 0) return CL_EOPEN;
     c->infected += ret;
+    c->files++;
     if(reason == visit_directory_toplev)
 	return CL_BREAK;
     return CL_SUCCESS;
@@ -382,14 +392,16 @@ int serial_client_scan(char *file, int scantype, int *infected, int maxlevel, in
     int ftw;
 
     cdata.infected = 0;
+    cdata.files = 0;
+    cdata.errors = 0;
     cdata.printok = printinfected^1;
     cdata.scantype = scantype;
     data.data = &cdata;
 
-    ftw = cli_ftw(file, flags, maxlevel ? maxlevel : INT_MAX, serial_callback, &data);
+    ftw = cli_ftw(file, flags, maxlevel ? maxlevel : INT_MAX, serial_callback, &data, NULL);
     *infected += cdata.infected;
 
-    if(ftw == CL_SUCCESS || ftw == CL_BREAK) {
+    if((cdata.errors < cdata.files) && (ftw == CL_SUCCESS || ftw == CL_BREAK)) {
 	if(cdata.printok)
 	    logg("~%s: OK\n", file);
 	return 0;
@@ -400,6 +412,8 @@ int serial_client_scan(char *file, int scantype, int *infected, int maxlevel, in
 /* Used in IDSESSION mode */
 struct client_parallel_data {
     int infected;
+    int files;
+    int errors;
     int scantype;
     int sockd;
     int lastid;
@@ -474,16 +488,19 @@ static int parallel_callback(struct stat *sb, char *filename, const char *path, 
 
     switch(reason) {
     case error_stat:
-	logg("^Can't access file %s\n", path);
+	logg("!Can't access file %s\n", path);
+	c->errors++;
 	return CL_SUCCESS;
     case error_mem:
-	logg("^Memory allocation failed in ftw\n");
+	logg("!Memory allocation failed in ftw\n");
+	c->errors++;
 	return CL_EMEM;
     case warning_skipped_dir:
 	logg("^Directory recursion limit reached\n");
 	return CL_SUCCESS;
     case warning_skipped_special:
-	logg("~%s: Not supported file type. ERROR\n", path);
+	logg("!%s: Not supported file type\n", path);
+	c->errors++;
     case warning_skipped_link:
     case visit_directory_toplev:
 	return CL_SUCCESS;
@@ -525,6 +542,7 @@ static int parallel_callback(struct stat *sb, char *filename, const char *path, 
     cid->file = filename;
     cid->next = c->ids;
     c->ids = cid;
+    c->files++;
 
     switch(c->scantype) {
 #ifdef HAVE_FD_PASSING
@@ -563,13 +581,15 @@ int parallel_client_scan(char *file, int scantype, int *infected, int maxlevel, 
     }
 
     cdata.infected = 0;
+    cdata.files = 0;
+    cdata.errors = 0;
     cdata.scantype = scantype;
     cdata.lastid = 0;
     cdata.ids = NULL;
     cdata.printok = printinfected^1;
     data.data = &cdata;
 
-    ftw = cli_ftw(file, flags, maxlevel ? maxlevel : INT_MAX, parallel_callback, &data);
+    ftw = cli_ftw(file, flags, maxlevel ? maxlevel : INT_MAX, parallel_callback, &data, NULL);
 
     if(ftw != CL_SUCCESS) {
 	*infected += cdata.infected;
@@ -587,6 +607,8 @@ int parallel_client_scan(char *file, int scantype, int *infected, int maxlevel, 
 	logg("!Clamd closed the connection before scanning all files.\n");
 	return 1;
     }
+    if(cdata.errors == cdata.files)
+	return 1;
     if(cdata.printok)
 	logg("~%s: OK\n", file);
     return 0;

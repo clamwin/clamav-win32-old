@@ -1083,6 +1083,8 @@ static int cli_scanscript(int desc, cli_ctx *ctx)
 			/* when we flush the buffer also scan */
 			if(cli_scanbuff(state.out, state.out_pos, offset, ctx, CL_TYPE_TEXT_ASCII, mdata) == CL_VIRUS) {
 				ret = CL_VIRUS;
+				if(ofd != -1)
+				    ret = cli_checkfp(ofd, ctx) ? CL_CLEAN : CL_VIRUS;
 				break;
 			}
 			if(ctx->scanned)
@@ -1137,9 +1139,9 @@ static int cli_scanhtml_utf16(int desc, cli_ctx *ctx)
 	    if(write(fd, decoded, strlen(decoded)) == -1) {
 		cli_errmsg("cli_scanhtml_utf16: Can't write to file %s\n", tempname);
 		free(decoded);
+		close(fd);
 		cli_unlink(tempname);
 		free(tempname);
-		close(fd);
 		return CL_EWRITE;
 	    }
 	    free(decoded);

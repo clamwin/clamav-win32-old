@@ -1,3 +1,145 @@
+Fri Oct 16 14:56:10 CEST 2009 (tk)
+----------------------------------
+ * clamdscan: fix some output msgs (bb#1716)
+
+Tue Oct  6 22:51:00 CEST 2009 (tk)
+----------------------------------
+ * shared/misc.h: #include <sys/types.h>
+
+Fri Oct  2 21:01:51 CEST 2009 (tk)
+----------------------------------
+ * libclamav: check file sizes for MD5 sigs in all cases
+	      Reported by Edwin
+
+Fri Oct  2 14:33:09 CEST 2009 (tk)
+----------------------------------
+ * libclamav/scanners.c: fix whitelisting of scripts (bb#1706)
+
+Wed Sep 30 19:41:43 EEST 2009 (edwin)
+-------------------------------------
+ * configure{.in,}: Only use -fno-strict-aliasing for gcc-4.3+ to avoid bugs
+    with older compilers (bb #1581)
+
+Tue Sep 29 21:40:29 CEST 2009 (tk)
+----------------------------------
+ * libclamav/matcher-ac.c: fix matching of logical sigs (bb#1707)
+			   Reported by Thiyaga <mthiyaga*corp.untd.com>
+
+Mon Sep 28 21:41:47 CEST 2009 (tk)
+----------------------------------
+ * libclamav/readdb.c: fix handling of broken .ldb sigs (bb#1701)
+		       Thanks Luca&Edwin
+
+Fri Sep 25 00:35:56 CEST 2009 (acab)
+------------------------------------
+ * libclamav/sis.c: size check fix, thanks Tomasz
+
+Mon Sep 14 13:56:42 CEST 2009 (tk)
+----------------------------------
+ * clamd/server-th.c: fix possible race condition when restarting clamuko
+		      (bb#1692), patch from John Ogness
+
+Thu Sep  3 15:09:57 CEST 2009 (tk)
+----------------------------------
+ * freshclam/mirman.c: make backoff time proportional to FLEVEL (bb#1687)
+
+Mon Aug 24 22:09:12 CEST 2009 (tk)
+----------------------------------
+ * libclamav: improve handling of PDF files (bb#1682)
+
+Fri Aug 21 00:56:03 CEST 2009 (acab)
+------------------------------------
+ * build system: upgrade to autoconf 2.64 and automake 1.11 (bb#1528)
+
+Wed Aug  5 18:33:11 CEST 2009 (tk)
+----------------------------------
+ * clamd/clamd.c: ignore SIGHUP and SIGUSR2 during initial setup (bb#1671)
+
+Tue Aug  4 23:15:26 CEST 2009 (tk)
+----------------------------------
+ * configure, libclamav: fix compile issues on IRIX (bb#1532)
+
+Tue Aug  4 20:06:51 CEST 2009 (tk)
+----------------------------------
+ * libclamav/readdb.c: make the parser more sensitive to errors in
+		       numerical fields
+
+Tue Aug  4 15:10:12 CEST 2009 (tk)
+----------------------------------
+ * freshclam, libclamav: work around possible race condition during
+			 db updates (bb#1624)
+
+Mon Aug  3 15:22:42 CEST 2009 (tk)
+----------------------------------
+ * freshclam/manager.c: fix confusing error message (bb#1648)
+
+Mon Aug  3 14:48:27 CEST 2009 (tk)
+----------------------------------
+ * libclamav/unzip.c: fix detection of encrypted zip files embedded into
+		      other files (bb#1660)
+
+Fri Jul 31 21:28:18 CEST 2009 (tk)
+----------------------------------
+ * libclamav, clamd: handle file exclusion in cli_ftw() (bb#1656)
+
+Fri Jul 31 15:29:36 EEST 2009 (edwin)
+-------------------------------------
+ * unit_tests/check_regex.c: fix unit-test failure on Solaris
+
+Fri Jul 31 12:52:08 CEST 2009 (acab)
+------------------------------------
+ * libclamav/pe.c: fix check for pe32+
+
+Sun Jul 26 18:55:37 CEST 2009 (acab)
+------------------------------------
+ * shared/actions.c: wrap unistd - reported by njh
+
+Fri Jul 17 12:48:24 EEST 2009 (edwin)
+-------------------------------------
+ * libclamav/regex_list.[ch]: improve safebrowsing.cvd load speed (20s -> 3s)
+
+Thu Jul 16 23:01:34 CEST 2009 (tk)
+----------------------------------
+ * libclamav/cab.c: downgrade warning message (bb#1659)
+
+Thu Jul 16 14:20:01 CEST 2009 (acab)
+------------------------------------
+ * libclamav, build system: fix portability issues for fseeko, sysconf(_SC_PAGESIZE),
+			    getpagesize() (bb#1658)
+
+Wed Jul 15 19:36:35 CEST 2009 (tk)
+----------------------------------
+ * clamd: honour value of 0 in Max* options
+
+Wed Jul 15 19:24:03 CEST 2009 (tk)
+----------------------------------
+ * clamscan: honour value of 0 in --max-* options (bb#1650)
+
+Wed Jul 15 16:25:00 EEST 2009 (edwin)
+-------------------------------------
+ * unit_tests/check_clamd.c: fix unit tests when run as root (bb #1635).
+
+Wed Jul 15 12:20:04 CEST 2009 (tk)
+----------------------------------
+ * clamd, clamav-milter: make pid files globally readable (bb#1642)
+
+Wed Jul 15 11:20:56 CEST 2009 (tk)
+----------------------------------
+ * libclamav/filetypes.c: fix off-by-one error (bb#1639)
+
+Wed Jul 15 08:46:35 CEST 2009 (tk)
+----------------------------------
+ * libclamav/mspack.c: fix valgrind warnings about use of uninitialized
+		       values (bb#1655)
+
+Mon Jun 29 11:25:46 CEST 2009 (acab)
+------------------------------------
+ * clamav-milter/netcode.c: Properly handle clamd disconnection (bb#1643)
+
+Mon Jun 22 17:19:45 CEST 2009 (acab)
+------------------------------------
+ * clamav-milter/whitelist.c: print failed whitelist filename
+
 Wed Jun 10 19:01:11 CEST 2009 (tk)
 ----------------------------------
  * V 0.95.2

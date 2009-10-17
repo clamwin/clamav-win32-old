@@ -89,7 +89,7 @@
 #define	O_BINARY	0
 #endif
 
-#ifndef _WIN32
+#ifndef C_WINDOWS
 #define	closesocket(s)	close(s)
 #endif
 
@@ -688,7 +688,7 @@ int submitstats(const char *clamdcfg, const struct optstruct *opts)
 	*pt2 = 0;
 	pt2 += 2;
 
-#ifdef _WIN32
+#ifdef C_WINDOWS
 	if((pt = strrchr(pt, '\\')))
 #else
 	if((pt = strrchr(pt, '/')))
@@ -1066,7 +1066,7 @@ static int getfile(const char *srcfile, const char *destfile, const char *hostna
 #else
 	if((i >= sizeof(buffer) - 1) || recv(sd, buffer + i, 1, 0) == -1) {
 #endif
-	    logg("%cgetfile: Error while reading database from %s (IP: %s)\n", logerr ? '!' : '^', hostname, ipaddr);
+	    logg("%cgetfile: Error while reading database from %s (IP: %s): %s\n", logerr ? '!' : '^', hostname, ipaddr, strerror(errno));
 	    mirman_update(mdat->currip, mdat->af, mdat, 1);
 	    closesocket(sd);
 	    return 52;
@@ -1157,8 +1157,7 @@ static int getfile(const char *srcfile, const char *destfile, const char *hostna
     close(fd);
 
     if(totalsize > 0)
-     /* FIMXE: Sherpya this is not correct but needed by ClamWin */
-        mprintf("\n");
+        logg("Downloading %s [%i%%]\n", srcfile, percentage);
     else
         logg("Downloading %s [*]\n", srcfile);
 
@@ -1414,7 +1413,7 @@ static int buildcld(const char *tmpdir, const char *dbname, const char *newfile,
     }
 
     while((dent = readdir(dir))) {
-#if !defined(C_INTERIX) && !defined(_WIN32)
+#if !defined(C_INTERIX) && !defined(C_WINDOWS)
 	if(dent->d_ino)
 #endif
 	{
@@ -1678,18 +1677,12 @@ static int updatedb(const char *dbname, const char *hostname, char *ip, int *sig
 	return 55; /* FIXME */
     }
 
-    if(!nodb && !access(localname, R_OK) && unlink(localname)) {
-	logg("!Can't unlink %s. Please fix it and try again.\n", localname);
-	unlink(newfile);
-	free(newfile);
-	return 53;
-    }
-
 #ifdef _WIN32
     if(!access(newdb, R_OK) && unlink(newdb)) {
 	logg("!Can't unlink %s. Please fix the problem manually and try again.\n", newdb);
 	unlink(newfile);
 	free(newfile);
+	cl_cvdfree(current);
 	return 53;
     }
 #endif
@@ -1698,9 +1691,14 @@ static int updatedb(const char *dbname, const char *hostname, char *ip, int *sig
 	logg("!Can't rename %s to %s: %s\n", newfile, newdb, strerror(errno));
 	unlink(newfile);
 	free(newfile);
+	cl_cvdfree(current);
 	return 57;
     }
     free(newfile);
+
+    if(!nodb && !access(localname, R_OK) && strcmp(newdb, localname))
+	if(unlink(localname))
+	    logg("^Can't unlink the old database file %s. Please remove it manually.\n", localname);
 
     logg("%s updated (version: %d, sigs: %d, f-level: %d, builder: %s)\n", newdb, current->version, current->sigs, current->fl, current->builder);
 

@@ -644,7 +644,7 @@ int cli_scanpe(int desc, cli_ctx *ctx)
     }
 
     /* This will be a chicken and egg problem until we drop 9x */
-    if(EC32(optional_hdr64.Magic)==PE32P_SIGNATURE) {
+    if(EC16(optional_hdr64.Magic)==PE32P_SIGNATURE) {
         if(EC16(file_hdr.SizeOfOptionalHeader)!=sizeof(struct pe_image_optional_hdr64)) {
 	    /* FIXME: need to play around a bit more with xp64 */
 	    cli_dbgmsg("Incorrect SizeOfOptionalHeader for PE32+\n");
@@ -927,8 +927,9 @@ int cli_scanpe(int desc, cli_ctx *ctx)
 		for(j = 0; j < md5_sect->soff_len && md5_sect->soff[j] <= exe_sections[i].rsz; j++) {
 		    if(md5_sect->soff[j] == exe_sections[i].rsz) {
 			unsigned char md5_dig[16];
-			if(cli_md5sect(desc, &exe_sections[i], md5_dig) && cli_bm_scanbuff(md5_dig, 16, ctx->virname, ctx->engine->md5_mdb, 0, 0, -1) == CL_VIRUS) {
-			    if(cli_bm_scanbuff(md5_dig, 16, NULL, ctx->engine->md5_fp, 0, 0, -1) != CL_VIRUS) {
+			const struct cli_bm_patt *patt;
+			if(cli_md5sect(desc, &exe_sections[i], md5_dig) && cli_bm_scanbuff(md5_dig, 16, ctx->virname, &patt, ctx->engine->md5_mdb, 0, 0, -1) == CL_VIRUS && patt->filesize == exe_sections[i].rsz) {
+			    if(cli_bm_scanbuff(md5_dig, 16, NULL, &patt, ctx->engine->md5_fp, 0, 0, -1) != CL_VIRUS || patt->filesize != fsize) {
 
 				free(section_hdr);
 				free(exe_sections);
@@ -2287,7 +2288,7 @@ int cli_peheader(int desc, struct cli_exe_info *peinfo)
 	return -1;
     }
 
-    if(EC32(optional_hdr64.Magic)==PE32P_SIGNATURE) { /* PE+ */
+    if(EC16(optional_hdr64.Magic)==PE32P_SIGNATURE) { /* PE+ */
         if(EC16(file_hdr.SizeOfOptionalHeader)!=sizeof(struct pe_image_optional_hdr64)) {
 	    cli_dbgmsg("Incorrect SizeOfOptionalHeader for PE32+\n");
 	    return -1;

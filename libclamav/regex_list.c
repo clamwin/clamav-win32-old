@@ -54,6 +54,7 @@
 #include "jsparse/textbuf.h"
 #include "regex_suffix.h"
 #include "default.h"
+#include "hashtab.h"
 
 #include "mpool.h"
 
@@ -361,7 +362,7 @@ int init_regex_list(struct regex_matcher* matcher)
 	matcher->list_inited=1;
 	matcher->list_built=0;
 	matcher->list_loaded=0;
-	hashtab_init(&matcher->suffix_hash, 512);
+	cli_hashtab_init(&matcher->suffix_hash, 512);
 #ifdef USE_MPOOL
 	matcher->mempool = mp;
 	matcher->suffixes.mempool = mp;
@@ -446,8 +447,15 @@ static int add_hash(struct regex_matcher *matcher, char* pattern, const char fl,
 	    bm = &matcher->sha256_hashes;
 	}
 
+	if (!matcher->sha256_pfx_set.keys) {
+	    if((rc = cli_hashset_init(&matcher->sha256_pfx_set, 1048576, 90))) {
+		return rc;
+	    }
+	}
+
 	if (fl != 'W' && pat->length == 32 &&
-	    cli_bm_scanbuff(pat->pattern, 32, &vname, &matcher->sha256_hashes,0,0,-1) == CL_VIRUS) {
+	    cli_hashset_contains(&matcher->sha256_pfx_set, cli_readint32(pat->pattern)) &&
+	    cli_bm_scanbuff(pat->pattern, 32, &vname, NULL, &matcher->sha256_hashes,0,0,-1) == CL_VIRUS) {
 	    if (*vname == 'W') {
 		/* hash is whitelisted in local.gdb */
 		cli_dbgmsg("Skipping hash %s\n", pattern);
@@ -462,7 +470,7 @@ static int add_hash(struct regex_matcher *matcher, char* pattern, const char fl,
 		return CL_EMEM;
 	}
 	*pat->virname = fl;
-
+	cli_hashset_addkey(&matcher->sha256_pfx_set, cli_readint32(pat->pattern));
 	if((rc = cli_bm_addpatt(bm, pat))) {
 		cli_errmsg("add_hash: failed to add BM pattern\n");
 		free(pat->pattern);
@@ -599,10 +607,11 @@ int cli_build_regex_list(struct regex_matcher* matcher)
 		return -1;/*TODO: better error code */
 	}
 	cli_dbgmsg("Building regex list\n");
-	hashtab_free(&matcher->suffix_hash);
+	cli_hashtab_free(&matcher->suffix_hash);
 	if(( rc = cli_ac_buildtrie(&matcher->suffixes) ))
 		return rc;
 	matcher->list_built=1;
+	cli_hashset_destroy(&matcher->sha256_pfx_set);
 
 	return CL_SUCCESS;
 }
@@ -636,7 +645,7 @@ void regex_list_done(struct regex_matcher* matcher)
 			}
 			mpool_free(matcher->mempool, matcher->all_pregs);
 		}
-		hashtab_free(&matcher->suffix_hash);
+		cli_hashtab_free(&matcher->suffix_hash);
 		cli_bm_free(&matcher->sha256_hashes);
 		cli_bm_free(&matcher->hostkey_prefix);
 	}
@@ -710,7 +719,7 @@ static int add_pattern_suffix(void *cbdata, const char *suffix, size_t suffix_le
 {
 	struct regex_matcher *matcher = cbdata;
 	struct regex_list *regex = cli_malloc(sizeof(*regex));
-	const struct element *el;
+	const struct cli_element *el;
 
 	assert(matcher);
 	if(!regex)
@@ -718,18 +727,17 @@ static int add_pattern_suffix(void *cbdata, const char *suffix, size_t suffix_le
 	regex->pattern = iregex->pattern ? cli_strdup(iregex->pattern) : NULL;
 	regex->preg = iregex->preg;
 	regex->nxt = NULL;
-	el = hashtab_find(&matcher->suffix_hash, suffix, suffix_len);
+	el = cli_hashtab_find(&matcher->suffix_hash, suffix, suffix_len);
 	/* TODO: what if suffixes are prefixes of eachother and only one will
 	 * match? */
 	if(el) {
 		/* existing suffix */
 		assert((size_t)el->data < matcher->suffix_cnt);
 		list_add_tail(&matcher->suffix_regexes[el->data], regex);
-		cli_dbgmsg(MODULE "added new regex to existing suffix %s: %s\n", suffix, regex->pattern);
 	} else {
 		/* new suffix */
 		size_t n = matcher->suffix_cnt++;
-		el = hashtab_insert(&matcher->suffix_hash, suffix, suffix_len, n);
+		el = cli_hashtab_insert(&matcher->suffix_hash, suffix, suffix_len, n);
 		matcher->suffix_regexes = cli_realloc(matcher->suffix_regexes, (n+1)*sizeof(*matcher->suffix_regexes));
 		if(!matcher->suffix_regexes)
 			return CL_EMEM;
@@ -738,7 +746,6 @@ static int add_pattern_suffix(void *cbdata, const char *suffix, size_t suffix_le
 		if (suffix[0] == '/' && suffix[1] == '\0')
 		    matcher->root_regex_idx = n;
 		add_newsuffix(matcher, regex, suffix, suffix_len);
-		cli_dbgmsg(MODULE "added new suffix %s, for regex: %s\n", suffix, regex->pattern);
 	}
 	return 0;
 }

@@ -39,6 +39,7 @@
 #endif
 #include <fcntl.h>
 #include <zlib.h>
+#include <errno.h>
 
 #include "clamav.h"
 #include "cvd.h"
@@ -82,7 +83,7 @@ struct cli_ignsig {
 };
 
 struct cli_ignored {
-    struct hashset hs;
+    struct cli_hashset hs;
     struct cli_ignsig *list;
 };
 
@@ -370,7 +371,7 @@ static int cli_chkign(const struct cli_ignored *ignored, const char *dbname, uns
     if(!ignored || !dbname || !signame)
 	return 0;
 
-    if(hashset_contains(&ignored->hs, line)) {
+    if(cli_hashset_contains(&ignored->hs, line)) {
 	pt = ignored->list;
 	while(pt) {
 	    if(pt->line == line && !strcmp(pt->dbname, dbname) && !strcmp(pt->signame, signame)) {
@@ -583,7 +584,8 @@ static int cli_loadndb(FILE *fs, struct cl_engine *engine, unsigned int *signo, 
 
 	if(tokens_count > 4) { /* min version */
 	    pt = tokens[4];
-	    if(!isdigit(*pt)) {
+
+	    if(!cli_isnumber(pt)) {
 		ret = CL_EMALFDB;
 		break;
 	    }
@@ -595,7 +597,7 @@ static int cli_loadndb(FILE *fs, struct cl_engine *engine, unsigned int *signo, 
 
 	    if(tokens_count == 6) { /* max version */
 		pt = tokens[5];
-		if(!isdigit(*pt)) {
+		if(!cli_isnumber(pt)) {
 		    ret = CL_EMALFDB;
 		    break;
 		}
@@ -606,7 +608,7 @@ static int cli_loadndb(FILE *fs, struct cl_engine *engine, unsigned int *signo, 
 	    }
 	}
 
-	if(!(pt = tokens[1]) || !isdigit(*pt)) {
+	if(!(pt = tokens[1]) || (strcmp(pt, "*") && !cli_isnumber(pt))) {
 	    ret = CL_EMALFDB;
 	    break;
 	}
@@ -717,6 +719,10 @@ static int lsigattribs(char *attribs, struct cli_lsig_tdb *tdb)
 
 	switch(apt->type) {
 	    case CLI_TDB_UINT:
+		if(!cli_isnumber(pt)) {
+		    cli_errmsg("lsigattribs: Invalid argument for %s\n", tokens[i]);
+		    return -1;
+		}
 		off[i] = cnt = tdb->cnt[CLI_TDB_UINT]++;
 		tdb->val = (uint32_t *) mpool_realloc2(tdb->mempool, tdb->val, tdb->cnt[CLI_TDB_UINT] * sizeof(uint32_t));
 		if(!tdb->val) {
@@ -737,6 +743,10 @@ static int lsigattribs(char *attribs, struct cli_lsig_tdb *tdb)
 		tdb->range = (uint32_t *) mpool_realloc2(tdb->mempool, tdb->range, tdb->cnt[CLI_TDB_RANGE] * sizeof(uint32_t));
 		if(!tdb->range) {
 		    tdb->cnt[CLI_TDB_RANGE] = 0;
+		    return -1;
+		}
+		if(!cli_isnumber(pt) || !cli_isnumber(pt2)) {
+		    cli_errmsg("lsigattribs: Invalid argument for %s\n", tokens[i]);
 		    return -1;
 		}
 		tdb->range[cnt] = atoi(pt);
@@ -945,7 +955,7 @@ static int cli_loadldb(FILE *fs, struct cl_engine *engine, unsigned int *signo, 
 	root->ac_lsigtable = newtable;
 
 	for(i = 0; i < subsigs; i++) {
-	    if(i >= tokens_count) {
+	    if(i + 3 >= tokens_count) {
 		cli_errmsg("cli_loadldb: Missing subsignature id %u\n", i);
 		ret = CL_EMALFDB;
 		break;
@@ -1056,11 +1066,22 @@ static int cli_loadftm(FILE *fs, struct cl_engine *engine, unsigned int options,
 	    break;
 	}
 
+	if(!cli_isnumber(tokens[0])) {
+	    cli_errmsg("cli_loadftm: Invalid value for the first field\n");
+	    ret = CL_EMALFDB;
+	    break;
+	}
+
 	if(atoi(tokens[0]) == 1) { /* A-C */
 	    if((ret = cli_parse_add(engine->root[0], tokens[3], tokens[2], rtype, type, strcmp(tokens[1], "*") ? tokens[1] : NULL, 0, NULL, options)))
 		break;
 
 	} else if(atoi(tokens[0]) == 0) { /* memcmp() */
+	    if(!cli_isnumber(tokens[1])) {
+		cli_errmsg("cli_loadftm: Invalid offset\n");
+		ret = CL_EMALFDB;
+		break;
+	    }
 	    new = (struct cli_ftype *) mpool_malloc(engine->mempool, sizeof(struct cli_ftype));
 	    if(!new) {
 		ret = CL_EMEM;
@@ -1119,7 +1140,7 @@ static int cli_loadign(FILE *fs, struct cl_engine *engine, unsigned int options,
 
     if(!engine->ignored) {
 	engine->ignored = (struct cli_ignored *) cli_calloc(sizeof(struct cli_ignored), 1);
-	if(!engine->ignored || hashset_init(&engine->ignored->hs, 64, 50))
+	if(!engine->ignored || cli_hashset_init(&engine->ignored->hs, 64, 50))
 	    return CL_EMEM;
     }
 
@@ -1128,6 +1149,12 @@ static int cli_loadign(FILE *fs, struct cl_engine *engine, unsigned int options,
 	cli_chomp(buffer);
 	tokens_count = cli_strtokenize(buffer, ':', IGN_TOKENS + 1, tokens);
 	if(tokens_count != IGN_TOKENS) {
+	    ret = CL_EMALFDB;
+	    break;
+	}
+
+	if(!cli_isnumber(tokens[1])) {
+	    cli_errmsg("cli_loadign: Invalid entry for line number\n");
 	    ret = CL_EMALFDB;
 	    break;
 	}
@@ -1148,7 +1175,7 @@ static int cli_loadign(FILE *fs, struct cl_engine *engine, unsigned int options,
 
 	new->line = atoi(tokens[1]);
 
-	if((ret = hashset_addkey(&engine->ignored->hs, new->line)))
+	if((ret = cli_hashset_addkey(&engine->ignored->hs, new->line)))
 	    break;
 
 	new->signame = cli_mpool_strdup(engine->mempool, tokens[2]);
@@ -1184,7 +1211,7 @@ static void cli_freeign(struct cl_engine *engine)
 	    mpool_free(engine->mempool, pt->signame);
 	    mpool_free(engine->mempool,pt);
 	}
-	hashset_destroy(&ignored->hs);
+	cli_hashset_destroy(&ignored->hs);
 	free(engine->ignored);
 	engine->ignored = NULL;
     }
@@ -1242,7 +1269,6 @@ static int cli_loadmd5(FILE *fs, struct cl_engine *engine, unsigned int *signo, 
 	const char *pt;
 	int ret = CL_SUCCESS;
 	unsigned int size_field = 1, md5_field = 0, line = 0, sigs = 0, tokens_count;
-	uint32_t size;
 	struct cli_bm_patt *new;
 	struct cli_matcher *db = NULL;
 
@@ -1257,6 +1283,11 @@ static int cli_loadmd5(FILE *fs, struct cl_engine *engine, unsigned int *signo, 
 	cli_chomp(buffer);
 	tokens_count = cli_strtokenize(buffer, ':', MD5_TOKENS + 1, tokens);
 	if(tokens_count != MD5_TOKENS) {
+	    ret = CL_EMALFDB;
+	    break;
+	}
+	if(!cli_isnumber(tokens[size_field])) {
+	    cli_errmsg("cli_loadmd5: Invalid value for the size field\n");
 	    ret = CL_EMALFDB;
 	    break;
 	}
@@ -1284,7 +1315,7 @@ static int cli_loadmd5(FILE *fs, struct cl_engine *engine, unsigned int *signo, 
 	}
 	new->length = 16;
 
-	size = atoi(tokens[size_field]);
+	new->filesize = atoi(tokens[size_field]);
 
 	new->virname = cli_mpool_virname(engine->mempool, (char *) tokens[2], options & CL_DB_OFFICIAL);
 	if(!new->virname) {
@@ -1314,9 +1345,9 @@ static int cli_loadmd5(FILE *fs, struct cl_engine *engine, unsigned int *signo, 
 
 	if(mode == MD5_MDB) { /* section MD5 */
 	    if(!db->md5_sizes_hs.capacity) {
-		    hashset_init(&db->md5_sizes_hs, 65536, 80);
+		    cli_hashset_init(&db->md5_sizes_hs, 65536, 80);
 	    }
-	    hashset_addkey(&db->md5_sizes_hs, size);
+	    cli_hashset_addkey(&db->md5_sizes_hs, new->filesize);
 	}
 
 	sigs++;
@@ -1356,6 +1387,37 @@ static int cli_loadmd(FILE *fs, struct cl_engine *engine, unsigned int *signo, i
 	cli_chomp(buffer);
 	tokens_count = cli_strtokenize(buffer, ':', MD_TOKENS + 1, tokens);
 	if(tokens_count != MD_TOKENS) {
+	    ret = CL_EMALFDB;
+	    break;
+	}
+
+	if(strcmp(tokens[1], "*") && !cli_isnumber(tokens[1])) {
+	    cli_errmsg("cli_loadmd: Invalid value for the 'encrypted' field\n");
+	    ret = CL_EMALFDB;
+	    break;
+	}
+	if(strcmp(tokens[3], "*") && !cli_isnumber(tokens[3])) {
+	    cli_errmsg("cli_loadmd: Invalid value for the 'original size' field\n");
+	    ret = CL_EMALFDB;
+	    break;
+	}
+	if(strcmp(tokens[4], "*") && !cli_isnumber(tokens[4])) {
+	    cli_errmsg("cli_loadmd: Invalid value for the 'compressed size' field\n");
+	    ret = CL_EMALFDB;
+	    break;
+	}
+	if(strcmp(tokens[6], "*") && !cli_isnumber(tokens[6])) {
+	    cli_errmsg("cli_loadmd: Invalid value for the 'compression method' field\n");
+	    ret = CL_EMALFDB;
+	    break;
+	}
+	if(strcmp(tokens[7], "*") && !cli_isnumber(tokens[7])) {
+	    cli_errmsg("cli_loadmd: Invalid value for the 'file number' field\n");
+	    ret = CL_EMALFDB;
+	    break;
+	}
+	if(strcmp(tokens[8], "*") && !cli_isnumber(tokens[8])) {
+	    cli_errmsg("cli_loadmd: Invalid value for the 'max depth' field\n");
 	    ret = CL_EMALFDB;
 	    break;
 	}
@@ -1467,6 +1529,14 @@ int cli_load(const char *filename, struct cl_engine *engine, unsigned int *signo
 
 
     if(!dbio && (fs = fopen(filename, "rb")) == NULL) {
+	if(options & CL_DB_DIRECTORY) { /* bb#1624 */
+	    if(access(filename, R_OK)) {
+		if(errno == ENOENT) {
+		    cli_dbgmsg("Detected race condition, ignoring old file %s\n", filename);
+		    return CL_SUCCESS;
+		}
+	    }
+	}
 	cli_errmsg("cli_load(): Can't open file %s\n", filename);
 	return CL_EOPEN;
     }
@@ -1711,7 +1781,7 @@ int cl_load(const char *path, struct cl_engine *engine, unsigned int *signo, uns
 	    break;
 
 	case S_IFDIR:
-	    ret = cli_loaddbdir(path, engine, signo, dboptions);
+	    ret = cli_loaddbdir(path, engine, signo, dboptions | CL_DB_DIRECTORY);
 	    break;
 
 	default:
@@ -1987,7 +2057,7 @@ int cl_engine_free(struct cl_engine *engine)
 	cli_bm_free(root);
 	mpool_free(engine->mempool, root->soff);
 	if(root->md5_sizes_hs.capacity) {
-		hashset_destroy(&root->md5_sizes_hs);
+		cli_hashset_destroy(&root->md5_sizes_hs);
 	}
 	mpool_free(engine->mempool, root);
     }
@@ -2051,14 +2121,14 @@ static void cli_md5db_build(struct cli_matcher* root)
 		uint32_t *mpoolht;
 		unsigned int mpoolhtsz = root->md5_sizes_hs.count * sizeof(*mpoolht);
 		root->soff = mpool_malloc(root->mempool, mpoolhtsz);
-		root->soff_len = hashset_toarray(&root->md5_sizes_hs, &mpoolht);
+		root->soff_len = cli_hashset_toarray(&root->md5_sizes_hs, &mpoolht);
 		memcpy(root->soff, mpoolht, mpoolhtsz);
 		free(mpoolht);
 		}
 #else
-		root->soff_len = hashset_toarray(&root->md5_sizes_hs, &root->soff);
+		root->soff_len = cli_hashset_toarray(&root->md5_sizes_hs, &root->soff);
 #endif
-		hashset_destroy(&root->md5_sizes_hs);
+		cli_hashset_destroy(&root->md5_sizes_hs);
 		qsort(root->soff, root->soff_len, sizeof(uint32_t), scomp);
 	}
 }

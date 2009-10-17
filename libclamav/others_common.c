@@ -40,7 +40,7 @@
 #endif
 #include <time.h>
 #include <fcntl.h>
-#ifdef	HAVE_PWD_H
+#ifndef	C_WINDOWS
 #include <pwd.h>
 #endif
 #include <errno.h>
@@ -118,11 +118,9 @@ void cli_dbgmsg_internal(const char *str, ...)
 int cli_matchregex(const char *str, const char *regex)
 {
 	regex_t reg;
-	int match, flags = REG_EXTENDED | REG_NOSUB;
-#ifdef _WIN32
-    flags |= REG_ICASE;
-#endif
-    if(cli_regcomp(&reg, regex, flags) == 0) {
+	int match;
+
+    if(cli_regcomp(&reg, regex, REG_EXTENDED | REG_NOSUB) == 0) {
 	match = (cli_regexec(&reg, str, 0, NULL, 0) == REG_NOMATCH) ? 0 : 1;
 	cli_regfree(&reg);
 	return match;
@@ -354,9 +352,6 @@ int cli_writen(int fd, const void *buff, unsigned int count)
 
 int cli_filecopy(const char *src, const char *dest)
 {
-#ifdef _WIN32
-	return (!CopyFileA(src, dest, 0));
-#else
 	char *buffer;
 	int s, d, bytes;
 
@@ -382,24 +377,7 @@ int cli_filecopy(const char *src, const char *dest)
     close(s);
 
     return close(d);
-#endif /* _WIN32 */
 }
-
-char *cli_gettempdir(void)
-{
-    char *tmpdir = NULL;
-
-    if (((tmpdir = getenv("TMPDIR")) == NULL) &&
-        ((tmpdir = getenv("TEMP")) == NULL) &&
-        ((tmpdir = getenv("TMP")) == NULL))
-#if defined(_WIN32)
-        tmpdir = "c:\\";
-#else
-        tmpdir = "/tmp";
-#endif
-    return tmpdir;
-}
-
 struct dirent_data {
     char *filename;
     const char *dirname;
@@ -518,26 +496,25 @@ static int handle_filetype(const char *fname, int flags,
     return CL_SUCCESS;
 }
 
-static int cli_ftw_dir(const char *dirname, int flags, int maxdepth, cli_ftw_cb callback, struct cli_ftw_cbdata *data);
-static int handle_entry(struct dirent_data *entry, int flags, int maxdepth, cli_ftw_cb callback, struct cli_ftw_cbdata *data)
+static int cli_ftw_dir(const char *dirname, int flags, int maxdepth, cli_ftw_cb callback, struct cli_ftw_cbdata *data, cli_ftw_pathchk pathchk);
+static int handle_entry(struct dirent_data *entry, int flags, int maxdepth, cli_ftw_cb callback, struct cli_ftw_cbdata *data, cli_ftw_pathchk pathchk)
 {
     if (!entry->is_dir) {
 	return callback(entry->statbuf, entry->filename, entry->filename, visit_file, data);
     } else {
-	return cli_ftw_dir(entry->dirname, flags, maxdepth, callback, data);
+	return cli_ftw_dir(entry->dirname, flags, maxdepth, callback, data, pathchk);
     }
 }
 
-int cli_ftw(char *path, int flags, int maxdepth, cli_ftw_cb callback, struct cli_ftw_cbdata *data)
+int cli_ftw(char *path, int flags, int maxdepth, cli_ftw_cb callback, struct cli_ftw_cbdata *data, cli_ftw_pathchk pathchk)
 {
     struct stat statbuf;
     enum filetype ft = ft_unknown;
     struct dirent_data entry;
     int stated = 0;
-
     int ret;
 
-    if ((flags & CLI_FTW_TRIM_SLASHES) && path[0] && path[1]) {
+    if (((flags & CLI_FTW_TRIM_SLASHES) || pathchk) && path[0] && path[1]) {
 #ifdef _WIN32
     NORMALIZE_PATH(path, 0, return -1);
 #else
@@ -550,6 +527,8 @@ int cli_ftw(char *path, int flags, int maxdepth, cli_ftw_cb callback, struct cli
 	*pathend = '\0';
 #endif
     }
+    if(pathchk && pathchk(path, data) == 1)
+	return CL_SUCCESS;
     ret = handle_filetype(path, flags, &statbuf, &stated, &ft, callback, data);
     if (ret != CL_SUCCESS)
 	return ret;
@@ -564,10 +543,10 @@ int cli_ftw(char *path, int flags, int maxdepth, cli_ftw_cb callback, struct cli
 	if (ret != CL_SUCCESS)
 	    return ret;
     }
-    return handle_entry(&entry, flags, maxdepth, callback, data);
+    return handle_entry(&entry, flags, maxdepth, callback, data, pathchk);
 }
 
-static int cli_ftw_dir(const char *dirname, int flags, int maxdepth, cli_ftw_cb callback, struct cli_ftw_cbdata *data)
+static int cli_ftw_dir(const char *dirname, int flags, int maxdepth, cli_ftw_cb callback, struct cli_ftw_cbdata *data, cli_ftw_pathchk pathchk)
 {
     DIR *dd;
 #if defined(HAVE_READDIR_R_3) || defined(HAVE_READDIR_R_2)
@@ -642,6 +621,11 @@ static int cli_ftw_dir(const char *dirname, int flags, int maxdepth, cli_ftw_cb 
 		sprintf(fname, "/%s", dent->d_name);
 	    else
 		sprintf(fname, "%s/%s", dirname, dent->d_name);
+
+	    if(pathchk && pathchk(fname, data) == 1) {
+		free(fname);
+		continue;
+	    }
 #ifdef _WIN32
         NORMALIZE_PATH(fname, 1, continue);
 #endif
@@ -702,7 +686,7 @@ static int cli_ftw_dir(const char *dirname, int flags, int maxdepth, cli_ftw_cb 
 	    qsort(entries, entries_cnt, sizeof(*entries), ftw_compare);
 	    for (i = 0; i < entries_cnt; i++) {
 		struct dirent_data *entry = &entries[i];
-		ret = handle_entry(entry, flags, maxdepth-1, callback, data);
+		ret = handle_entry(entry, flags, maxdepth-1, callback, data, pathchk);
 		if (entry->is_dir)
 		    free(entry->filename);
 		if (entry->statbuf)
@@ -779,12 +763,18 @@ char *cli_gentemp(const char *dir)
         const char *mdir;
 	unsigned char salt[16 + 32];
 	int i;
-    size_t len;
 
-    mdir = dir ? dir : cli_gettempdir();
+    if(!dir) {
+	if((mdir = getenv("TMPDIR")) == NULL)
+#ifdef P_tmpdir
+	    mdir = P_tmpdir;
+#else
+	    mdir = "/tmp";
+#endif
+    } else
+	mdir = dir;
 
-    len = strlen(mdir) + 76;
-    name = (char *) cli_calloc(len, sizeof(char));
+    name = (char *) cli_calloc(strlen(mdir) + 1 + 32 + 1 + 7, sizeof(char));
     if(!name) {
 	cli_dbgmsg("cli_gentemp('%s'): out of memory\n", mdir);
 	return NULL;
@@ -811,7 +801,12 @@ char *cli_gentemp(const char *dir)
 	return NULL;
     }
 
-	snprintf(name, len, "%s/clamav-%s.%08x.clamtmp", mdir, tmp, getpid());
+#ifdef	C_WINDOWS
+	sprintf(name, "%s\\clamav-", mdir);
+#else
+	sprintf(name, "%s/clamav-", mdir);
+#endif
+    strncat(name, tmp, 32);
     free(tmp);
 
     return(name);
