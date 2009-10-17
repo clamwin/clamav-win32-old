@@ -1,3 +1,51 @@
+Fri Oct 16 20:08:51 CEST 2009 (acab)
+------------------------------------
+ * win32: stat added, dirent updated
+
+Fri Oct 16 14:56:10 CEST 2009 (tk)
+----------------------------------
+ * clamdscan: fix some output msgs (bb#1716)
+
+Fri Oct 16 10:11:56 CEST 2009 (tk)
+----------------------------------
+ * sigtool: add support for --find-sigs (part of bb#1246)
+
+Fri Oct 16 01:46:28 CEST 2009 (acab)
+------------------------------------
+ * win32: res_query compatible interface
+
+Thu Oct 15 13:06:33 CEST 2009 (acab)
+------------------------------------
+ * win32: add freshclam
+
+Wed Oct 14 19:03:47 CEST 2009 (acab)
+------------------------------------
+ * win32: remove stale netcode
+
+Wed Oct 14 18:59:13 CEST 2009 (acab)
+------------------------------------
+ * win32: preliminary winsock support files
+
+Wed Oct 14 01:26:47 CEST 2009 (acab)
+------------------------------------
+ * win32: unrar support
+
+Tue Oct 13 20:13:53 CEST 2009 (acab)
+------------------------------------
+ * win32: clamscan builds (and will scan soon...)
+
+Tue Oct 13 00:54:05 CEST 2009 (acab)
+------------------------------------
+ * win32/compat: add POSIX compatible snprintf
+
+Mon Oct 12 23:39:30 CEST 2009 (acab)
+------------------------------------
+ * win32: libclamav compiles
+
+Mon Oct 12 23:33:32 CEST 2009 (acab)
+------------------------------------
+ * /win32: VC project file and 3rd party stuff
+
 Sat Oct 10 20:22:10 CEST 2009 (acab)
 ------------------------------------
  * libclamav: completed merge of fmap4all

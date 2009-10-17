@@ -55,7 +55,6 @@ int main(int argc, char **argv)
 {
 	int ds, dms, ret, infected = 0;
 	struct timeval t1, t2;
-	struct timezone tz;
 	time_t starttime;
         struct optstruct *opts;
         const struct optstruct *opt;
@@ -127,7 +126,7 @@ int main(int argc, char **argv)
     time(&starttime);
     /* ctime() does \n, but I need it once more */
 
-    gettimeofday(&t1, &tz);
+    gettimeofday(&t1, NULL);
 
 #ifdef _WIN32
     cw_fsredirection(FALSE);
@@ -137,7 +136,7 @@ int main(int argc, char **argv)
 
     /* TODO: Implement STATUS in clamd */
     if((infected || ret != 2) && !optget(opts, "no-summary")->enabled) {
-	gettimeofday(&t2, &tz);
+	gettimeofday(&t2, NULL);
 	ds = t2.tv_sec - t1.tv_sec;
 	dms = t2.tv_usec - t1.tv_usec;
 	ds -= (dms < 0) ? (1):(0);

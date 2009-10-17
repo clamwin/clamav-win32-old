@@ -73,7 +73,7 @@
 #include "cab.h"
 #include "rtf.h"
 #include "unarj.h"
-#include "nulsft.h"
+#include "nsis/nulsft.h"
 #include "autoit.h"
 #include "textnorm.h"
 #include <zlib.h>
