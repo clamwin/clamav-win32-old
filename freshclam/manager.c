@@ -1156,6 +1156,12 @@ static int getfile(const char *srcfile, const char *destfile, const char *hostna
     closesocket(sd);
     close(fd);
 
+    if(bread == -1) {
+	logg("%cgetfile: Download interrupted: %s (IP: %s)\n", logerr ? '!' : '^', strerror(errno), ipaddr);
+	mirman_update(mdat->currip, mdat->af, mdat, 1);
+	return 52;
+    }
+
     if(totalsize > 0)
         logg("Downloading %s [%i%%]\n", srcfile, percentage);
     else
