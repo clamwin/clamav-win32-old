@@ -46,7 +46,9 @@ extern int ftruncate(int fd, off_t length);
 #define setgid(x) (0)
 #define setuid(x) (0)
 
-#define SIG_IGN 0
+#ifndef SIG_IGN
+#define SIG_IGN 1
+#endif
 
 struct sigaction { void *sa_handler; };
 
