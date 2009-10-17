@@ -1431,83 +1431,83 @@
 				Name="zlib"
 				>
 				<File
-					RelativePath="..\..\zlib\adler32.c"
+					RelativePath="..\..\..\..\win32\3rdparty\zlib\adler32.c"
 					>
 				</File>
 				<File
-					RelativePath="..\..\zlib\compress.c"
+					RelativePath="..\..\..\..\win32\3rdparty\zlib\compress.c"
 					>
 				</File>
 				<File
-					RelativePath="..\..\zlib\crc32.c"
+					RelativePath="..\..\..\..\win32\3rdparty\zlib\crc32.c"
 					>
 				</File>
 				<File
-					RelativePath="..\..\zlib\crc32.h"
+					RelativePath="..\..\..\..\win32\3rdparty\zlib\crc32.h"
 					>
 				</File>
 				<File
-					RelativePath="..\..\zlib\deflate.c"
+					RelativePath="..\..\..\..\win32\3rdparty\zlib\deflate.c"
 					>
 				</File>
 				<File
-					RelativePath="..\..\zlib\deflate.h"
+					RelativePath="..\..\..\..\win32\3rdparty\zlib\deflate.h"
 					>
 				</File>
 				<File
-					RelativePath="..\..\zlib\gzio.c"
+					RelativePath="..\..\..\..\win32\3rdparty\zlib\gzio.c"
 					>
 				</File>
 				<File
-					RelativePath="..\..\zlib\infback.c"
+					RelativePath="..\..\..\..\win32\3rdparty\zlib\infback.c"
 					>
 				</File>
 				<File
-					RelativePath="..\..\zlib\inffast.c"
+					RelativePath="..\..\..\..\win32\3rdparty\zlib\inffast.c"
 					>
 				</File>
 				<File
-					RelativePath="..\..\zlib\inffast.h"
+					RelativePath="..\..\..\..\win32\3rdparty\zlib\inffast.h"
 					>
 				</File>
 				<File
-					RelativePath="..\..\zlib\inffixed.h"
+					RelativePath="..\..\..\..\win32\3rdparty\zlib\inffixed.h"
 					>
 				</File>
 				<File
-					RelativePath="..\..\zlib\inflate.c"
+					RelativePath="..\..\..\..\win32\3rdparty\zlib\inflate.c"
 					>
 				</File>
 				<File
-					RelativePath="..\..\zlib\inflate.h"
+					RelativePath="..\..\..\..\win32\3rdparty\zlib\inflate.h"
 					>
 				</File>
 				<File
-					RelativePath="..\..\zlib\inftrees.c"
+					RelativePath="..\..\..\..\win32\3rdparty\zlib\inftrees.c"
 					>
 				</File>
 				<File
-					RelativePath="..\..\zlib\inftrees.h"
+					RelativePath="..\..\..\..\win32\3rdparty\zlib\inftrees.h"
 					>
 				</File>
 				<File
-					RelativePath="..\..\zlib\trees.c"
+					RelativePath="..\..\..\..\win32\3rdparty\zlib\trees.c"
 					>
 				</File>
 				<File
-					RelativePath="..\..\zlib\trees.h"
+					RelativePath="..\..\..\..\win32\3rdparty\zlib\trees.h"
 					>
 				</File>
 				<File
-					RelativePath="..\..\zlib\uncompr.c"
+					RelativePath="..\..\..\..\win32\3rdparty\zlib\uncompr.c"
 					>
 				</File>
 				<File
-					RelativePath="..\..\zlib\zutil.c"
+					RelativePath="..\..\..\..\win32\3rdparty\zlib\zutil.c"
 					>
 				</File>
 				<File
-					RelativePath="..\..\zlib\zutil.h"
+					RelativePath="..\..\..\..\win32\3rdparty\zlib\zutil.h"
 					>
 				</File>
 			</Filter>
@@ -1515,55 +1515,11 @@
 				Name="bzip2"
 				>
 				<File
-					RelativePath="..\..\bzip2\blocksort.c"
+					RelativePath="..\..\..\..\win32\3rdparty\bzip2\blocksort.c"
 					>
 				</File>
 				<File
-					RelativePath="..\..\bzip2\bzlib.c"
-					>
-					<FileConfiguration
-						Name="Debug|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug|x64"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|x64"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)\$(InputName)1.obj"
-							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-						/>
-					</FileConfiguration>
-				</File>
-				<File
-					RelativePath="..\..\bzip2\bzlib_private.h"
-					>
-				</File>
-				<File
-					RelativePath="..\..\bzip2\compress.c"
+					RelativePath="..\..\..\..\win32\3rdparty\bzip2\bzlib.c"
 					>
 					<FileConfiguration
 						Name="Debug|Win32"
@@ -1603,19 +1559,63 @@
 					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="..\..\bzip2\crctable.c"
+					RelativePath="..\..\..\..\win32\3rdparty\bzip2\bzlib_private.h"
 					>
 				</File>
 				<File
-					RelativePath="..\..\bzip2\decompress.c"
+					RelativePath="..\..\..\..\win32\3rdparty\bzip2\compress.c"
+					>
+					<FileConfiguration
+						Name="Debug|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							ObjectFile="$(IntDir)\$(InputName)1.obj"
+							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug|x64"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							ObjectFile="$(IntDir)\$(InputName)1.obj"
+							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							ObjectFile="$(IntDir)\$(InputName)1.obj"
+							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release|x64"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							ObjectFile="$(IntDir)\$(InputName)1.obj"
+							XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
+						/>
+					</FileConfiguration>
+				</File>
+				<File
+					RelativePath="..\..\..\..\win32\3rdparty\bzip2\crctable.c"
 					>
 				</File>
 				<File
-					RelativePath="..\..\bzip2\huffman.c"
+					RelativePath="..\..\..\..\win32\3rdparty\bzip2\decompress.c"
 					>
 				</File>
 				<File
-					RelativePath="..\..\bzip2\randtable.c"
+					RelativePath="..\..\..\..\win32\3rdparty\bzip2\huffman.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\win32\3rdparty\bzip2\randtable.c"
 					>
 				</File>
 			</Filter>

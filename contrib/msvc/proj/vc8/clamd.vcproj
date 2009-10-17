@@ -460,14 +460,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\..\shared\network.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\shared\network.h"
-				>
-			</File>
-			<File
 				RelativePath="..\..\..\..\shared\optparser.c"
 				>
 			</File>
