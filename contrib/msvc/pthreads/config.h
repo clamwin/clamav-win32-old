@@ -3,10 +3,6 @@
 #ifndef PTW32_CONFIG_H
 #define PTW32_CONFIG_H
 
-#if _MSC_VER >= 1400
-#define _CRT_SECURE_NO_WARNINGS
-#endif
-
 /*********************************************************************
  * Defaults: see target specific redefinitions below.
  *********************************************************************/

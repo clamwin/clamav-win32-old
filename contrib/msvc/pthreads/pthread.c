@@ -52,9 +52,7 @@
 #include "cleanup.c"
 #include "condvar.c"
 #include "create.c"
-#if 0
 #include "dll.c"
-#endif
 #include "errno.c"
 #include "exit.c"
 #include "fork.c"

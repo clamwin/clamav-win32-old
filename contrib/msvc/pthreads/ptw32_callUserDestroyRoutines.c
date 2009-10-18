@@ -129,7 +129,7 @@ ptw32_callUserDestroyRoutines (pthread_t thread)
 		  if (pthread_mutex_trylock(&(assoc->key->keyLock)) == EBUSY)
 		    {
 		      pthread_mutex_unlock(&(sp->threadLock));
-		      Sleep(1); /* Ugly but necessary to avoid priority effects. */
+		      Sleep(1); // Ugly but necessary to avoid priority effects.
 		      /*
 		       * Go around again.
 		       * If pthread_key_delete has removed this assoc in the meantime,
@@ -155,7 +155,7 @@ ptw32_callUserDestroyRoutines (pthread_t thread)
 	      value = TlsGetValue(k->key);
 	      TlsSetValue (k->key, NULL);
 
-	      /* Every assoc->key exists and has a destructor */
+	      // Every assoc->key exists and has a destructor
 	      if (value != NULL && iterations <= PTHREAD_DESTRUCTOR_ITERATIONS)
 		{
 		  /*
