@@ -33,10 +33,6 @@
 
 extern int gnulib_snprintf(char *str, size_t size, const char *format, ...);
 
-#if defined(__MINGW32__) && defined(__STRICT_ANSI__)
-#include <nonansi.h>
-#endif
-
 /*
     On my TB 1.2Ghz
     Average speed: 1.608 mb/s - main + daily
@@ -89,11 +85,11 @@ double benchmark(void)
     char szWinDir[MAX_PATH], szFileSpec[MAX_PATH], szFileName[MAX_PATH];
     char szLine[MAX_PATH];
 
-    GetWindowsDirectory(szWinDir, MAX_PATH);
-    strncat(szWinDir, "\\System32\\", MAX_PATH);
+    GetWindowsDirectory(szWinDir, MAX_PATH - 1);
+    strncat(szWinDir, "\\System32\\", MAX_PATH - 1 - strlen(szWinDir));
     szFileSpec[0] = '\0';
-    strncat(szFileSpec, szWinDir, MAX_PATH);
-    strncat(szFileSpec, FILESPEC, MAX_PATH);
+    strncat(szFileSpec, szWinDir, MAX_PATH - 1 - strlen(szFileSpec));
+    strncat(szFileSpec, FILESPEC, MAX_PATH - 1 - strlen(szFileSpec));
     fp = FindFirstFile(szFileSpec, &info);
 
     do
@@ -105,8 +101,8 @@ double benchmark(void)
         }
 
         szFileName[0] = L'\0';
-        strncat(szFileName, szWinDir, MAX_PATH);
-        strncat(szFileName, info.cFileName, MAX_PATH);
+        strncat(szFileName, szWinDir, MAX_PATH - 1 - strlen(szFileName));
+        strncat(szFileName, info.cFileName, MAX_PATH - 1 - strlen(szFileName));
 
         hFile = CreateFile(szFileName, GENERIC_READ, FILE_SHARE_READ|FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_FLAG_RANDOM_ACCESS, NULL);
         if (hFile == INVALID_HANDLE_VALUE) break;
