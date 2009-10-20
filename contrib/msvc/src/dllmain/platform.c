@@ -71,9 +71,9 @@ char *cw_getpath(const char *base, const char *file)
     {
         if ((*file == '\\') || (*file == '/'))
             file++;
-        strncat(path, "\\", MAX_PATH - 1);
+        strncat(path, "\\", MAX_PATH - 1 - strlen(path));
         path[MAX_PATH - 1] = 0;
-        strncat(path, file, MAX_PATH - 1);
+        strncat(path, file, MAX_PATH - 1 - strlen(path));
         path[MAX_PATH - 1] = 0;
     }
 
@@ -138,7 +138,7 @@ static char *cw_getaltname(const char *filename)
     CW_CHECKALLOC(fqname_a, malloc(len), { free(name_a); return NULL; });
     strncpy(fqname_a, filename, pos);
     fqname_a[pos] = 0;
-    strncat(fqname_a, name_a, len - 1);
+    strncat(fqname_a, name_a, len - 1 - strlen(fqname_a));
     free(name_a);
     return fqname_a;
 }
@@ -188,8 +188,8 @@ char *cw_normalizepath(const char *path)
 
             /* reallocate the string to make room for the filename */
             CW_CHECKALLOC(fq, realloc(fq, clen + strlen(filename)), return NULL);
-            strncat(fq, "\\", clen - 1);
-            strncat(fq, filename, clen - 1);
+            strncat(fq, "\\", clen - 1 - strlen(fq));
+            strncat(fq, filename, clen - 1 - strlen(fq));
             free(filename);
             filename = fq;
         }
@@ -255,7 +255,7 @@ int cw_movefileex(const char *source, const char *dest, DWORD flags)
         char ssource[MAX_PATH] = "";
         GetWindowsDirectoryA(WinInitIni, MAX_PATH - 1);
         WinInitIni[MAX_PATH - 1] = 0;
-        strncat(WinInitIni, "\\wininit.ini", MAX_PATH - 1);
+        strncat(WinInitIni, "\\wininit.ini", MAX_PATH - 1 - strlen(WinInitIni));
         WinInitIni[MAX_PATH - 1] = 0;
 
         /* Currently first copy the file to the destination, then schedule the remove.

@@ -45,7 +45,7 @@ DWORD WINAPI CrashMiniDumpWriteDumpProc(LPVOID lpParam)
     unsigned int i;
 
     if (!GetModuleFileNameA(NULL, fullpath, MAX_PATH - 1)) /* Very unlikely */
-        strncat(name, "Unknown", MAX_PATH - 1);
+        strncat(name, "Unknown", MAX_PATH - 1 - strlen(name));
     else
     {
         /* Get executable name */
@@ -91,7 +91,7 @@ DWORD WINAPI CrashMiniDumpWriteDumpProc(LPVOID lpParam)
         goto cleanup;
     }
 
-    strncat(name, ".dmp", MAX_PATH - 1);
+    strncat(name, ".dmp", MAX_PATH - 1 - strlen(name));
     name[MAX_PATH - 1] = 0;
     hFile = CreateFileA(name, GENERIC_READ | GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
     if (hFile == INVALID_HANDLE_VALUE)

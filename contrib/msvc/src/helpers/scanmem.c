@@ -81,7 +81,7 @@ static inline void insert_cache(filelist_t **list, const char *filename, int res
     current->next = NULL;
     current->res = res;
     current->filename[0] = 0;
-    strncat(current->filename, filename, MAX_PATH - 1);
+    strncat(current->filename, filename, MAX_PATH - 1 - strlen(current->filename));
     current->filename[MAX_PATH - 1] = 0;
 }
 
@@ -655,7 +655,7 @@ int scanmem_cb(PROCESSENTRY32 ProcStruct, MODULEENTRY32 me32, void *data)
     if ((strlen(me32.szExePath) > 12) && !strncmp(me32.szExePath, "\\SystemRoot\\", 12))
     {
         expandmodule[0] = 0;
-        strncat(expandmodule, me32.szExePath, MAX_PATH - 1);
+        strncat(expandmodule, me32.szExePath, MAX_PATH - 1 - strlen(expandmodule));
         expandmodule[MAX_PATH - 1] = 0;
         snprintf(expandmodule, MAX_PATH - 1, "%%SystemRoot%%\\%s", &me32.szExePath[12]);
         expandmodule[MAX_PATH - 1] = 0;
