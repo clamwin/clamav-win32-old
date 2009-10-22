@@ -17,6 +17,7 @@ EXPORTS cl_cvdhead
 EXPORTS cl_retflevel
 EXPORTS cl_cvdparse
 EXPORTS cl_cvdverify
+EXPORTS cl_retver
 
 ; cli_stuff - should be mangled or exported by ordinal only
 EXPORTS cli_gentemp
@@ -31,11 +32,14 @@ EXPORTS cli_strtok
 EXPORTS cli_cvdunpack
 EXPORTS cli_decodesig
 EXPORTS cli_chomp
+EXPORTS cli_strtokenize
+EXPORTS have_rar
 
 ; shared stuff - to be either double compiled into the tools or treated like cli_xxx
 EXPORTS opendir
 EXPORTS readdir
 EXPORTS closedir
+EXPORTS safe_open
 EXPORTS snprintf
 EXPORTS mp_init
 EXPORTS mp_read_radix
@@ -48,6 +52,17 @@ EXPORTS gzgets
 EXPORTS gzdopen
 EXPORTS gzclose
 EXPORTS gzwrite
+
+EXPORTS optget
+EXPORTS optparse
+EXPORTS optfree
+EXPORTS clam_options DATA
+
+EXPORTS DATADIR DATA
+EXPORTS CONFDIR DATA
+EXPORTS CONFDIR_CLAMD DATA
+EXPORTS CONFDIR_FRESHCLAM DATA
+EXPORTS CONFDIR_MILTER DATA
 
 ; winsock - bridging for now
 EXPORTS htonl

@@ -74,11 +74,7 @@ char *freshdbdir(void)
 
     /* try to find the most up-to-date db directory */
     dbdir = cl_retdbdir();
-#ifdef _WIN32
-    if((opts = optparse(cw_getpath("ConfigDir", "freshclam.conf"), 0, NULL, 0, OPT_FRESHCLAM, 0, NULL))) {
-#else
-    if((opts = optparse(CONFDIR"/freshclam.conf", 0, NULL, 0, OPT_FRESHCLAM, 0, NULL))) {
-#endif
+    if((opts = optparse(CONFDIR_FRESHCLAM, 0, NULL, 0, OPT_FRESHCLAM, 0, NULL))) {
 	if((opt = optget(opts, "DatabaseDirectory"))->enabled) {
 	    if(strcmp(dbdir, opt->strarg)) {
 		    char *daily = (char *) malloc(strlen(opt->strarg) + strlen(dbdir) + 30);
@@ -272,7 +268,7 @@ int daemonize(void)
     return 0;
 #endif
 }
-#ifndef _WIN32
+
 #ifndef CL_NOLIBCLAMAV
 int match_regex(const char *filename, const char *pattern)
 {
@@ -298,8 +294,6 @@ int match_regex(const char *filename, const char *pattern)
 	return match;
 }
 #endif
-#endif /* _WIN32 */
-
 
 int cfg_tcpsock(const struct optstruct *opts, struct sockaddr_in *tcpsock, in_addr_t defaultbind)
 {
@@ -325,7 +319,7 @@ int cfg_tcpsock(const struct optstruct *opts, struct sockaddr_in *tcpsock, in_ad
 int cli_is_abspath(const char *path) {
 #ifdef _WIN32
     int len = strlen(path);
-    return (len > 2 && path[0] == '\\' && path[1] == '\\') || (len > 3 && path[1] == ':' && path[2] == '\\');
+    return (len > 2 && path[0] == '\\' && path[1] == '\\') || (len >= 2 && ((*path >= 'a' && *path <= 'z') || (*path >= 'A' && *path <= 'Z')) && path[1] == ':');
 #else
     return *path == '/';
 #endif

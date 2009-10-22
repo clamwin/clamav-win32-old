@@ -57,14 +57,14 @@
 #define FLAG_HIDDEN	4 /* don't print in clamconf --generate-config */
 #define FLAG_REG_CASE	8 /* case-sensitive regex matching */
 
-const struct clam_option clam_options[] = {
+const struct clam_option __clam_options[] = {
     /* name,   longopt, sopt, argtype, regex, num, str, flags, owner, description, suggested */
 
     /* cmdline only */
     { NULL, "help", 'h', TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_CLAMD | OPT_FRESHCLAM | OPT_CLAMSCAN | OPT_CLAMDSCAN | OPT_SIGTOOL | OPT_MILTER | OPT_CLAMCONF | OPT_CLAMDTOP | OPT_CLAMBC, "", "" },
-    { NULL, "config-file", 'c', TYPE_STRING, NULL, 0, CONFDIR"/clamd.conf", FLAG_REQUIRED, OPT_CLAMD | OPT_CLAMDSCAN | OPT_CLAMDTOP, "", "" },
-    { NULL, "config-file", 0, TYPE_STRING, NULL, 0, CONFDIR"/freshclam.conf", FLAG_REQUIRED, OPT_FRESHCLAM, "", "" },
-    { NULL, "config-file", 'c', TYPE_STRING, NULL, 0, CONFDIR"/clamav-milter.conf", FLAG_REQUIRED, OPT_MILTER, "", "" },
+    { NULL, "config-file", 'c', TYPE_STRING, NULL, 0, CONFDIR_CLAMD, FLAG_REQUIRED, OPT_CLAMD | OPT_CLAMDSCAN | OPT_CLAMDTOP, "", "" },
+    { NULL, "config-file", 0, TYPE_STRING, NULL, 0, CONFDIR_FRESHCLAM, FLAG_REQUIRED, OPT_FRESHCLAM, "", "" },
+    { NULL, "config-file", 'c', TYPE_STRING, NULL, 0, CONFDIR_MILTER, FLAG_REQUIRED, OPT_MILTER, "", "" },
     { NULL, "version", 'V', TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_CLAMD | OPT_FRESHCLAM | OPT_CLAMSCAN | OPT_CLAMDSCAN | OPT_SIGTOOL | OPT_MILTER | OPT_CLAMCONF | OPT_CLAMDTOP | OPT_CLAMBC, "", "" },
     { NULL, "debug", 0, TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_CLAMD | OPT_FRESHCLAM | OPT_CLAMSCAN | OPT_SIGTOOL, "", "" },
     { NULL, "verbose", 'v', TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_FRESHCLAM | OPT_CLAMSCAN | OPT_CLAMDSCAN | OPT_SIGTOOL, "", "" },
@@ -75,7 +75,7 @@ const struct clam_option clam_options[] = {
     { NULL, "daemon", 'd', TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_FRESHCLAM, "", "" },
     { NULL, "no-dns", 0, TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_FRESHCLAM, "", "" },
     { NULL, "list-mirrors", 0, TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_FRESHCLAM, "", "" },
-    { NULL, "submit-stats", 0, TYPE_STRING, NULL, 0, CONFDIR"/clamd.conf", 0, OPT_FRESHCLAM, "", "" }, /* Don't merge this one with SubmitDetectionStats */
+    { NULL, "submit-stats", 0, TYPE_STRING, NULL, 0, CONFDIR_CLAMD, 0, OPT_FRESHCLAM, "", "" }, /* Don't merge this one with SubmitDetectionStats */
     { NULL, "reload", 0, TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_CLAMDSCAN, "", "" },
     { NULL, "multiscan", 'm', TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_CLAMDSCAN, "", "" },
     { NULL, "fdpass", 0, TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_CLAMDSCAN, "", "" },
@@ -117,19 +117,6 @@ const struct clam_option clam_options[] = {
     { NULL, "config-dir", 'c', TYPE_STRING, NULL, 0, CONFDIR, FLAG_REQUIRED, OPT_CLAMCONF, "", "" },
     { NULL, "non-default", 'n', TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_CLAMCONF, "", "" },
     { NULL, "generate-config", 'g', TYPE_STRING, NULL, -1, NULL, 0, OPT_CLAMCONF, "", "" },
-
-    { NULL, "show-progress", 0, TYPE_BOOL, NULL, 0, NULL, 0, OPT_CLAMSCAN, "", "" },
-    { NULL, "keep-mbox", 0, TYPE_BOOL, NULL, 0, NULL, 0, OPT_CLAMSCAN, "", "" },
-
-#ifdef _WIN32
-    { NULL, "install", 0, TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_CLAMD | OPT_FRESHCLAM, "", "" },
-    { NULL, "uninstall", 0, TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_CLAMD | OPT_FRESHCLAM, "", "" },
-    { NULL, "daemon", 'd', TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_CLAMD, "", "" },
-
-    { NULL, "memory", 0, TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_CLAMSCAN, "", "" },
-    { NULL, "kill", 'k', TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_CLAMSCAN, "", "" },
-    { NULL, "unload", 'u', TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_CLAMSCAN, "", "" },
-#endif
 
     /* cmdline only - deprecated */
     { NULL, "http-proxy", 0, TYPE_STRING, NULL, 0, NULL, 0, OPT_FRESHCLAM | OPT_DEPRECATED, "", "" },
@@ -350,7 +337,7 @@ const struct clam_option clam_options[] = {
 
     { "HTTPUserAgent", NULL, 0, TYPE_STRING, NULL, -1, NULL, 0, OPT_FRESHCLAM, "If your servers are behind a firewall/proxy which does a User-Agent\nfiltering you can use this option to force the use of a different\nUser-Agent header.", "default" },
 
-    { "NotifyClamd", "daemon-notify", 0, TYPE_STRING, NULL, -1, CONFDIR"/clamd.conf", 0, OPT_FRESHCLAM, "Send the RELOAD command to clamd after a successful update.", "yes" },
+    { "NotifyClamd", "daemon-notify", 0, TYPE_STRING, NULL, -1, CONFDIR_CLAMD, 0, OPT_FRESHCLAM, "Send the RELOAD command to clamd after a successful update.", "yes" },
 
     { "OnUpdateExecute", "on-update-execute", 0, TYPE_STRING, NULL, -1, NULL, 0, OPT_FRESHCLAM, "Run a command after a successful database update.", "command" },
 
@@ -435,7 +422,8 @@ const struct clam_option clam_options[] = {
 
     { NULL, NULL, 0, 0, NULL, 0, NULL, 0, 0, NULL, NULL }
 };
-#ifndef _WIN32
+const struct clam_option *clam_options = __clam_options;
+
 const struct optstruct *optget(const struct optstruct *opts, const char *name)
 {
     while(opts) {
@@ -445,7 +433,7 @@ const struct optstruct *optget(const struct optstruct *opts, const char *name)
     }
     return NULL;
 }
-#endif
+
 static struct optstruct *optget_i(struct optstruct *opts, const char *name)
 {
     while(opts) {

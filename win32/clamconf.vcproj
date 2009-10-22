@@ -2,9 +2,9 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="9,00"
-	Name="freshclam"
-	ProjectGUID="{CEA52DD8-0418-42AD-B640-F33CC7C600CE}"
-	RootNamespace="freshclam"
+	Name="clamconf"
+	ProjectGUID="{DEABE3C7-6F4D-4221-8EEE-AD19C8261273}"
+	RootNamespace="clamconf"
 	Keyword="Win32Proj"
 	TargetFrameworkVersion="196613"
 	>
@@ -50,7 +50,7 @@
 				WarningLevel="3"
 				DebugInformationFormat="3"
 				CompileAs="1"
-				DisableSpecificWarnings="4996;4244;4018;4090;4333;4101;4146"
+				DisableSpecificWarnings="4996;4244"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -63,7 +63,6 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="dnsapi.lib"
 				LinkIncremental="1"
 				GenerateDebugInformation="true"
 				SubSystem="1"
@@ -121,13 +120,12 @@
 				AdditionalIncludeDirectories="&quot;$(SolutionDir)&quot;;&quot;$(SolutionDir)..\libclamav&quot;;&quot;$(SolutionDir)compat&quot;;&quot;$(SolutionDir)3rdparty\zlib&quot;;&quot;$(SolutionDir)3rdparty\pthreads&quot;;&quot;$(SolutionDir)3rdparty\bzip2&quot;;&quot;$(SolutionDir)..&quot;"
 				PreprocessorDefinitions="WIN32_LEAN_AND_MEAN;HAVE_CONFIG_H"
 				RuntimeLibrary="2"
-				BufferSecurityCheck="false"
 				EnableFunctionLevelLinking="true"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
 				DebugInformationFormat="3"
 				CompileAs="1"
-				DisableSpecificWarnings="4996;4244;4018;4090;4333;4101;4146"
+				DisableSpecificWarnings="4996;4244"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -140,7 +138,6 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="dnsapi.lib"
 				LinkIncremental="1"
 				GenerateDebugInformation="true"
 				SubSystem="1"
@@ -180,66 +177,18 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath="..\freshclam\dns.c"
-				>
-			</File>
-			<File
-				RelativePath="..\freshclam\execute.c"
-				>
-			</File>
-			<File
-				RelativePath="..\freshclam\freshclam.c"
-				>
-			</File>
-			<File
-				RelativePath="..\freshclam\manager.c"
-				>
-			</File>
-			<File
-				RelativePath="..\freshclam\mirman.c"
-				>
-			</File>
-			<File
-				RelativePath="..\freshclam\nonblock.c"
-				>
-			</File>
-			<File
-				RelativePath="..\freshclam\notify.c"
+				RelativePath="..\clamconf\clamconf.c"
 				>
 			</File>
 			<Filter
 				Name="shared"
 				>
 				<File
-					RelativePath="..\shared\cdiff.c"
-					>
-				</File>
-				<File
 					RelativePath="..\shared\getopt.c"
 					>
 				</File>
 				<File
 					RelativePath="..\shared\misc.c"
-					>
-				</File>
-				<File
-					RelativePath="..\shared\output.c"
-					>
-				</File>
-				<File
-					RelativePath="..\shared\tar.c"
-					>
-				</File>
-			</Filter>
-			<Filter
-				Name="compat"
-				>
-				<File
-					RelativePath=".\compat\resolv.c"
-					>
-				</File>
-				<File
-					RelativePath=".\compat\strptime.c"
 					>
 				</File>
 			</Filter>

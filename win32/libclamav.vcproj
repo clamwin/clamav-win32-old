@@ -341,10 +341,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\shared\misc.c"
-				>
-			</File>
-			<File
 				RelativePath="..\libclamav\mpool.c"
 				>
 			</File>
@@ -760,7 +756,7 @@
 					>
 				</File>
 				<File
-					RelativePath="..\shared\optparser.c"
+					RelativePath="..\shared\misc.c"
 					>
 				</File>
 			</Filter>
@@ -777,6 +773,10 @@
 				</File>
 				<File
 					RelativePath=".\compat\libclamav_main.c"
+					>
+				</File>
+				<File
+					RelativePath=".\compat\libgen.c"
 					>
 				</File>
 				<File
@@ -797,10 +797,6 @@
 				</File>
 				<File
 					RelativePath=".\compat\w32_stat.c"
-					>
-				</File>
-				<File
-					RelativePath=".\compat\w32_stat.h"
 					>
 				</File>
 			</Filter>
