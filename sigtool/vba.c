@@ -31,7 +31,6 @@
 #include <dirent.h>
 #include <ctype.h>
 
-#include "shared/output.h"
 #include "libclamav/clamav.h"
 #include "libclamav/vba_extract.h"
 #include "libclamav/others.h"

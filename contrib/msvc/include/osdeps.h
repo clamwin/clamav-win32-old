@@ -51,6 +51,7 @@
 #define mkdir(a, b) mkdir(a)
 
 #define match_regex cli_matchregex
+#define optget win32_optget
 
 #undef strtok_r /* thanks to pthread.h */
 

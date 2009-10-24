@@ -407,6 +407,10 @@
 				RelativePath="..\..\src\shared\win32actions.c"
 				>
 			</File>
+			<File
+				RelativePath="..\..\src\shared\win32optparser.c"
+				>
+			</File>
 		</Filter>
 		<Filter
 			Name="Shared"
@@ -425,10 +429,6 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\shared\misc.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\shared\optparser.c"
 				>
 			</File>
 			<File

@@ -432,6 +432,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\shared\win32optparser.c"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\helpers\win32poll.c"
 				>
 			</File>
@@ -453,10 +457,6 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\shared\misc.h"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\shared\optparser.c"
 				>
 			</File>
 			<File

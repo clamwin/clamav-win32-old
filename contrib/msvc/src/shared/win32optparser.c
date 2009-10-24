@@ -49,7 +49,7 @@ static const struct cw_wild expansions[] =
     { NULL,                 NULL,           NULL        }
 };
 
-const struct optstruct *optget(const struct optstruct *opts, const char *name)
+const struct optstruct *win32_optget(const struct optstruct *opts, const char *name)
 {
     while (opts)
     {
@@ -80,3 +80,6 @@ const struct optstruct *optget(const struct optstruct *opts, const char *name)
     }
     return NULL;
 }
+
+#undef optget
+#include <shared/optparser.c>
