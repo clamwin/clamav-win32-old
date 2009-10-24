@@ -272,11 +272,11 @@ static inline int cw_open(const char *filename, int oflag, ...)
 /* FIXME: check if this function works as expected */
 static inline ssize_t pread(int fd, void *buf, size_t count, off_t offset)
 {
-    off_t lastpos = lseek(fd, offset, SEEK_SET);
+    off_t lastpos = _lseek(fd, offset, SEEK_SET);
     ssize_t res;
     if (lastpos == -1) return -1;
-    res = (ssize_t) read(fd, buf, (unsigned int) count);
-    return ((lseek(fd, lastpos, SEEK_SET) == -1) ? -1 : res);
+    res = (ssize_t) _read(fd, buf, (unsigned int) count);
+    return ((_lseek(fd, lastpos, SEEK_SET) == -1) ? -1 : res);
 }
 
 #include "../../../platform.h.in"

@@ -55,6 +55,13 @@
 
 #undef strtok_r /* thanks to pthread.h */
 
+/* ISO C++, just to shut up vs without disabling warnings */
+#define read _read
+#define close _close
+#define dup _dup
+#define lseek _lseek
+#define fdopen _fdopen
+
 /* gnulib entries */
 extern char *strtok_r(char *s, const char *delim, char **save_ptr);
 extern struct tm *localtime_r(time_t const *t, struct tm *tp);
