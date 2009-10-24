@@ -388,10 +388,6 @@
 				RelativePath="..\..\src\helpers\cw_main.c"
 				>
 			</File>
-			<File
-				RelativePath="..\..\src\shared\win32optparser.c"
-				>
-			</File>
 		</Filter>
 		<Filter
 			Name="Shared"
