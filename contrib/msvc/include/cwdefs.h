@@ -27,10 +27,10 @@
 #pragma warning(disable: 4018)              /* Signed/Unsigned mismatch */
 #pragma warning(disable: 4244 4267)         /* Conversion, possible loss of data */
 #pragma warning(disable: 4146)              /* Minus operator applied to unsigned */
+#pragma warning(disable: 4101 4102)         /* Unreferenced local variable / label */
+#pragma warning(disable: 4090)              /* 'function' : different 'const' qualifiers */
 
 /* #pragma warning(disable: 4715) */        /* not all control paths return a value */
-/* #pragma warning(disable: 4101 4102) */   /* Unreferenced local variable / label */
-/* #pragma warning(disable: 4090) */        /* 'function' : different 'const' qualifiers */
 /* #pragma warning(disable: 4005) */        /* Macro redefinition: 'NDEBUG' not "onto" standard */
 /* #pragma warning(disable: 4129) */        /* Unrecognized character escape seq % in PDF */
 /* #pragma warning(disable: 4026) */        /* Function declared with formal parameter list */
