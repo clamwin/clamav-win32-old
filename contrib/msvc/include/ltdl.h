@@ -41,7 +41,7 @@ typedef struct {
 
 static inline lt_dlhandle lt_dlopen(const char *filename)
 {
-    UINT olderr = SetErrorMode(SEM_NOOPENFILEERRORBOX); /* why hell this does not work? */
+    UINT olderr = SetErrorMode(SEM_FAILCRITICALERRORS);
     HMODULE lib = LoadLibraryA(filename);
     SetErrorMode(olderr);
     return lib;

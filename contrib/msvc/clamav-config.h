@@ -431,7 +431,7 @@
 #undef LT_DLSEARCH_PATH
 
 /* The archive extension */
-#define LT_LIBEXT ".dll"
+#define LT_LIBEXT "dll"
 
 /* Define to the extension used for runtime loadable modules, say, ".so". */
 #if defined(_MSC_VER) && defined(_DEBUG)
