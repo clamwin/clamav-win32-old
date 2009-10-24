@@ -645,7 +645,6 @@ int scanmanager(const struct optstruct *opts)
 #endif
 #ifdef _WIN32
     cw_fsredirection(FALSE);
-
     /* scan only memory */
     if (optget(opts, "memory")->enabled && (!opts->filename && !optget(opts, "file-list")->enabled))
         ret = scanmem(engine, opts, options);

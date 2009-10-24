@@ -55,6 +55,8 @@
 
 #undef strtok_r /* thanks to pthread.h */
 
+#undef OUT
+
 /* ISO C++, just to shut up vs without disabling warnings */
 #define read _read
 #define close _close
@@ -69,8 +71,13 @@ extern char *strptime (const char *buf, const char *format, struct tm *tm);
 
 /* Re_routing */
 extern int cw_stat(const char *path, struct stat *buf);
-#define lstat stat
-#define stat(p, b) cw_stat(p, b)
+extern int cw_unlink(const char *pathname);
+
+#define lstat           cw_stat
+#define stat(p, b)      cw_stat(p, b)
+#define unlink          cw_unlink
+#define cli_unlink      cw_unlink
+#define cli_rmdirs      cw_rmdirs
 
 #define S_IROTH S_IREAD
 #define S_ISLNK(x) (0)

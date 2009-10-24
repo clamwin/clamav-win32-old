@@ -536,10 +536,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\..\libclamav\others.c"
-				>
-			</File>
-			<File
 				RelativePath="..\..\..\..\libclamav\others_common.c"
 				>
 			</File>
@@ -1352,6 +1348,10 @@
 				</File>
 				<File
 					RelativePath="..\..\src\dllmain\termios.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\src\dllmain\win32others.c"
 					>
 				</File>
 				<File

@@ -72,8 +72,6 @@ extern int cw_uninstallservice(const char *name, int verbose);
 #define LODWORD(l)  ((DWORD)((uint64_t)(l) & 0xffffffff))
 #define HIDWORD(l)  ((DWORD)((uint64_t)(l) >> 32))
 
-#define cli_rmdirs(directory) cw_rmdirs(directory)
-
 /* UNC Path Handling on win32 */
 #define UNC_PREFIX "\\\\?\\"
 #define UN2_PREFIX "\\??\\"
@@ -117,15 +115,14 @@ do \
     free(swap); swap = NULL;                                        \
 }
 
+#define ISLOCKED(error) \
+    ((error == ERROR_ACCESS_DENIED) || (error == ERROR_SHARING_VIOLATION) || (error == ERROR_LOCK_VIOLATION))
+
 #define FIXATTRS(filename) \
 { \
     DWORD dwAttrs = GetFileAttributes(filename); \
     SetFileAttributes(filename, dwAttrs & ~ (FILE_ATTRIBUTE_READONLY | FILE_ATTRIBUTE_HIDDEN)); \
 }
-
-extern int cw_unlink(const char *pathname);
-#define cli_unlink(x)   cw_unlink(x)
-#define unlink(x)       cw_unlink(x)
 
 extern BOOL cw_fsredirection(BOOL value);
 extern BOOL cw_iswow64(void);

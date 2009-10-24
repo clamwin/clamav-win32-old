@@ -141,7 +141,6 @@ static char nuls[10];		/* place to point scanner in event of error */
 #ifdef	_POSIX2_RE_DUP_MAX
 #define	DUPMAX	_POSIX2_RE_DUP_MAX
 #else
-#undef DUPMAX
 #define	DUPMAX	255
 #endif
 

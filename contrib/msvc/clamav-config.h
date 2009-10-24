@@ -422,7 +422,7 @@
 #define LIBCLAMAV_FULLVER "dll"
 
 /* "Major library version number" */
-#define LIBCLAMAV_MAJORVER "dll"
+#define LIBCLAMAV_MAJORVER dll
 
 /* Define if the OS needs help to load dependent libraries for dlopen(). */
 #undef LTDL_DLOPEN_DEPLIBS

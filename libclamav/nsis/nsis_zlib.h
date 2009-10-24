@@ -223,7 +223,6 @@ typedef nsis_z_stream FAR *nsis_z_streamp;
  inflateReset(z);	  \
 }
 int ZEXPORT nsis_inflate(nsis_z_streamp z);
-#undef inflateReset
 #define inflateReset(z) \
 { \
   (z)->blocks.mode = TYPE; \

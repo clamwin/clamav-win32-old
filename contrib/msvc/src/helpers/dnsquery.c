@@ -18,10 +18,6 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-#if HAVE_CONFIG_H
-#include <clamav-config.h>
-#endif
-
 #include <platform.h>
 #include <windns.h>
 #include <iphlpapi.h>
@@ -386,17 +382,17 @@ char *txtquery_compat(const char *domain, unsigned int *ttl)
 
 /* DNS API Version */
 typedef DNS_STATUS (WINAPI *fnDnsQuery)(
-    IN      PCSTR           pszName,
-    IN      WORD            wType,
-    IN      DWORD           Options,
-    IN      PIP4_ARRAY      aipServers      OPTIONAL,
-    IN OUT  PDNS_RECORD     *ppQueryResults OPTIONAL,
-    IN OUT  PVOID           *pReserved      OPTIONAL
+    PCSTR           pszName,
+    WORD            wType,
+    DWORD           Options,
+    PIP4_ARRAY      aipServers,
+    PDNS_RECORD     *ppQueryResults,
+    PVOID           *pReserved
 );
 
 typedef VOID (WINAPI *fnDnsRecordListFree)(
-    IN OUT  PDNS_RECORD     pRecordList,
-    IN      DNS_FREE_TYPE   FreeType
+    PDNS_RECORD     pRecordList,
+    DNS_FREE_TYPE   FreeType
 );
 
 char *txtquery_dnsapi(const char *domain, unsigned int *ttl)

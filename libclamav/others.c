@@ -104,7 +104,8 @@ static int lt_init(void) {
     return 0;
 }
 
-#define PASTE(a,b) a##b
+#define PASTE2(b) #b
+#define PASTE(a,b) a PASTE2(b)
 
 static lt_dlhandle lt_dlfind(const char *name, const char *featurename)
 {
@@ -657,7 +658,6 @@ char *cli_md5file(const char *filename)
 /* Function: unlink
         unlink() with error checking
 */
-#ifndef _WIN32 /* mapped to cw_unlink */
 int cli_unlink(const char *pathname)
 {
 	if (unlink(pathname)==-1) {
@@ -667,7 +667,6 @@ int cli_unlink(const char *pathname)
 	}
 	return 0;
 }
-#endif
 
 #ifdef	C_WINDOWS
 /*
@@ -741,7 +740,7 @@ cli_rmdirs(const char *name)
 
     return rc;	
 }
-#elif !defined(_WIN32)
+#else
 int cli_rmdirs(const char *dirname)
 {
 	DIR *dd;

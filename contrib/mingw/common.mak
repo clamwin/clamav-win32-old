@@ -2,7 +2,7 @@ top=../..
 msvc=$(top)/contrib/msvc
 
 CFLAGS=-I$(msvc) -I$(msvc)/include -I$(msvc)/gnulib -I$(msvc)/pthreads
-CFLAGS+=-I$(top) -I$(top)/shared -I$(top)/libclamav -I$(top)/libclamav/lzma -I$(top)/libclamav/nsis
+CFLAGS+=-I$(top) -I$(top)/shared -I$(top)/libclamav -I$(top)/libclamav/nsis
 CFLAGS+=-DHAVE_CONFIG_H
 CFLAGS+=-Wall -Wextra -Wno-unused -Wno-sign-compare -Wno-switch -Wno-pointer-sign -Wno-format -pipe
 CFLAGS+=-fno-strict-aliasing
