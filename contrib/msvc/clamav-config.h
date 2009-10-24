@@ -161,7 +161,7 @@
 #undef HAVE_DECL_CYGWIN_CONV_PATH
 
 /* Define to 1 if you have the <dirent.h> header file. */
-#undef HAVE_DIRENT_H
+#define HAVE_DIRENT_H 1
 
 /* Define if you have the GNU dld library. */
 #undef HAVE_DLD
@@ -188,7 +188,7 @@
 #undef HAVE_FD_PASSING
 
 /* Define to 1 if fseeko (and presumably ftello) exists and is declared. */
-#undef HAVE_FSEEKO
+#define HAVE_FSEEKO 1
 
 /* have getaddrinfo() */
 #undef HAVE_GETADDRINFO
@@ -203,10 +203,10 @@
 #undef HAVE_GETHOSTBYNAME_R_6
 
 /* Define to 1 if getpagesize() is available */
-#undef HAVE_GETPAGESIZE
+#define HAVE_GETPAGESIZE 1
 
 /* Define to 1 if you have the <grp.h> header file. */
-#define HAVE_GRP_H 1
+#undef HAVE_GRP_H
 
 /* iconv() available */
 #undef HAVE_ICONV
@@ -221,10 +221,10 @@
 #define HAVE_INTTYPES_H 1
 
 /* in_addr_t is defined */
-#define HAVE_IN_ADDR_T 1
+#undef HAVE_IN_ADDR_T
 
 /* in_port_t is defined */
-#define HAVE_IN_PORT_T 1
+#undef HAVE_IN_PORT_T
 
 /* Define to '1' if you have the check.h library */
 #undef HAVE_LIBCHECK
@@ -256,6 +256,9 @@
 /* Define to 1 if you have the <mach-o/dyld.h> header file. */
 #undef HAVE_MACH_O_DYLD_H
 
+/* Define to 1 if you have the `madvise' function. */
+#undef HAVE_MADVISE
+
 /* Define to 1 if you have the `mallinfo' function. */
 #undef HAVE_MALLINFO
 
@@ -273,7 +276,7 @@
 
 /* Define to 1 if you have a working `mmap' system call that supports
    MAP_PRIVATE. */
-#define HAVE_MMAP 1
+#undef HAVE_MMAP
 
 /* Define to 1 if you have the <ndir.h> header file. */
 #undef HAVE_NDIR_H
@@ -344,7 +347,7 @@
 #undef HAVE_STDBOOL_H
 
 /* Define to 1 if you have the <stdint.h> header file. */
-#define HAVE_STDINT_H 1
+#undef HAVE_STDINT_H
 
 /* Define to 1 if you have the <stdlib.h> header file. */
 #define HAVE_STDLIB_H 1
@@ -386,7 +389,7 @@
 #undef HAVE_SYS_INT_TYPES_H
 
 /* Define to 1 if you have the <sys/mman.h> header file. */
-#define HAVE_SYS_MMAN_H 1
+#undef HAVE_SYS_MMAN_H
 
 /* Define to 1 if you have the <sys/param.h> header file. */
 #undef HAVE_SYS_PARAM_H
@@ -428,7 +431,7 @@
 #undef LT_DLSEARCH_PATH
 
 /* The archive extension */
-#define LT_LIBEXT ".dll"
+#define LT_LIBEXT "dll"
 
 /* Define to the extension used for runtime loadable modules, say, ".so". */
 #if defined(_MSC_VER) && defined(_DEBUG)
@@ -514,7 +517,11 @@
 #undef USE_SYSLOG
 
 /* Version number of package */
-#define VERSION "0.95.2"
+#ifdef _MSC_VER
+#define VERSION "devel@clamwin msvc - "__DATE__
+#else
+#define VERSION "devel@clamwin MinGW - "__DATE__
+#endif
 
 /* Version suffix for package */
 #define VERSION_SUFFIX ""
