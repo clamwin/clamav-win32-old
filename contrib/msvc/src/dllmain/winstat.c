@@ -20,9 +20,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-#include <platform.h>
 #include <osdeps.h>
-#include <posix-errno.h>
 
 #undef fstat
 #undef stat

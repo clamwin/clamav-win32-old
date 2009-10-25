@@ -25,10 +25,6 @@
 
 #include <shared/output.h>
 
-struct cfgstruct;
-
-int localserver(const struct cfgstruct *copt) { return -1; }
-
 /* Get the alternative name for a file, so esotic names/paths can be easily accessed */
 static char *cw_getaltname(const char *filename)
 {

@@ -17,7 +17,6 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-#include "clamav-config.h"
 #include <osdeps.h>
 #include <dirent.h>
 #include <libclamav/others.h>
