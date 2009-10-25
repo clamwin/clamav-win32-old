@@ -52,7 +52,6 @@ typedef int socklen_t;
 #define F_SETFL     4   /* Set file status flags */
 
 #define O_NONBLOCK 04000
-extern int fcntl(int fd, int cmd, long arg);
 
 /* only setting O_NONBLOCK is supported - F_GETFL returns always 0 */
 static inline int fcntl(int fd, int cmd, long arg)

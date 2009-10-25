@@ -2,7 +2,7 @@ include common.mak
 
 shared_SOURCES+=$(wildcard $(top)/shared/*.c)
 shared_SOURCES:=$(subst $(top)/shared/actions.c,$(msvc)/src/shared/win32actions.c,$(shared_SOURCES))
-shared_SOURCES:=$(subst $(top)/shared/optparser.c,$(msvc)/src/shared/win32optparser.c,$(shared_SOURCES))
+shared_SOURCES:=$(subst $(top)/shared/optparser.c,,$(shared_SOURCES))
 shared_OBJECTS=$(shared_SOURCES:.c=.o)
 
 clamd_SOURCES=$(wildcard $(top)/clamd/*.c)
