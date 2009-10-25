@@ -137,7 +137,7 @@ typedef	unsigned int in_addr_t;
 
 #define PATHSEP "\\"
 
-#ifndef _OSDEPS_H_
+#ifndef WITHIN_OSDEPS
 #undef DATADIR
 #undef CONFDIR
 __declspec(dllimport) extern const char *DATADIR;
