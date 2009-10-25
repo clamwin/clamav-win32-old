@@ -130,8 +130,8 @@ extern int mkstemp(char *tmpl);
 #define MAX(a,b) (((a) > (b)) ? (a) : (b))
 #endif
 
-typedef	unsigned short in_port_t;
-typedef	unsigned int in_addr_t;
+typedef unsigned short in_port_t;
+typedef unsigned int in_addr_t;
 
 #undef IMAGE_DOS_SIGNATURE
 
