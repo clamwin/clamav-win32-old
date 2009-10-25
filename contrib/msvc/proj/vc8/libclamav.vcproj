@@ -1255,6 +1255,10 @@
 					>
 				</File>
 				<File
+					RelativePath="..\..\include\cw_inline.h"
+					>
+				</File>
+				<File
 					RelativePath="..\..\include\cwdefs.h"
 					>
 				</File>
