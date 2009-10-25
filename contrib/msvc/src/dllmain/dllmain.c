@@ -218,6 +218,8 @@ size_t cw_heapcompact(void)
     return lcommit;
 }
 
+void fix_paths();
+
 BOOL APIENTRY DllMain(HANDLE hModule, DWORD reason, LPVOID lpReserved)
 {
     switch (reason)
@@ -228,6 +230,7 @@ BOOL APIENTRY DllMain(HANDLE hModule, DWORD reason, LPVOID lpReserved)
             DisableThreadLibraryCalls((HMODULE) hModule);
             cwi_processattach();
             _set_invalid_parameter_handler(clamavInvalidParameterHandler);
+            fix_paths();
             break;
         }
         case DLL_THREAD_ATTACH:
@@ -266,3 +269,55 @@ const char *CONFDIR_MILTER = _CONFDIR_MILTER;
 
 #include <shared/getopt.c>
 #include <shared/optparser.c>
+
+#ifndef KEY_WOW64_64KEY
+#define KEY_WOW64_64KEY 0x0100
+#endif
+
+static int cw_getregvalue(const char *key, char *path, char *default_value)
+{
+    HKEY hKey = NULL;
+    DWORD dwType = 0;
+    DWORD flags = KEY_QUERY_VALUE;
+    unsigned char data[MAX_PATH];
+    DWORD datalen = sizeof(data);
+
+    if (default_value)
+    {
+        strncpy(path, default_value, MAX_PATH - 1);
+        path[MAX_PATH - 1] = 0;
+    }
+
+    if (cw_iswow64()) flags |= KEY_WOW64_64KEY;
+
+    /* First look in HKCU then in HKLM */
+    if (RegOpenKeyExA(HKEY_CURRENT_USER, DATADIRBASEKEY, 0, flags, &hKey) != ERROR_SUCCESS)
+        if (RegOpenKeyExA(HKEY_LOCAL_MACHINE, DATADIRBASEKEY, 0, flags, &hKey) != ERROR_SUCCESS)
+            return 0;
+
+    if ((RegQueryValueExA(hKey, key, NULL, &dwType, data, &datalen) == ERROR_SUCCESS) &&
+        datalen && ((dwType == REG_SZ) || dwType == REG_EXPAND_SZ))
+    {
+        path[0] = 0;
+        ExpandEnvironmentStrings((LPCSTR) data, path, MAX_PATH - 1);
+        path[MAX_PATH - 1] = 0;
+        RegCloseKey(hKey);
+        return 1;
+    }
+    RegCloseKey(hKey);
+    return 0;
+}
+
+/* Picks data dir from the Windows Registry, then resolve the request.
+   This function leaks memory, but it's called once or two times per run,
+   the advantage is thread safety. */
+void fix_paths()
+{
+    cw_getregvalue("DataDir", _DATADIR, NULL);
+    if (cw_getregvalue("ConfigDir", _CONFDIR, NULL))
+    {
+        snprintf(_CONFDIR_CLAMD, sizeof(_CONFDIR_CLAMD), "%s\\%s", _CONFDIR, "clamd.conf");
+        snprintf(_CONFDIR_FRESHCLAM, sizeof(_CONFDIR_FRESHCLAM), "%s\\%s", _CONFDIR, "freshclam.conf");
+        snprintf(_CONFDIR_MILTER, sizeof(_CONFDIR_MILTER), "%s\\%s", _CONFDIR, "clamav-milter.conf");
+    }
+}

@@ -43,7 +43,6 @@ extern uint32_t cw_getplatform(void);
 extern helpers_t *cw_gethelpers(void);
 extern int cw_movefile(const char *source, const char *dest, int reboot);
 extern int cw_movefileex(const char *source, const char *dest, DWORD flags);
-extern char *cw_getpath(const char *base, const char *file);
 
 #define PlatformId          ((cw_getplatform() >> 16) & 0x000000ff)
 #define PlatformMajor       ((cw_getplatform() >> 8 ) & 0x000000ff)

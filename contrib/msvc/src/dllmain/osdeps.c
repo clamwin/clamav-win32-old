@@ -29,60 +29,6 @@ struct cfgstruct;
 
 int localserver(const struct cfgstruct *copt) { return -1; }
 
-#ifndef KEY_WOW64_64KEY
-#define KEY_WOW64_64KEY 0x0100
-#endif
-
-static void cw_getregvalue(const char *key, char *path, char *default_value)
-{
-    HKEY hKey = NULL;
-    DWORD dwType = 0;
-    DWORD flags = KEY_QUERY_VALUE;
-    unsigned char data[MAX_PATH];
-    DWORD datalen = sizeof(data);
-
-    strncpy(path, default_value, MAX_PATH - 1);
-    path[MAX_PATH - 1] = 0;
-
-    if (cw_iswow64()) flags |= KEY_WOW64_64KEY;
-
-    /* First look in HKCU then in HKLM */
-    if (RegOpenKeyExA(HKEY_CURRENT_USER, DATADIRBASEKEY, 0, flags, &hKey) != ERROR_SUCCESS)
-        if (RegOpenKeyExA(HKEY_LOCAL_MACHINE, DATADIRBASEKEY, 0, flags, &hKey) != ERROR_SUCCESS)
-            return;
-
-    if ((RegQueryValueExA(hKey, key, NULL, &dwType, data, &datalen) == ERROR_SUCCESS) &&
-        datalen && ((dwType == REG_SZ) || dwType == REG_EXPAND_SZ))
-    {
-        path[0] = 0;
-        ExpandEnvironmentStrings((LPCSTR) data, path, MAX_PATH - 1);
-        path[MAX_PATH - 1] = 0;
-    }
-    RegCloseKey(hKey);
-}
-
-/* Picks data dir from the Windows Registry, then resolve the request.
-   This function leaks memory, but it's called once or two times per run,
-   the advantage is thread safety. */
-char *cw_getpath(const char *base, const char *file)
-{
-    char path[MAX_PATH] = "", *result = NULL;
-    cw_getregvalue(base, path, ".");
-    if (file && *file)
-    {
-        if ((*file == '\\') || (*file == '/'))
-            file++;
-        strncat(path, "\\", MAX_PATH - 1 - strlen(path));
-        path[MAX_PATH - 1] = 0;
-        strncat(path, file, MAX_PATH - 1 - strlen(path));
-        path[MAX_PATH - 1] = 0;
-    }
-
-    CW_CHECKALLOC(result, malloc(strlen(path) + 1), return NULL);
-    strcpy(result, path);
-    return result;
-}
-
 /* Get the alternative name for a file, so esotic names/paths can be easily accessed */
 static char *cw_getaltname(const char *filename)
 {

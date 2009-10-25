@@ -36,10 +36,6 @@
  *      59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  */
 
-#define PTW32_BUILD_INLINED
-#define PTW32_STATIC_LIB
-#define CLEANUP __CLEANUP_C
-
 #include "pthread.h"
 #include "implement.h"
 

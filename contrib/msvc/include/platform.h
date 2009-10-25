@@ -137,14 +137,20 @@ typedef	unsigned int in_addr_t;
 
 #define PATHSEP "\\"
 
+#ifdef _WINDLL
+#define LIBCLAMAV_API
+#else
+#define LIBCLAMAV_API __declspec(dllimport)
+#endif
+
 #ifndef WITHIN_OSDEPS
 #undef DATADIR
 #undef CONFDIR
-__declspec(dllimport) extern const char *DATADIR;
-__declspec(dllimport) extern const char *CONFDIR;
-__declspec(dllimport) extern const char *CONFDIR_CLAMD;
-__declspec(dllimport) extern const char *CONFDIR_FRESHCLAM;
-__declspec(dllimport) extern const char *CONFDIR_MILTER;
+LIBCLAMAV_API extern const char *DATADIR;
+LIBCLAMAV_API extern const char *CONFDIR;
+LIBCLAMAV_API extern const char *CONFDIR_CLAMD;
+LIBCLAMAV_API extern const char *CONFDIR_FRESHCLAM;
+LIBCLAMAV_API extern const char *CONFDIR_MILTER;
 #undef HAVE_CONFIG_H
 #endif
 

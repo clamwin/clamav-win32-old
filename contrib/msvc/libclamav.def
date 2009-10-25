@@ -55,7 +55,6 @@ cw_perror
 
 ; clamwin internals @ 50
 cw_gethelpers               @50 NONAME
-cw_getpath                  @51 NONAME
 cw_async_noalert            @52 NONAME
 cw_leerrno                  @53 NONAME
 cw_wseterrno                @54 NONAME
