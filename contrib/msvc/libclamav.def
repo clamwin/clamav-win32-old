@@ -55,18 +55,17 @@ cw_perror
 
 ; clamwin internals @ 50
 cw_gethelpers               @50 NONAME
-cw_async_noalert            @52 NONAME
-cw_leerrno                  @53 NONAME
-cw_wseterrno                @54 NONAME
+cw_async_noalert            @51 NONAME
+cw_leerrno                  @52 NONAME
+cw_wseterrno                @53 NONAME
 
 ; win32 portability layer @ 70
-;fcntl                       @70 NONAME
-opendir                     @71 NONAME
-closedir                    @72 NONAME
-readdir                     @73 NONAME
-mkstemp                     @74 NONAME
-tcgetattr                   @75 NONAME
-tcsetattr                   @76 NONAME
+opendir                     @70 NONAME
+closedir                    @71 NONAME
+readdir                     @72 NONAME
+mkstemp                     @73 NONAME
+tcgetattr                   @74 NONAME
+tcsetattr                   @75 NONAME
 
 ; gnulib @ 90
 gnulib_snprintf             @90 NONAME
@@ -121,12 +120,22 @@ sha256_final                @154 NONAME
 sha256_init                 @155 NONAME
 sha256_update               @156 NONAME
 uniq_get                    @157 NONAME
+fmap                        @158 NONAME
+funmap                      @159 NONAME
 
-; fmap
-fmap                        @160 NONAME
-funmap                      @161 NONAME
+; optparser
+optget                      @170 NONAME
+optparse                    @171 NONAME
+optfree                     @172 NONAME
 
-; inlined pthreads-win32 @ 200
+clam_options                @173 NONAME DATA
+DATADIR                     @174 NONAME DATA
+CONFDIR                     @175 NONAME DATA
+CONFDIR_CLAMD               @176 NONAME DATA
+CONFDIR_FRESHCLAM           @177 NONAME DATA
+CONFDIR_MILTER              @178 NONAME DATA
+
+; pthreads-win32 @ 200
 pthread_attr_destroy        @200 NONAME
 pthread_attr_init           @201 NONAME
 pthread_attr_setdetachstate @202 NONAME
@@ -153,14 +162,3 @@ gzdopen                     @251 NONAME
 gzgets                      @252 NONAME
 gzopen                      @253 NONAME
 gzwrite                     @254 NONAME
-
-EXPORTS optget
-EXPORTS optparse
-EXPORTS optfree
-EXPORTS clam_options DATA
-
-EXPORTS DATADIR DATA
-EXPORTS CONFDIR DATA
-EXPORTS CONFDIR_CLAMD DATA
-EXPORTS CONFDIR_FRESHCLAM DATA
-EXPORTS CONFDIR_MILTER DATA
