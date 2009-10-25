@@ -246,34 +246,6 @@ BOOL APIENTRY DllMain(HANDLE hModule, DWORD reason, LPVOID lpReserved)
     return TRUE;
 }
 
-#include "clamav-config.h"
-char _DATADIR[MAX_PATH] = DATADIR;
-char _CONFDIR[MAX_PATH] = CONFDIR;
-char _CONFDIR_CLAMD[MAX_PATH] = CONFDIR"\\clamd.conf";
-char _CONFDIR_FRESHCLAM[MAX_PATH] = CONFDIR"\\freshclam.conf";
-char _CONFDIR_MILTER[MAX_PATH] = CONFDIR"\\clamav-milter.conf";
-
-#undef DATADIR
-#undef CONFDIR
-const char *DATADIR = _DATADIR;
-const char *CONFDIR = _CONFDIR;
-const char *CONFDIR_CLAMD = _CONFDIR_CLAMD;
-const char *CONFDIR_FRESHCLAM = _CONFDIR_FRESHCLAM;
-const char *CONFDIR_MILTER = _CONFDIR_MILTER;
-
-#define DATADIR _DATADIR
-#define CONFDIR _CONFDIR
-#define CONFDIR_CLAMD _CONFDIR_CLAMD
-#define CONFDIR_FRESHCLAM _CONFDIR_FRESHCLAM
-#define CONFDIR_MILTER _CONFDIR_MILTER
-
-#include <shared/getopt.c>
-#include <shared/optparser.c>
-
-#ifndef KEY_WOW64_64KEY
-#define KEY_WOW64_64KEY 0x0100
-#endif
-
 static int cw_getregvalue(const char *key, char *path, char *default_value)
 {
     HKEY hKey = NULL;
@@ -308,9 +280,35 @@ static int cw_getregvalue(const char *key, char *path, char *default_value)
     return 0;
 }
 
-/* Picks data dir from the Windows Registry, then resolve the request.
-   This function leaks memory, but it's called once or two times per run,
-   the advantage is thread safety. */
+/* look at win32/compat/libclamav_main.c for more info */
+#include "clamav-config.h"
+char _DATADIR[MAX_PATH] = DATADIR;
+char _CONFDIR[MAX_PATH] = CONFDIR;
+char _CONFDIR_CLAMD[MAX_PATH] = CONFDIR"\\clamd.conf";
+char _CONFDIR_FRESHCLAM[MAX_PATH] = CONFDIR"\\freshclam.conf";
+char _CONFDIR_MILTER[MAX_PATH] = CONFDIR"\\clamav-milter.conf";
+
+#undef DATADIR
+#undef CONFDIR
+const char *DATADIR = _DATADIR;
+const char *CONFDIR = _CONFDIR;
+const char *CONFDIR_CLAMD = _CONFDIR_CLAMD;
+const char *CONFDIR_FRESHCLAM = _CONFDIR_FRESHCLAM;
+const char *CONFDIR_MILTER = _CONFDIR_MILTER;
+
+#define DATADIR _DATADIR
+#define CONFDIR _CONFDIR
+#define CONFDIR_CLAMD _CONFDIR_CLAMD
+#define CONFDIR_FRESHCLAM _CONFDIR_FRESHCLAM
+#define CONFDIR_MILTER _CONFDIR_MILTER
+
+#include <shared/getopt.c>
+#include <shared/optparser.c>
+
+#ifndef KEY_WOW64_64KEY
+#define KEY_WOW64_64KEY 0x0100
+#endif
+
 void fix_paths()
 {
     cw_getregvalue("DataDir", _DATADIR, NULL);
