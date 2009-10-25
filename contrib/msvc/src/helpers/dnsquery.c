@@ -19,6 +19,7 @@
  */
 
 #include <platform.h>
+#include <osdeps.h>
 #include <windns.h>
 #include <iphlpapi.h>
 #include <inttypes.h>

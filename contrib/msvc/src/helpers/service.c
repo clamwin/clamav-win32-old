@@ -19,7 +19,7 @@
  */
 
 #include <platform.h>
-#include <cwhelpers.h>
+#include <osdeps.h>
 #include <winsvc.h>
 #include <shared/output.h>
 

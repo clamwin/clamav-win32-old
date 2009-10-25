@@ -20,7 +20,6 @@
 
 #ifndef _TERMIOS_H_
 #define _TERMIOS_H_
-#include <cwdefs.h>
 
 #define ECHO (~(ENABLE_LINE_INPUT | ENABLE_PROCESSED_INPUT))
 #define TCSAFLUSH 2

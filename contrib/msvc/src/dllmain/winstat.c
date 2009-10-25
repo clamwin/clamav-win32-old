@@ -21,7 +21,7 @@
  */
 
 #include <platform.h>
-#include <safe_ctype.h>
+#include <osdeps.h>
 #include <posix-errno.h>
 
 #undef fstat

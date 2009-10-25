@@ -21,104 +21,148 @@
 #ifndef _OSDEPS_H_
 #define _OSDEPS_H_
 
-#ifdef _DEBUG
-#define CL_DEBUG 1
-#endif
-
-#ifdef __MINGW32__
-#define HAVE_GETTIMEOFDAY 1
-#endif
-
 #include <platform.h>
-#include <direct.h>
+#include <assert.h>
+#include <stdarg.h>
+#include <string.h>
+#include <sys/types.h>
+#include <cwhelpers.h>
+
+#define DATADIRBASEKEY  "Software\\ClamAV"
 
 /* Process execution */
 #define WIFSIGNALED(x) (x)
 #define WIFEXITED(x) (1)
 #define WTERMSIG(x) (x)
-#include <process.h>
-
-/* ctype.h functions are not safe on win32 */
-#include <safe_ctype.h>
-
-/* re-route main to cw_main to handle some startup code */
-#define main cw_main
-
-/* errno remap */
-#define strerror cw_strerror
-#define perror cw_perror
-
-#define mkdir(a, b) mkdir(a)
-
-#define match_regex cli_matchregex
-#define optget win32_optget
-
-#undef strtok_r /* thanks to pthread.h */
-
-#undef OUT
-
-/* ISO C++, just to shut up vs without disabling warnings */
-#define read _read
-#define close _close
-#define dup _dup
-#define lseek _lseek
-#define fdopen _fdopen
-
-/* gnulib entries */
-extern char *strtok_r(char *s, const char *delim, char **save_ptr);
-extern struct tm *localtime_r(time_t const *t, struct tm *tp);
-extern char *strptime (const char *buf, const char *format, struct tm *tm);
-
-/* Re_routing */
-extern int cw_stat(const char *path, struct stat *buf);
-extern int cw_unlink(const char *pathname);
-
-#define lstat           cw_stat
-#define stat(p, b)      cw_stat(p, b)
-#define unlink          cw_unlink
-#define cli_unlink      cw_unlink
-#define cli_rmdirs      cw_rmdirs
-
-#define S_IROTH S_IREAD
-#define S_ISLNK(x) (0)
-#define S_IRWXO S_IEXEC
-#define S_IRWXG S_IRWXU
-
-/* adds _O_SHORT_LIVED flag */
-#define open cw_open
-/* #define fopen(f, m) fopen(f, m"T") */
-
-/* <stdio.h> / <stdarg.h> */
-/* Use snprintf and vsnprintf from gnulib, win32 crt has broken a snprintf */
-#undef snprintf
-#undef vsnprintf
-#define snprintf gnulib_snprintf
-#define vsnprintf gnulib_vsnprintf
-extern int snprintf(char *str, size_t size, const char *format, ...);
-extern int vsnprintf(char *str, size_t size, const char *format, va_list args);
-
-#if defined(_MSC_VER)
-#define fseeko _fseeki64
-#elif defined(__GNUC__)
-#define fseeko fseeko64
-extern int __cdecl fseeko64 (FILE* stream, off64_t offset, int whence);
-#else
-#undef HAVE_FSEEKO
-#endif
-
-/* tmpfile() on win32 uses root dir, not suitable if non-admin */
-#define tmpfile do_not_use_tmpfile_on_win32
-
-/* <stdlib.h> */
-extern int mkstemp(char *tmpl);
 
 void clamscan_ctrl_handler(DWORD ctrl_type);
 
-/* yes msvc 6 sucks... */
-#ifndef _INTPTR_T_DEFINED
-typedef long int intptr_t;
-#define _INTPTR_T_DEFINED
+extern uint32_t cw_getplatform(void);
+extern helpers_t *cw_gethelpers(void);
+extern int cw_movefile(const char *source, const char *dest, int reboot);
+extern int cw_movefileex(const char *source, const char *dest, DWORD flags);
+extern char *cw_getpath(const char *base, const char *file);
+
+#define PlatformId          ((cw_getplatform() >> 16) & 0x000000ff)
+#define PlatformMajor       ((cw_getplatform() >> 8 ) & 0x000000ff)
+#define PlatformMinor       (cw_getplatform() & 0x000000ff)
+#define PlatformVersion     (cw_getplatform() & 0x0000ffff)
+#define isWin9x()           (PlatformId == VER_PLATFORM_WIN32_WINDOWS)
+#define isOldOS()           (PlatformVersion <= 0x400)
+
+#define LODWORD(l)  ((DWORD)((uint64_t)(l) & 0xffffffff))
+#define HIDWORD(l)  ((DWORD)((uint64_t)(l) >> 32))
+
+static inline const char *cw_uncprefix(const char *filename)
+{
+    if (PATH_ISUNC(filename) || PATH_ISNET(filename) || isWin9x())
+        return "";
+    else
+        return UNC_PREFIX;
+}
+
+#define ISLOCKED(error) \
+    ((error == ERROR_ACCESS_DENIED) || (error == ERROR_SHARING_VIOLATION) || (error == ERROR_LOCK_VIOLATION))
+
+#define FIXATTRS(filename) \
+{ \
+    DWORD dwAttrs = GetFileAttributes(filename); \
+    SetFileAttributes(filename, dwAttrs & ~ (FILE_ATTRIBUTE_READONLY | FILE_ATTRIBUTE_HIDDEN)); \
+}
+
+extern BOOL cw_iswow64(void);
+
+static inline wchar_t *cw_mb2wc(const char *mb)
+{
+    wchar_t *wc = NULL;
+    DWORD len = 0;
+
+    if (!(len = MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, mb, -1, NULL, 0)))
+        return NULL;
+
+    CW_CHECKALLOC(wc, malloc(len * sizeof(wchar_t)), return NULL);
+
+    if (MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, mb, -1, wc, len))
+        return wc;
+
+    free(wc);
+    return NULL;
+}
+
+#ifndef WC_NO_BEST_FIT_CHARS
+#define WC_NO_BEST_FIT_CHARS 1024
 #endif
+
+static inline char *cw_wc2mb(const wchar_t *wc, DWORD flags)
+{
+    BOOL invalid = FALSE;
+    DWORD len = 0, res = 0;
+    char *mb = NULL;
+
+    /* NT4 does not like WC_NO_BEST_FIT_CHARS */
+    if (isOldOS()) flags &= ~WC_NO_BEST_FIT_CHARS;
+
+    len = WideCharToMultiByte(CP_ACP, flags, wc, -1, NULL, 0, NULL, &invalid);
+    if (!len && (GetLastError() != ERROR_INSUFFICIENT_BUFFER))
+    {
+        fprintf(stderr, "WideCharToMultiByte() failed with %d\n", GetLastError());
+        return NULL;
+    }
+
+    CW_CHECKALLOC(mb, malloc(len), return NULL);
+
+    res = WideCharToMultiByte(CP_ACP, flags, wc, -1, mb, len, NULL, &invalid);
+    if (res && ((!invalid || (flags != WC_NO_BEST_FIT_CHARS)))) return mb;
+    free(mb);
+    return NULL;
+}
+
+static inline char *cw_getfullpathname(const char *path)
+{
+    char *fp = NULL;
+    DWORD len = GetFullPathNameA(path, 0, NULL, NULL);
+    if (!len) return NULL;
+
+    CW_CHECKALLOC(fp, malloc(len + 1), return NULL);
+
+    if (GetFullPathNameA(path, len, fp, NULL))
+        return fp;
+    free(fp);
+    return NULL;
+}
+
+static inline char *cw_getcurrentdir(void)
+{
+    DWORD len = GetCurrentDirectoryA(0, NULL);
+    char *cwd = NULL;
+    if (!len) return NULL;
+    len++;
+
+    CW_CHECKALLOC(cwd, malloc(len), return NULL);
+
+    len = GetCurrentDirectoryA(len - 1, cwd);
+    if (len) return cwd;
+    free(cwd);
+    return NULL;
+}
+
+static inline void cw_pathtowin32(char *name)
+{
+    /* UNC Paths need to have only backslashes */
+    char *p = name;
+    while (*p)
+    {
+        if (*p == '/') *p = '\\';
+        p++;
+    }
+}
+
+static inline void cw_rmtrailslashes(char *path)
+{
+    size_t i = strlen(path) - 1;
+    while ((i > 0) && ((path[i] == '/') || (path[i] == '\\')))
+        path[i--] = 0;
+}
 
 static volatile const char portrev_rodata[] =
 {

@@ -22,8 +22,6 @@
 #ifndef _DIRENT_H
 #define _DIRENT_H
 
-#include <platform.h>
-
 struct dirent {
     char *d_name;
     off_t d_ino;

@@ -18,7 +18,9 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
+#include <platform.h>
 #include <posix-errno.h>
+#include <assert.h>
 #include <others.h>
 
 static const char *const cw_errlist[MAX_CW_ERRNO] =

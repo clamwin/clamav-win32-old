@@ -53,14 +53,15 @@
 #define WINVER 0x0501
 #endif
 
+/* ISO C++, just to shut up vs without disabling warnings */
+#define read _read
+#define close _close
+#define dup _dup
+#define lseek _lseek
+#define fdopen _fdopen
+
 #ifndef __cplusplus
 #define inline __inline
 #endif
-
-/* <strings.h> */
-#define strcasecmp _stricmp
-#define strncasecmp _strnicmp
-
-#include <windows.h>
 
 #endif /* _CWDEFS_H_ */

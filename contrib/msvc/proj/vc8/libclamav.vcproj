@@ -1335,7 +1335,7 @@
 					>
 				</File>
 				<File
-					RelativePath="..\..\src\dllmain\platform.c"
+					RelativePath="..\..\src\dllmain\osdeps.c"
 					>
 				</File>
 				<File

@@ -18,7 +18,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-#include <platform.h>
+//#include <platform.h>
+#include <osdeps.h>
 #include <pthread.h>
 
 static uint32_t platform = 0;
@@ -158,6 +159,11 @@ static void cwi_processattach(void)
     }
 }
 
+/* Winsock internals */
+#define SO_SYNCHRONOUS_ALERT    0x10
+#define SO_SYNCHRONOUS_NONALERT 0x20
+#define SO_OPENTYPE             0x7008
+
 /* currently unused */
 void cw_async_noalert(void)
 {
@@ -236,3 +242,27 @@ BOOL APIENTRY DllMain(HANDLE hModule, DWORD reason, LPVOID lpReserved)
     }
     return TRUE;
 }
+
+#include "clamav-config.h"
+char _DATADIR[MAX_PATH] = DATADIR;
+char _CONFDIR[MAX_PATH] = CONFDIR;
+char _CONFDIR_CLAMD[MAX_PATH] = CONFDIR"\\clamd.conf";
+char _CONFDIR_FRESHCLAM[MAX_PATH] = CONFDIR"\\freshclam.conf";
+char _CONFDIR_MILTER[MAX_PATH] = CONFDIR"\\clamav-milter.conf";
+
+#undef DATADIR
+#undef CONFDIR
+const char *DATADIR = _DATADIR;
+const char *CONFDIR = _CONFDIR;
+const char *CONFDIR_CLAMD = _CONFDIR_CLAMD;
+const char *CONFDIR_FRESHCLAM = _CONFDIR_FRESHCLAM;
+const char *CONFDIR_MILTER = _CONFDIR_MILTER;
+
+#define DATADIR _DATADIR
+#define CONFDIR _CONFDIR
+#define CONFDIR_CLAMD _CONFDIR_CLAMD
+#define CONFDIR_FRESHCLAM _CONFDIR_FRESHCLAM
+#define CONFDIR_MILTER _CONFDIR_MILTER
+
+#include <shared/getopt.c>
+#include <shared/optparser.c>

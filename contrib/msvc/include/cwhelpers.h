@@ -21,7 +21,6 @@
 #ifndef _CWHELPERS_H_
 #define _CWHELPERS_H_
 
-#include <cwdefs.h>
 #include <tlhelp32.h>
 #include <psapi.h>
 

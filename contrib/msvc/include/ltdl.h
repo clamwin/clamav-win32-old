@@ -21,8 +21,6 @@
 #ifndef __LTDL_H_
 #define __LTDL_H_
 
-#include <windows.h>
-
 #define SEARCH_LIBDIR ""
 
 typedef HMODULE lt_dlhandle;

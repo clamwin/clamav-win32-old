@@ -23,9 +23,6 @@
 #ifndef _SYS_SOCKET_H
 #define _SYS_SOCKET_H
 
-#include <platform.h>
-#include <errno.h>
-#include <posix-errno.h>
 extern int cw_wseterrno(void);
 extern int gnulib_snprintf(char *str, size_t size, const char *format, ...);
 
@@ -56,6 +53,23 @@ typedef int socklen_t;
 
 #define O_NONBLOCK 04000
 extern int fcntl(int fd, int cmd, long arg);
+
+/* only setting O_NONBLOCK is supported - F_GETFL returns always 0 */
+static inline int fcntl(int fd, int cmd, long arg)
+{
+    u_long mode = (arg & O_NONBLOCK);
+
+    switch (cmd)
+    {
+        case F_GETFL: return 0;
+        case F_SETFL:
+            if (!ioctlsocket(fd, FIONBIO, &mode))
+                return 0;
+    }
+
+    errno = EBADF;
+    return -1;
+}
 
 static inline SOCKET inl_accept(SOCKET sockfd, struct sockaddr *addr, socklen_t *addrlen)
 {

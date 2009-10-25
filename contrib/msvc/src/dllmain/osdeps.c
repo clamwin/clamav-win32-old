@@ -19,6 +19,7 @@
  */
 
 #include <platform.h>
+#include <osdeps.h>
 #include <dirent.h>
 #include <others.h>
 
@@ -296,23 +297,6 @@ int cw_movefile(const char *source, const char *dest, int reboot)
         return 1;
     cli_warnmsg("error scheduling the move operation for reboot (%lu)\n", GetLastError());
     return 0;
-}
-
-/* only setting O_NONBLOCK is supported - F_GETFL returns always 0 */
-int fcntl(int fd, int cmd, long arg)
-{
-    u_long mode = (arg & O_NONBLOCK);
-
-    switch (cmd)
-    {
-        case F_GETFL: return 0;
-        case F_SETFL:
-            if (!ioctlsocket(fd, FIONBIO, &mode))
-                return 0;
-    }
-
-    errno = EBADF;
-    return -1;
 }
 
 int getpagesize(void)

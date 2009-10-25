@@ -585,4 +585,4 @@
 /* Define to "int" if <sys/socket.h> does not define. */
 #undef socklen_t
 
-#include <osdeps.h>
+#include <platform.h>

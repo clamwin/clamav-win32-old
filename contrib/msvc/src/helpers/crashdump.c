@@ -19,6 +19,7 @@
  */
 
 #include <platform.h>
+#include <osdeps.h>
 
 static char filescanned[MAX_PATH] = "N/A";
 

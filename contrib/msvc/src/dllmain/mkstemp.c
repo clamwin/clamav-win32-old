@@ -16,15 +16,8 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA */
 
 
-#include <cwdefs.h>
-#include <inttypes.h>
-#include <stdio.h>
-#include <errno.h>
-#include <string.h>
-#include <time.h>
-#include <fcntl.h>
+#include <platform.h>
 #include <process.h>
-#include <io.h>
 
 /* Generate a unique temporary file name from TEMPLATE.
    The last six characters of TEMPLATE must be "XXXXXX";

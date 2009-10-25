@@ -1845,11 +1845,7 @@ int cl_load(const char *path, struct cl_engine *engine, unsigned int *signo, uns
 
 const char *cl_retdbdir(void)
 {
-#ifdef _WIN32
-    return cw_getpath("DataDir", NULL);
-#else
     return DATADIR;
-#endif
 }
 
 int cl_statinidir(const char *dirname, struct cl_stat *dbstat)

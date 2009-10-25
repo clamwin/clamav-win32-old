@@ -23,28 +23,58 @@
 
 #include <cwdefs.h>
 #include <winsock2.h>
-#include <inttypes.h>
-#include <malloc.h>
-#include <assert.h>
-
-#include <io.h>
+#include <windows.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdarg.h>
-#include <string.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <time.h>
-#include <sys/timeb.h>
-#include <sys/types.h>
-#include <fcntl.h>
+#include <errno.h>
+#include <direct.h>  /* _mkdir()  */
+#include <process.h> /* _getpid() */
+#include <malloc.h>  /* _alloca() */
 
-#include <cwhelpers.h>
 #include <posix-errno.h>
+#include <safe_ctype.h>
+#include <cw_inline.h>
 #include <socket_inline.h>
 
-#define DATADIRBASEKEY  "Software\\ClamAV"
-#undef IMAGE_DOS_SIGNATURE
+/* re-route main to cw_main to handle some startup code */
+#define main cw_main
+
+#undef strtok_r /* thanks to pthread.h */
+
+/* <strings.h> */
+#define strcasecmp _stricmp
+#define strncasecmp _strnicmp
+
+/* cw */
+extern char *cw_normalizepath(const char *path);
+extern size_t cw_heapcompact(void);
+extern BOOL cw_fsredirection(BOOL value);
+extern void cw_registerservice(const char *name);
+extern int cw_installservice(const char *name, const char *dname, const char *desc);
+extern int cw_uninstallservice(const char *name, int verbose);
+
+/* gnulib entries */
+extern char *strtok_r(char *s, const char *delim, char **save_ptr);
+extern struct tm *localtime_r(time_t const *t, struct tm *tp);
+extern char *strptime (const char *buf, const char *format, struct tm *tm);
+
+/* Re_routing */
+extern int cw_stat(const char *path, struct stat *buf);
+extern int cw_unlink(const char *pathname);
+
+#define lstat           cw_stat
+#define stat(p, b)      cw_stat(p, b)
+#define unlink          cw_unlink
+#define cli_unlink      cw_unlink
+#define cli_rmdirs      cw_rmdirs
+#define safe_open       cw_open
+
+/* errno remap */
+#define strerror cw_strerror
+#define perror cw_perror
+
+#define mkdir(a, b) mkdir(a)
+#define match_regex cli_matchregex
 
 #ifdef _MSC_VER
 extern void cw_scanning(const char *filename);
@@ -52,25 +82,34 @@ extern void cw_scanning(const char *filename);
 #define cw_scanning(x)
 #endif
 
-extern uint32_t cw_getplatform(void);
-extern helpers_t *cw_gethelpers(void);
-extern char *cw_normalizepath(const char *path);
-extern char *cw_getpath(const char *base, const char *file);
-extern int cw_movefile(const char *source, const char *dest, int reboot);
-extern int cw_movefileex(const char *source, const char *dest, DWORD flags);
-extern void cw_registerservice(const char *name);
-extern int cw_installservice(const char *name, const char *dname, const char *desc);
-extern int cw_uninstallservice(const char *name, int verbose);
+#define S_IROTH S_IREAD
+#define S_ISLNK(x) (0)
+#define S_IRWXO S_IEXEC
+#define S_IRWXG S_IRWXU
 
-#define PlatformId          ((cw_getplatform() >> 16) & 0x000000ff)
-#define PlatformMajor       ((cw_getplatform() >> 8 ) & 0x000000ff)
-#define PlatformMinor       (cw_getplatform() & 0x000000ff)
-#define PlatformVersion     (cw_getplatform() & 0x0000ffff)
-#define isWin9x()           (PlatformId == VER_PLATFORM_WIN32_WINDOWS)
-#define isOldOS()           (PlatformVersion <= 0x400)
+/* <stdio.h> / <stdarg.h> */
+/* Use snprintf and vsnprintf from gnulib, win32 crt has broken a snprintf */
+#undef snprintf
+#undef vsnprintf
+#define snprintf gnulib_snprintf
+#define vsnprintf gnulib_vsnprintf
+extern int gnulib_snprintf(char *str, size_t size, const char *format, ...);
+extern int gnulib_vsnprintf(char *str, size_t size, const char *format, va_list args);
 
-#define LODWORD(l)  ((DWORD)((uint64_t)(l) & 0xffffffff))
-#define HIDWORD(l)  ((DWORD)((uint64_t)(l) >> 32))
+#if defined(_MSC_VER)
+#define fseeko _fseeki64
+#elif defined(__GNUC__)
+#define fseeko fseeko64
+extern int __cdecl fseeko64 (FILE* stream, off64_t offset, int whence);
+#else
+#undef HAVE_FSEEKO
+#endif
+
+/* tmpfile() on win32 uses root dir, not suitable if non-admin */
+#define tmpfile do_not_use_tmpfile_on_win32
+
+/* <stdlib.h> */
+extern int mkstemp(char *tmpl);
 
 /* UNC Path Handling on win32 */
 #define UNC_PREFIX "\\\\?\\"
@@ -84,198 +123,29 @@ extern int cw_uninstallservice(const char *name, int verbose);
 #define PATH_ISNET(path)  (!strncmp(path, NET_PREFIX, 2))
 #define PATH_PLAIN(path)  (PATH_ISUNC(path) ? UNC_OFFSET(path) : path)
 
-static inline const char *cw_uncprefix(const char *filename)
-{
-    if (PATH_ISUNC(filename) || PATH_ISNET(filename) || isWin9x())
-        return "";
-    else
-        return UNC_PREFIX;
-}
-
-#define CW_CHECKALLOC(var, alloc, ret) \
-do \
-{ \
-    if (!(var = alloc)) \
-    { \
-        fprintf(stderr, #alloc" failed\n"); \
-        ret; \
-    } \
-} while (0)
-
-#define NORMALIZE_PATH(path, free_src, fail)                        \
-{                                                                   \
-    char *swap = cw_normalizepath((char *) path);                   \
-    if (free_src) free((void *) path);                              \
-    if (!swap) { fail; }                                            \
-    if (free_src)                                                   \
-        CW_CHECKALLOC(path, malloc(strlen(swap) + 1), fail);        \
-    else                                                            \
-        CW_CHECKALLOC(path, alloca(strlen(swap) + 1), fail);        \
-    strcpy((char *) path, swap);                                    \
-    free(swap); swap = NULL;                                        \
-}
-
-#define ISLOCKED(error) \
-    ((error == ERROR_ACCESS_DENIED) || (error == ERROR_SHARING_VIOLATION) || (error == ERROR_LOCK_VIOLATION))
-
-#define FIXATTRS(filename) \
-{ \
-    DWORD dwAttrs = GetFileAttributes(filename); \
-    SetFileAttributes(filename, dwAttrs & ~ (FILE_ATTRIBUTE_READONLY | FILE_ATTRIBUTE_HIDDEN)); \
-}
-
-extern BOOL cw_fsredirection(BOOL value);
-extern BOOL cw_iswow64(void);
-extern size_t cw_heapcompact(void);
-
-struct timezone {
-    int tz_minuteswest; /* minutes W of Greenwich */
-    int tz_dsttime;     /* type of dst correction */
-};
-
-static inline int gettimeofday(struct timeval *tv, struct timezone *tz)
-{
-    struct timeb timebuffer;
-    ftime(&timebuffer);
-    tv->tv_sec = (long) timebuffer.time;
-    tv->tv_usec = 1000 * timebuffer.millitm;
-    return 0;
-}
-
-static inline wchar_t *cw_mb2wc(const char *mb)
-{
-    wchar_t *wc = NULL;
-    DWORD len = 0;
-
-    if (!(len = MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, mb, -1, NULL, 0)))
-        return NULL;
-
-    CW_CHECKALLOC(wc, malloc(len * sizeof(wchar_t)), return NULL);
-
-    if (MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, mb, -1, wc, len))
-        return wc;
-
-    free(wc);
-    return NULL;
-}
-
-#ifndef WC_NO_BEST_FIT_CHARS
-#define WC_NO_BEST_FIT_CHARS 1024
+#ifndef MIN
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
+#endif
+#ifndef MAX
+#define MAX(a,b) (((a) > (b)) ? (a) : (b))
 #endif
 
-static inline char *cw_wc2mb(const wchar_t *wc, DWORD flags)
-{
-    BOOL invalid = FALSE;
-    DWORD len = 0, res = 0;
-    char *mb = NULL;
+typedef	unsigned short in_port_t;
+typedef	unsigned int in_addr_t;
 
-    /* NT4 does not like WC_NO_BEST_FIT_CHARS */
-    if (isOldOS()) flags &= ~WC_NO_BEST_FIT_CHARS;
+#undef IMAGE_DOS_SIGNATURE
 
-    len = WideCharToMultiByte(CP_ACP, flags, wc, -1, NULL, 0, NULL, &invalid);
-    if (!len && (GetLastError() != ERROR_INSUFFICIENT_BUFFER))
-    {
-        fprintf(stderr, "WideCharToMultiByte() failed with %d\n", GetLastError());
-        return NULL;
-    }
+#define PATHSEP "\\"
 
-    CW_CHECKALLOC(mb, malloc(len), return NULL);
-
-    res = WideCharToMultiByte(CP_ACP, flags, wc, -1, mb, len, NULL, &invalid);
-    if (res && ((!invalid || (flags != WC_NO_BEST_FIT_CHARS)))) return mb;
-    free(mb);
-    return NULL;
-}
-
-static inline char *cw_getfullpathname(const char *path)
-{
-    char *fp = NULL;
-    DWORD len = GetFullPathNameA(path, 0, NULL, NULL);
-    if (!len) return NULL;
-
-    CW_CHECKALLOC(fp, malloc(len + 1), return NULL);
-
-    if (GetFullPathNameA(path, len, fp, NULL))
-        return fp;
-    free(fp);
-    return NULL;
-}
-
-static inline char *cw_getcurrentdir(void)
-{
-    DWORD len = GetCurrentDirectoryA(0, NULL);
-    char *cwd = NULL;
-    if (!len) return NULL;
-    len++;
-
-    CW_CHECKALLOC(cwd, malloc(len), return NULL);
-
-    len = GetCurrentDirectoryA(len - 1, cwd);
-    if (len) return cwd;
-    free(cwd);
-    return NULL;
-}
-
-static inline void cw_pathtowin32(char *name)
-{
-    /* UNC Paths need to have only backslashes */
-    char *p = name;
-    while (*p)
-    {
-        if (*p == '/') *p = '\\';
-        p++;
-    }
-}
-
-static inline void cw_rmtrailslashes(char *path)
-{
-    size_t i = strlen(path) - 1;
-    while ((i > 0) && ((path[i] == '/') || (path[i] == '\\')))
-        path[i--] = 0;
-}
-
-/* If timer represents a date before midnight, January 1, 1970,
-   gmtime returns NULL. There is no error return */
-static inline struct tm *safe_gmtime(const time_t *timer)
-{
-    struct tm *gmt = NULL;
-    if ((*timer < 0) || !(gmt = gmtime(timer)))
-    {
-        time_t t = 0;
-        gmt = gmtime(&t);
-    }
-    return gmt;
-}
-#define gmtime safe_gmtime
-
-static inline int cw_open(const char *filename, int oflag, ...)
-{
-    va_list ap;
-    int pmode = 0;
-
-    va_start(ap, oflag);
-    pmode = va_arg(ap, int);
-    va_end(ap);
-
-    if (oflag & _O_CREAT)
-    {
-        oflag |= _O_SHORT_LIVED;
-        pmode |= (_S_IREAD | _S_IWRITE);
-    }
-
-    return _open(filename, oflag, pmode);
-}
-
-/* FIXME: check if this function works as expected */
-static inline ssize_t pread(int fd, void *buf, size_t count, off_t offset)
-{
-    off_t lastpos = _lseek(fd, offset, SEEK_SET);
-    ssize_t res;
-    if (lastpos == -1) return -1;
-    res = (ssize_t) _read(fd, buf, (unsigned int) count);
-    return ((_lseek(fd, lastpos, SEEK_SET) == -1) ? -1 : res);
-}
-
-#include "../../../platform.h.in"
+#ifndef _OSDEPS_H_
+#undef DATADIR
+#undef CONFDIR
+__declspec(dllimport) extern const char *DATADIR;
+__declspec(dllimport) extern const char *CONFDIR;
+__declspec(dllimport) extern const char *CONFDIR_CLAMD;
+__declspec(dllimport) extern const char *CONFDIR_FRESHCLAM;
+__declspec(dllimport) extern const char *CONFDIR_MILTER;
+#undef HAVE_CONFIG_H
+#endif
 
 #endif /* _PLATFORM_H */

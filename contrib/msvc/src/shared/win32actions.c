@@ -18,16 +18,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-#if HAVE_CONFIG_H
-#include "clamav-config.h"
-#endif
-
-#include <stdio.h>
-#include <string.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <errno.h>
+#include <platform.h>
+#include <osdeps.h>
 
 #include "shared/optparser.h"
 #include "shared/output.h"

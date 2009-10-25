@@ -61,7 +61,7 @@ cw_leerrno                  @53 NONAME
 cw_wseterrno                @54 NONAME
 
 ; win32 portability layer @ 70
-fcntl                       @70 NONAME
+;fcntl                       @70 NONAME
 opendir                     @71 NONAME
 closedir                    @72 NONAME
 readdir                     @73 NONAME
@@ -154,3 +154,14 @@ gzdopen                     @251 NONAME
 gzgets                      @252 NONAME
 gzopen                      @253 NONAME
 gzwrite                     @254 NONAME
+
+EXPORTS optget
+EXPORTS optparse
+EXPORTS optfree
+EXPORTS clam_options DATA
+
+EXPORTS DATADIR DATA
+EXPORTS CONFDIR DATA
+EXPORTS CONFDIR_CLAMD DATA
+EXPORTS CONFDIR_FRESHCLAM DATA
+EXPORTS CONFDIR_MILTER DATA
