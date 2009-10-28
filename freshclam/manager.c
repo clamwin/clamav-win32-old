@@ -1395,6 +1395,7 @@ static int buildcld(const char *tmpdir, const char *dbname, const char *newfile,
 	else
 	    close(fd);
 	unlink(newfile);
+	closedir(dir);
 	return -1;
     }
 
