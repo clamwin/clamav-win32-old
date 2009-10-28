@@ -161,7 +161,7 @@
 #undef HAVE_DECL_CYGWIN_CONV_PATH
 
 /* Define to 1 if you have the <dirent.h> header file. */
-#define HAVE_DIRENT_H 1
+#undef HAVE_DIRENT_H
 
 /* Define if you have the GNU dld library. */
 #undef HAVE_DLD
@@ -188,7 +188,7 @@
 #undef HAVE_FD_PASSING
 
 /* Define to 1 if fseeko (and presumably ftello) exists and is declared. */
-#define HAVE_FSEEKO 1
+#undef HAVE_FSEEKO
 
 /* have getaddrinfo() */
 #undef HAVE_GETADDRINFO
@@ -206,7 +206,7 @@
 #define HAVE_GETPAGESIZE 1
 
 /* Define to 1 if you have the <grp.h> header file. */
-#undef HAVE_GRP_H
+#define HAVE_GRP_H 1
 
 /* iconv() available */
 #undef HAVE_ICONV
@@ -221,10 +221,10 @@
 #define HAVE_INTTYPES_H 1
 
 /* in_addr_t is defined */
-#undef HAVE_IN_ADDR_T
+#define HAVE_IN_ADDR_T 1
 
 /* in_port_t is defined */
-#undef HAVE_IN_PORT_T
+#define HAVE_IN_PORT_T 1
 
 /* Define to '1' if you have the check.h library */
 #undef HAVE_LIBCHECK
@@ -256,10 +256,7 @@
 /* Define to 1 if you have the <mach-o/dyld.h> header file. */
 #undef HAVE_MACH_O_DYLD_H
 
-/* Define to 1 if you have the `madvise' function. */
-#undef HAVE_MADVISE
-
-/* Define to 1 if you have the `mallinfo' function. */
+/* have mallinfo */
 #undef HAVE_MALLINFO
 
 /* Define to 1 if you have the <malloc.h> header file. */
@@ -276,7 +273,7 @@
 
 /* Define to 1 if you have a working `mmap' system call that supports
    MAP_PRIVATE. */
-#undef HAVE_MMAP
+#define HAVE_MMAP 1
 
 /* Define to 1 if you have the <ndir.h> header file. */
 #undef HAVE_NDIR_H
@@ -347,7 +344,7 @@
 #undef HAVE_STDBOOL_H
 
 /* Define to 1 if you have the <stdint.h> header file. */
-#undef HAVE_STDINT_H
+#define HAVE_STDINT_H 1
 
 /* Define to 1 if you have the <stdlib.h> header file. */
 #define HAVE_STDLIB_H 1
@@ -389,7 +386,7 @@
 #undef HAVE_SYS_INT_TYPES_H
 
 /* Define to 1 if you have the <sys/mman.h> header file. */
-#undef HAVE_SYS_MMAN_H
+#define HAVE_SYS_MMAN_H 1
 
 /* Define to 1 if you have the <sys/param.h> header file. */
 #undef HAVE_SYS_PARAM_H
@@ -431,7 +428,7 @@
 #undef LT_DLSEARCH_PATH
 
 /* The archive extension */
-#define LT_LIBEXT "dll"
+#define LT_LIBEXT ".dll"
 
 /* Define to the extension used for runtime loadable modules, say, ".so". */
 #if defined(_MSC_VER) && defined(_DEBUG)
@@ -517,11 +514,7 @@
 #undef USE_SYSLOG
 
 /* Version number of package */
-#ifdef _MSC_VER
-#define VERSION "devel@clamwin msvc - "__DATE__
-#else
-#define VERSION "devel@clamwin MinGW - "__DATE__
-#endif
+#define VERSION "0.95.3"
 
 /* Version suffix for package */
 #define VERSION_SUFFIX ""
@@ -572,14 +565,13 @@
    nothing if this is not supported.  Do not define if restrict is
    supported directly.  */
 #undef restrict
-/* Work around a bug in Sun C++: it does not support _Restrict or
-   __restrict__, even though the corresponding Sun C compiler ends up with
-   "#define restrict _Restrict" or "#define restrict __restrict__" in the
-   previous line.  Perhaps some future version of Sun C++ will work with
-   restrict; if so, hopefully it defines __RESTRICT like Sun C does.  */
+/* Work around a bug in Sun C++: it does not support _Restrict, even
+   though the corresponding Sun C compiler does, which causes
+   "#define restrict _Restrict" in the previous line.  Perhaps some future
+   version of Sun C++ will work with _Restrict; if so, it'll probably
+   define __RESTRICT, just as Sun C does.  */
 #if defined __SUNPRO_CC && !defined __RESTRICT
 # define _Restrict
-# define __restrict__
 #endif
 
 /* Define to "int" if <sys/socket.h> does not define. */

@@ -5,7 +5,7 @@ CFLAGS=-I$(msvc) -I$(msvc)/include -I$(msvc)/gnulib -I$(msvc)/pthreads
 CFLAGS+=-I$(top) -I$(top)/shared -I$(top)/libclamav -I$(top)/libclamav/lzma -I$(top)/libclamav/nsis
 CFLAGS+=-DHAVE_CONFIG_H
 CFLAGS+=-Wall -Wextra -Wno-unused -Wno-sign-compare -Wno-switch -Wno-pointer-sign -Wno-format -pipe
-CFLAGS+=-std=c89 -fno-strict-aliasing
+CFLAGS+=-fno-strict-aliasing
 CFLAGS+=-O2 -mtune=generic -march=i686 -fomit-frame-pointer -ffast-math
 
 CC=$(MINGW32_CROSS_PREFIX)gcc

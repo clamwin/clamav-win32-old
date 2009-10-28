@@ -118,7 +118,8 @@ static int lt_init(void) {
     return 0;
 }
 
-#define PASTE(a,b) a##b
+#define PASTE2(a,b) a#b
+#define PASTE(a,b) PASTE2(a,b)
 
 static lt_dlhandle lt_dlfind(const char *name, const char *featurename)
 {
@@ -268,10 +269,15 @@ const char *cl_strerror(int clerror)
 
 int cl_init(unsigned int initoptions)
 {
+	struct timeval tv;
+	unsigned int pid = (unsigned int) getpid();
+
     /* put dlopen() stuff here, etc. */
     if (lt_init() == 0) {
 	cli_rarload();
     }
+    gettimeofday(&tv, (struct timezone *) 0);
+    srand(pid + tv.tv_usec*(pid+1) + clock());
     return CL_SUCCESS;
 }
 

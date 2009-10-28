@@ -716,6 +716,10 @@ static int cli_ftw_dir(const char *dirname, int flags, int maxdepth, cli_ftw_cb 
 		if (ret != CL_SUCCESS)
 		    break;
 	    }
+	    for (i++;i<entries_cnt;i++) {
+		struct dirent_data *entry = &entries[i];
+		free(entry->filename);
+	    }
 	    free(entries);
 	}
     } else {
@@ -773,7 +777,7 @@ unsigned int cli_rndnum(unsigned int max)
     if(name_salt[0] == 16) { /* minimizes re-seeding after the first call to cli_gentemp() */
 	    struct timeval tv;
 	gettimeofday(&tv, (struct timezone *) 0);
-	srand(tv.tv_usec+clock());
+	srand(tv.tv_usec+clock()+rand());
     }
 
     return 1 + (unsigned int) (max * (rand() / (1.0 + RAND_MAX)));

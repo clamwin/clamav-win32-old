@@ -1,6 +1,47 @@
+Wed Oct 28 16:55:03 CET 2009 (tk)
+---------------------------------
+ * V 0.95.3
+
+Wed Oct 28 15:15:05 EET 2009 (edwin)
+------------------------------------
+ * clamd/thrmgr.c: use a double instead of integer to avoid negative time (bb #1731).
+
+Wed Oct 28 12:41:34 CET 2009 (tk)
+---------------------------------
+ * libclamav/filetypes_int.h: sync with daily.ftm
+
+Tue Oct 27 23:29:09 CET 2009 (tk)
+---------------------------------
+ * clamdscan: improve error handling (bb#1729)
+
+Tue Oct 27 20:31:36 CET 2009 (tk)
+---------------------------------
+ * clamdscan, libclamav, clamdtop, freshclam, sigtool: fix some error path
+   leaks (bb#1730)
+
+Tue Oct 27 11:59:32 CET 2009 (tk)
+---------------------------------
+ * libclamav/scanners.c: drop hardcoded offset limits for embedded objs (bb#1664)
+
+Mon Oct 26 16:09:29 CET 2009 (tk)
+---------------------------------
+ * libclamav/others.c: call srand() already in cli_init() (bb#1728)
+
+Mon Oct 26 13:08:41 CET 2009 (tk)
+---------------------------------
+ * clamdscan/proto.c: handle recv() == 0 (bb#1717)
+
+Sat Oct 24 15:06:50 CEST 2009 (acab)
+------------------------------------
+ * libclamav/mpool.c: increase max pool to 8M to allow loading huge custom dbs
+
 Fri Oct 23 20:48:12 CEST 2009 (acab)
 ------------------------------------
  * libclamav/unarj: fix error path leaks and valgrind warnings
+
+Sat Oct 24 14:27:10 EEST 2009 (edwin)
+------------------------------------
+ * clamd/scanner.c, libclamav/others_common.c: fix error path leak (bb #1711)
 
 Fri Oct 16 14:56:10 CEST 2009 (tk)
 ----------------------------------
