@@ -240,11 +240,3 @@ int cw_movefile(const char *source, const char *dest, int reboot)
     cli_warnmsg("error scheduling the move operation for reboot (%lu)\n", GetLastError());
     return 0;
 }
-
-int getpagesize(void)
-{
-    int pagesize = 0;
-    SYSTEM_INFO si;
-    GetSystemInfo(&si);
-    return si.dwPageSize;
-}

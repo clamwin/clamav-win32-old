@@ -36,7 +36,6 @@
 #define pause()
 
 extern int ftruncate(int fd, off_t length);
-extern int getpagesize(void);
 
 #define chown(a, b, c) ((void) (0))
 

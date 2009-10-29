@@ -192,7 +192,7 @@
 #undef HAVE_GETADDRINFO
 
 /* Define to 1 if getpagesize() is available */
-#define HAVE_GETPAGESIZE 1
+#undef HAVE_GETPAGESIZE
 
 /* Define to 1 if you have the <grp.h> header file. */
 #undef HAVE_GRP_H
