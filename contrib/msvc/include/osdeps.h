@@ -58,8 +58,6 @@
 
 #define match_regex cli_matchregex
 
-extern int getpagesize(void);
-
 #undef strtok_r /* thanks to pthread.h */
 
 /* gnulib entries */

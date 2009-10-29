@@ -366,6 +366,17 @@ void cli_dbgmsg_internal(const char *str, ...) __attribute__((format(printf, 1, 
 void cli_dbgmsg_internal(const char *str, ...);
 #endif
 
+#ifdef HAVE_CLI_GETPAGESIZE
+#undef HAVE_CLI_GETPAGESIZE
+#endif
+
+#ifdef _WIN32
+static inline int cli_getpagesize(void) {
+    SYSTEM_INFO si;
+    GetSystemInfo(&si);
+    return si.dwPageSize;
+}
+#else /* ! _WIN32 */
 #if HAVE_SYSCONF_SC_PAGESIZE
 static inline int cli_getpagesize(void) { return sysconf(_SC_PAGESIZE); }
 #define HAVE_CLI_GETPAGESIZE 1
@@ -373,9 +384,9 @@ static inline int cli_getpagesize(void) { return sysconf(_SC_PAGESIZE); }
 #if HAVE_GETPAGESIZE
 static inline int cli_getpagesize(void) { return getpagesize(); }
 #define HAVE_CLI_GETPAGESIZE 1
-#endif
-#define HAVE_CLI_GETPAGESIZE 0
-#endif
+#endif /* HAVE_GETPAGESIZE */
+#endif /* HAVE_SYSCONF_SC_PAGESIZE */
+#endif /* _WIN32 */
 
 void *cli_malloc(size_t nmemb);
 void *cli_calloc(size_t nmemb, size_t size);

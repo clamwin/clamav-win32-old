@@ -407,11 +407,3 @@ int fcntl(int fd, int cmd, long arg)
     errno = EBADF;
     return -1;
 }
-
-int getpagesize(void)
-{
-    int pagesize = 0;
-    SYSTEM_INFO si;
-    GetSystemInfo(&si);
-    return si.dwPageSize;
-}

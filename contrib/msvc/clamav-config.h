@@ -203,7 +203,7 @@
 #undef HAVE_GETHOSTBYNAME_R_6
 
 /* Define to 1 if getpagesize() is available */
-#define HAVE_GETPAGESIZE 1
+#undef HAVE_GETPAGESIZE
 
 /* Define to 1 if you have the <grp.h> header file. */
 #define HAVE_GRP_H 1
