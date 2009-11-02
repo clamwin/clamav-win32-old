@@ -245,6 +245,10 @@ BOOL APIENTRY DllMain(HANDLE hModule, DWORD reason, LPVOID lpReserved)
     return TRUE;
 }
 
+#ifndef KEY_WOW64_64KEY
+#define KEY_WOW64_64KEY 0x0100
+#endif
+
 static int cw_getregvalue(const char *key, char *path, char *default_value)
 {
     HKEY hKey = NULL;
@@ -303,10 +307,6 @@ const char *CONFDIR_MILTER = _CONFDIR_MILTER;
 
 #include <shared/getopt.c>
 #include <shared/optparser.c>
-
-#ifndef KEY_WOW64_64KEY
-#define KEY_WOW64_64KEY 0x0100
-#endif
 
 void fix_paths()
 {
