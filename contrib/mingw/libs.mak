@@ -21,24 +21,25 @@ libclamav_SOURCES=$(wildcard $(top)/libclamav/*.c)
 libclamav_SOURCES+=$(wildcard $(top)/libclamav/regex/*.c)
 libclamav_SOURCES+=$(wildcard $(top)/libclamav/lzma/*.c)
 libclamav_SOURCES+=$(wildcard $(top)/libclamav/nsis/*.c)
-libclamav_SOURCES+=$(wildcard $(top)/libclamav/jsparse/js-norm.c)
-libclamav_SOURCES+=$(msvc)/pthreads/pthread.c
 libclamav_SOURCES+=$(wildcard $(msvc)/src/dllmain/*.c)
+libclamav_SOURCES+=$(top)/libclamav/jsparse/js-norm.c
 
-libclamav_SOURCES+=$(wildcard $(msvc)/zlib/*.c)
-libclamav_SOURCES+=$(wildcard $(msvc)/bzip2/*.c)
+libclamav_SOURCES+=$(top)/win32/3rdparty/pthreads/pthread.c
+libclamav_SOURCES+=$(addprefix $(top)/win32/3rdparty/bzip2/,blocksort.c bzlib.c compress.c \
+	crctable.c decompress.c huffman.c randtable.c)
+libclamav_SOURCES+=$(addprefix $(top)/win32/3rdparty/zlib/,adler32.c compress.c crc32.c \
+	deflate.c gzio.c infback.c inffast.c inflate.c inftrees.c trees.c uncompr.c zutil.c)
 
 libclamav_SOURCES+=$(wildcard $(top)/libclamav/7z/*.c)
 libclamav_SOURCES+=$(wildcard $(top)/libclamav/7z/Archive/7z/*.c)
 
-# Exclusions
 libclamav_SOURCES:=$(subst $(top)/libclamav/regex/engine.c,,$(libclamav_SOURCES))
 libclamav_SOURCES:=$(subst $(top)/libclamav/others.c,$(msvc)/src/dllmain/win32others.c,$(libclamav_SOURCES))
 
 libclamav_OBJECTS=$(libclamav_SOURCES:.c=.o)
 libclamav_OBJECTS+=$(msvc)/resources/libclamav-rc.o
 libclamav.dll: $(libclamav_OBJECTS) $(gnulib_OBJECTS)
-	$(DLLWRAP) $(LDFLAGS) --def $(msvc)/libclamav.def --implib $@.a -o $@ $^ -lz -lbz2 -lws2_32
+	$(DLLWRAP) $(LDFLAGS) --def $(msvc)/libclamav.def --implib $@.a -o $@ $^ -lws2_32
 
 clean:
 	@-rm -f *.dll *.a $(gnulib_OBJECTS) $(libclamunrar_OBJECTS) $(libclamunrar_iface_OBJECTS) $(libclamav_OBJECTS)

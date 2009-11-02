@@ -41,14 +41,14 @@ freshclam_SOURCES:=$(subst $(top)/freshclam/dns.c,,$(freshclam_SOURCES))
 freshclam_OBJECTS=$(freshclam_SOURCES:.c=.o)
 freshclam_OBJECTS+=$(msvc)/resources/freshclam-rc.o
 freshclam.exe: libclamav.dll $(freshclam_OBJECTS) $(shared_OBJECTS)
-	$(CC) $(LDFLAGS) $^ -o $@ libclamav.dll.a -lws2_32 -lz -liphlpapi
+	$(CC) $(LDFLAGS) $^ -o $@ libclamav.dll.a -lws2_32 -liphlpapi
 
 sigtool_SOURCES=$(wildcard $(top)/sigtool/*.c)
 sigtool_SOURCES+=$(msvc)/src/helpers/cw_main.c
 sigtool_OBJECTS=$(sigtool_SOURCES:.c=.o)
 sigtool_OBJECTS+=$(msvc)/resources/sigtool-rc.o
 sigtool.exe: libclamav.dll $(sigtool_OBJECTS) $(shared_OBJECTS)
-	$(CC) $(LDFLAGS) $^ -o $@ libclamav.dll.a -lws2_32 -lz
+	$(CC) $(LDFLAGS) $^ -o $@ libclamav.dll.a -lws2_32
 
 profiler_SOURCES=$(msvc)/tools/profiler.c
 profiler_OBJECTS=$(msvc)/tools/profiler.o
