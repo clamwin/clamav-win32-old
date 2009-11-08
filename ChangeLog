@@ -1,3 +1,21 @@
+Fri Nov  6 16:14:09 CET 2009 (acab)
+-----------------------------------
+ * libclamav/tnef.c: don't use fgetc (bb#1695)
+
+Fri Nov  6 12:22:33 CET 2009 (tk)
+---------------------------------
+ * freshclam: add support for DetectionStatsHostID (bb#1503)
+
+Tue Nov  3 22:50:30 CET 2009 (tk)
+---------------------------------
+ * libclamav, freshclam: fix handling of dbs when both daily.cvd and daily.cld
+			 are present in the db directory and ScriptedUpdates
+			 are turned off (bb#1739)
+
+Tue Nov  3 15:18:14 CET 2009 )tk)
+---------------------------------
+ * libclamav/readdb.c: return error if lsig contains redundant subsigs
+
 Sun Nov  1 21:26:10 CET 2009 (acab)
 -----------------------------------
  * win32: improve build system

@@ -856,7 +856,7 @@ static int lsigattribs(char *attribs, struct cli_lsig_tdb *tdb)
 #define LDB_TOKENS 67
 static int cli_loadldb(FILE *fs, struct cl_engine *engine, unsigned int *signo, unsigned int options, struct cli_dbio *dbio, const char *dbname)
 {
-	char *tokens[LDB_TOKENS];
+	char *tokens[LDB_TOKENS + 1];
 	char buffer[CLI_DEFAULT_LSIG_BUFSIZE + 1], *buffer_cpy, *pt;
 	const char *sig, *virname, *offset, *logic;
 	struct cli_matcher *root;
@@ -882,7 +882,7 @@ static int cli_loadldb(FILE *fs, struct cl_engine *engine, unsigned int *signo, 
 	if(engine->ignored)
 	    strcpy(buffer_cpy, buffer);
 
-	tokens_count = cli_strtokenize(buffer, ';', LDB_TOKENS, (const char **) tokens);
+	tokens_count = cli_strtokenize(buffer, ';', LDB_TOKENS + 1, (const char **) tokens);
 	if(tokens_count < 4) {
 	    ret = CL_EMALFDB;
 	    break;
@@ -907,6 +907,12 @@ static int cli_loadldb(FILE *fs, struct cl_engine *engine, unsigned int *signo, 
 
 	if(subsigs > 64) {
 	    cli_errmsg("cli_loadldb: Broken logical expression or too many subsignatures\n");
+	    ret = CL_EMALFDB;
+	    break;
+	}
+
+	if(subsigs != tokens_count - 3) {
+	    cli_errmsg("cli_loadldb: The number of subsignatures (== %u) doesn't match the IDs in the logical expression (== %u)\n", tokens_count - 3, subsigs);
 	    ret = CL_EMALFDB;
 	    break;
 	}
@@ -984,11 +990,6 @@ static int cli_loadldb(FILE *fs, struct cl_engine *engine, unsigned int *signo, 
 	root->ac_lsigtable = newtable;
 
 	for(i = 0; i < subsigs; i++) {
-	    if(i + 3 >= tokens_count) {
-		cli_errmsg("cli_loadldb: Missing subsignature id %u\n", i);
-		ret = CL_EMALFDB;
-		break;
-	    }
 	    lsigid[1] = i;
 	    sig = tokens[3 + i];
 
@@ -1691,7 +1692,8 @@ static int cli_loaddbdir(const char *dirname, struct cl_engine *engine, unsigned
 	} result;
 #endif
 	char *dbfile;
-	int ret = CL_EOPEN;
+	int ret = CL_EOPEN, have_cld;
+	struct cl_cvd *daily_cld, *daily_cvd;
 
 
     cli_dbgmsg("Loading databases from %s\n", dirname);
@@ -1739,8 +1741,38 @@ static int cli_loaddbdir(const char *dirname, struct cl_engine *engine, unsigned
     }
 
     sprintf(dbfile, "%s"PATHSEP"daily.cld", dirname);
-    if(access(dbfile, R_OK))
-	sprintf(dbfile, "%s"PATHSEP"daily.cvd", dirname);
+    have_cld = !access(dbfile, R_OK);
+    if(have_cld) {
+	daily_cld = cl_cvdhead(dbfile);
+	if(!daily_cld) {
+	    cli_errmsg("cli_loaddbdir(): error parsing header of %s\n", dbfile);
+	    free(dbfile);
+	    closedir(dd);
+	    return CL_EMALFDB;
+	}
+    }
+    sprintf(dbfile, "%s"PATHSEP"daily.cvd", dirname); 
+    if(!access(dbfile, R_OK)) {
+	if(have_cld) {
+	    daily_cvd = cl_cvdhead(dbfile);
+	    if(!daily_cvd) {
+		cli_errmsg("cli_loaddbdir(): error parsing header of %s\n", dbfile);
+		free(dbfile);
+		if(have_cld)
+		    cl_cvdfree(daily_cld);
+		closedir(dd);
+		return CL_EMALFDB;
+	    }
+	    if(daily_cld->version > daily_cvd->version)
+		sprintf(dbfile, "%s"PATHSEP"daily.cld", dirname);
+	    cl_cvdfree(daily_cvd);
+	}
+    } else {
+	sprintf(dbfile, "%s"PATHSEP"daily.cld", dirname);
+    }
+    if(have_cld)
+	cl_cvdfree(daily_cld);
+
     if(!access(dbfile, R_OK) && (ret = cli_load(dbfile, engine, signo, options, NULL))) {
 	free(dbfile);
 	closedir(dd);
