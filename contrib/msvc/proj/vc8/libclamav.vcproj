@@ -568,6 +568,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\..\libclamav\qsort.c"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\..\libclamav\readdb.c"
 				>
 			</File>
