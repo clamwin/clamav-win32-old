@@ -1645,7 +1645,7 @@ static int verifydiff(const char *diff, const char *cvd, const char *incdir)
     return ret;
 }
 
-static char *decodehexstr(const char *hex)
+static char *decodehexstr(const char *hex, unsigned int *dlen)
 {
 	uint16_t *str16;
 	char *decoded;
@@ -1691,6 +1691,9 @@ static char *decodehexstr(const char *hex)
 	}
     }
 
+    if(dlen)
+	*dlen = p;
+
     return decoded;
 }
 
@@ -1698,7 +1701,7 @@ static int decodehex(const char *hexsig)
 {
 	char *pt, *hexcpy, *start, *n, *decoded;
 	int asterisk = 0;
-	unsigned int i, j, hexlen, parts = 0;
+	unsigned int i, j, hexlen, dlen, parts = 0, bw;
 	int mindist = 0, maxdist = 0, error = 0;
 
 
@@ -1742,12 +1745,12 @@ static int decodehex(const char *hexsig)
 	    else if(maxdist)
 		mprintf("{WILDCARD_ANY_STRING(LENGTH<=%u)}", maxdist);
 
-	    if(!(decoded = decodehexstr(start))) {
+	    if(!(decoded = decodehexstr(start, &dlen))) {
 		mprintf("!Decoding failed\n");
 		free(hexcpy);
 		return -1;
 	    }
-	    mprintf("%s", decoded);
+	    bw = write(1, decoded, dlen);
 	    free(decoded);
 
 	    if(i == parts)
@@ -1823,11 +1826,11 @@ static int decodehex(const char *hexsig)
 		mprintf("!Can't extract part %u of partial signature\n", i);
 		return -1;
 	    }
-	    if(!(decoded = decodehexstr(pt))) {
+	    if(!(decoded = decodehexstr(pt, &dlen))) {
 		mprintf("!Decoding failed\n");
 		return -1;
 	    }
-	    mprintf("%s", decoded);
+	    bw = write(1, decoded, dlen);
 	    free(decoded);
 	    if(i < parts)
 		mprintf("{WILDCARD_ANY_STRING}");
@@ -1835,11 +1838,11 @@ static int decodehex(const char *hexsig)
 	}
 
     } else {
-	if(!(decoded = decodehexstr(hexsig))) {
+	if(!(decoded = decodehexstr(hexsig, &dlen))) {
 	    mprintf("!Decoding failed\n");
 	    return -1;
 	}
-	mprintf("%s", decoded);
+	bw = write(1, decoded, dlen);
 	free(decoded);
     }
 
@@ -1850,13 +1853,99 @@ static int decodehex(const char *hexsig)
 static int decodesig(char *sig)
 {
 	char *pt;
+	const char *tokens[68];
+	int tokens_count, subsigs, i;
 
     if(strchr(sig, ';')) { /* lsig */
-	mprintf("decodesig: Not supported signature format (yet)\n");
-	return -1;
+        tokens_count = cli_strtokenize(sig, ';', 67 + 1, (const char **) tokens);
+	if(tokens_count < 4) {
+	    mprintf("!decodesig: Invalid or not supported signature format\n");
+	    return -1;
+	}
+	mprintf("VIRUS NAME: %s\n", tokens[0]);
+	mprintf("TDB: %s\n", tokens[1]);
+	mprintf("LOGICAL EXPRESSION: %s\n", tokens[2]);
+	subsigs = cli_ac_chklsig(tokens[2], tokens[2] + strlen(tokens[2]), NULL, NULL, NULL, 1);
+	if(subsigs == -1) {
+	    mprintf("!decodesig: Broken logical expression\n");
+	    return -1;
+	}
+	subsigs++;
+	if(subsigs > 64) {
+	    mprintf("!decodesig: Too many subsignatures\n");
+	    return -1;
+	}
+	if(subsigs != tokens_count - 3) {
+	    mprintf("!decodesig: The number of subsignatures (==%u) doesn't match the IDs in the logical expression (==%u)\n", tokens_count - 3, subsigs);
+	    return -1;
+	}
+	for(i = 0; i < subsigs; i++) {
+	    mprintf(" * SUBSIG ID %d\n", i);
+	    if((pt = strchr(tokens[3 + i], ':'))) {
+		*pt++ = 0;
+		mprintf(" +-> OFFSET: %s\n", pt);
+	    } else {
+		mprintf(" +-> OFFSET: ANY\n");
+	    }
+	    mprintf(" +-> DECODED SUBSIGNATURE:\n");
+	    decodehex(tokens[3 + i]);
+	}
     } else if(strchr(sig, ':')) { /* ndb */
-	mprintf("decodesig: Not supported signature format (yet)\n");
-	return -1;
+	tokens_count = cli_strtokenize(sig, ':', 6 + 1, tokens);
+	if(tokens_count < 4 || tokens_count > 6) {
+	    mprintf("!decodesig: Invalid or not supported signature format\n");
+	    mprintf("TOKENS COUNT: %u\n", tokens_count);
+	    return -1;
+	}
+	mprintf("VIRUS NAME: %s\n", tokens[0]);
+	if(tokens_count == 5)
+	    mprintf("FUNCTIONALITY LEVEL: >=%s\n", tokens[4]);
+	else if(tokens_count == 6)
+	    mprintf("FUNCTIONALITY LEVEL: %s..%s\n", tokens[4], tokens[5]);
+
+	if(!cli_isnumber(tokens[1])) {
+	    mprintf("!decodesig: Invalid target type\n");
+	    return -1;
+	}
+	mprintf("TARGET TYPE: ");
+	switch(atoi(tokens[1])) {
+	    case 0:
+		mprintf("ANY FILE\n");
+		break;
+	    case 1:
+		mprintf("PE\n");
+		break;
+	    case 2:
+		mprintf("OLE2\n");
+		break;
+	    case 3:
+		mprintf("HTML\n");
+		break;
+	    case 4:
+		mprintf("MAIL\n");
+		break;
+	    case 5:
+		mprintf("GRAPHICS\n");
+		break;
+	    case 6:
+		mprintf("ELF\n");
+		break;
+	    case 7:
+		mprintf("NORMALIZED ASCII TEXT\n");
+		break;
+	    case 8:
+		mprintf("DISASM DATA\n");
+		break;
+	    case 9:
+		mprintf("MACHO\n");
+		break;
+	    default:
+		mprintf("!decodesig: Invalid target type\n");
+		return -1;
+	}
+	mprintf("OFFSET: %s\n", tokens[2]);
+	mprintf("DECODED SIGNATURE:\n");
+	decodehex(tokens[3]);
     } else if((pt = strchr(sig, '='))) {
 	*pt++ = 0;
 	mprintf("VIRUS NAME: %s\n", sig);
