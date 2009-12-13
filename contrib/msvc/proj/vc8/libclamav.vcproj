@@ -556,6 +556,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\..\libclamav\pe_icons.c"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\..\libclamav\petite.c"
 				>
 			</File>
@@ -878,6 +882,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\..\libclamav\bcfeatures.h"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\..\libclamav\bignum.h"
 				>
 			</File>
@@ -899,6 +907,14 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\libclamav\bytecode_api.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\bytecode_api_impl.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\bytecode_hooks.h"
 				>
 			</File>
 			<File
@@ -939,6 +955,10 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\libclamav\default.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\disasm-common.h"
 				>
 			</File>
 			<File
@@ -1103,6 +1123,10 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\libclamav\pe.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\pe_icons.h"
 				>
 			</File>
 			<File
