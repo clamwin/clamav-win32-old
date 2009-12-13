@@ -85,36 +85,38 @@ cli_ftw                     @107 NONAME
 cli_gentemp                 @108 NONAME
 cli_gentempfd               @109 NONAME
 cli_gettmpdir               @110 NONAME
-cli_hex2ui                  @111 NONAME
-cli_isnumber                @112 NONAME
-cli_malloc                  @113 NONAME
-cli_matchregex              @114 NONAME
-cli_md5file                 @115 NONAME
-cli_md5stream               @116 NONAME
-cli_ole2_extract            @117 NONAME
-cli_ppt_vba_read            @118 NONAME
-cli_readn                   @119 NONAME
-cli_regcomp                 @120 NONAME
-cli_regexec                 @121 NONAME
-cli_regfree                 @122 NONAME
-cli_rndnum                  @123 NONAME
-cli_scancpio_newc           @124 NONAME
-cli_scancpio_odc            @125 NONAME
-cli_scancpio_old            @126 NONAME
-cli_scanmacho               @127 NONAME
-cli_str2hex                 @128 NONAME
-cli_strbcasestr             @129 NONAME
-cli_strdup                  @130 NONAME
-cli_strerror                @131 NONAME
-cli_strtok                  @132 NONAME
-cli_strtokenize             @133 NONAME
-cli_utf16toascii            @134 NONAME
-cli_vba_inflate             @135 NONAME
-cli_vba_readdir             @136 NONAME
-;cli_vm_execute              @137 NONAME
-cli_wm_decrypt_macro        @138 NONAME
-cli_wm_readdir              @139 NONAME
-cli_writen                  @140 NONAME
+cli_hex2str                 @111 NONAME
+cli_hex2ui                  @112 NONAME
+cli_initroots               @113 NONAME
+cli_isnumber                @114 NONAME
+cli_malloc                  @115 NONAME
+cli_matchregex              @116 NONAME
+cli_md5file                 @117 NONAME
+cli_md5stream               @118 NONAME
+cli_ole2_extract            @119 NONAME
+cli_parse_add               @120 NONAME
+cli_ppt_vba_read            @121 NONAME
+cli_readn                   @122 NONAME
+cli_regcomp                 @123 NONAME
+cli_regexec                 @124 NONAME
+cli_regfree                 @125 NONAME
+cli_rndnum                  @126 NONAME
+cli_scancpio_newc           @127 NONAME
+cli_scancpio_odc            @128 NONAME
+cli_scancpio_old            @129 NONAME
+cli_scanmacho               @130 NONAME
+cli_str2hex                 @131 NONAME
+cli_strbcasestr             @132 NONAME
+cli_strdup                  @133 NONAME
+cli_strerror                @134 NONAME
+cli_strtok                  @135 NONAME
+cli_strtokenize             @136 NONAME
+cli_utf16toascii            @137 NONAME
+cli_vba_inflate             @138 NONAME
+cli_vba_readdir             @139 NONAME
+cli_wm_decrypt_macro        @140 NONAME
+cli_wm_readdir              @141 NONAME
+cli_writen                  @142 NONAME
 
 html_normalise_map          @150 NONAME
 mp_clear                    @151 NONAME
@@ -166,7 +168,3 @@ gzdopen                     @251 NONAME
 gzgets                      @252 NONAME
 gzopen                      @253 NONAME
 gzwrite                     @254 NONAME
-
-cli_parse_add
-cli_initroots
-cli_hex2str
