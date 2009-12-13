@@ -111,7 +111,7 @@ cli_strtokenize             @133 NONAME
 cli_utf16toascii            @134 NONAME
 cli_vba_inflate             @135 NONAME
 cli_vba_readdir             @136 NONAME
-cli_vm_execute              @137 NONAME
+;cli_vm_execute              @137 NONAME
 cli_wm_decrypt_macro        @138 NONAME
 cli_wm_readdir              @139 NONAME
 cli_writen                  @140 NONAME
@@ -166,3 +166,7 @@ gzdopen                     @251 NONAME
 gzgets                      @252 NONAME
 gzopen                      @253 NONAME
 gzwrite                     @254 NONAME
+
+cli_parse_add
+cli_initroots
+cli_hex2str

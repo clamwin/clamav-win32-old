@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="Windows-1252"?>
 <VisualStudioProject
 	ProjectType="Visual C++"
-	Version="9,00"
+	Version="9.00"
 	Name="clamconf"
 	ProjectGUID="{DEABE3C7-6F4D-4221-8EEE-AD19C8261273}"
 	RootNamespace="clamconf"
@@ -169,6 +169,10 @@
 		</Configuration>
 	</Configurations>
 	<References>
+		<ProjectReference
+			ReferencedProjectIdentifier="{3AD5B16C-340A-40AC-96AD-6017B941A316}"
+			RelativePathToProject=".\libclamav.vcproj"
+		/>
 	</References>
 	<Files>
 		<Filter

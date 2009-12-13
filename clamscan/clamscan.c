@@ -211,17 +211,10 @@ void help(void)
     mprintf("    --remove[=yes/no(*)]                 Remove infected files. Be careful!\n");
     mprintf("    --move=DIRECTORY                     Move infected files into DIRECTORY\n");
     mprintf("    --copy=DIRECTORY                     Copy infected files into DIRECTORY\n");
-#ifdef HAVE_REGEX_H
     mprintf("    --exclude=REGEX                      Don't scan file names matching REGEX\n");
     mprintf("    --exclude-dir=REGEX                  Don't scan directories matching REGEX\n");
     mprintf("    --include=REGEX                      Only scan file names matching REGEX\n");
     mprintf("    --include-dir=REGEX                  Only scan directories matching REGEX\n");
-#else
-    mprintf("    --exclude=PATT                       Don't scan file names containing PATT\n");
-    mprintf("    --exclude-dir=PATT                   Don't scan directories containing PATT\n");
-    mprintf("    --include=PATT                       Only scan file names containing PATT\n");
-    mprintf("    --include-dir=PATT                   Only scan directories containing PATT\n");
-#endif
 #ifdef _WIN32
     mprintf("    --memory                             Scan loaded executable modules\n");
     mprintf("    --kill                -k             Kill/Unload infected loaded modules\n");
@@ -262,27 +255,3 @@ void help(void)
     mprintf("(**) Certain files (e.g. documents, archives, etc.) may in turn contain other\n");
     mprintf("   files inside. The above options ensure safe processing of this kind of data.\n\n");
 }
-
-#ifdef _WIN32
-/* Display summary on Ctrl+C, --no-summary is not honored here :( */
-void clamscan_ctrl_handler(DWORD ctrl_type)
-{
-    double mb;
-    logg("\nScanning aborted...\n");
-    logg("\n----------- SCAN SUMMARY -----------\n");
-    logg("Known viruses: %u\n", info.sigs);
-    logg("Engine version: %s\n", cl_retver());
-    logg("Scanned directories: %u\n", info.dirs);
-	logg("Scanned files: %u\n", info.files);
-    logg("Infected files: %u\n", info.ifiles);
-	if(notremoved) {
-	    logg("Not removed: %u\n", notremoved);
-	}
-	if(notmoved) {
-	    logg("Not moved: %u\n", notmoved);
-	}
-    mb = info.blocks * (CL_COUNT_PRECISION / 1024) / 1024.0;
-    logg("Data scanned: %2.2lf MB\n", mb);
-    exit(1);
-}
-#endif

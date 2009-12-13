@@ -65,6 +65,7 @@
 #include "libclamav/htmlnorm.h"
 #include "libclamav/default.h"
 #include "libclamav/fmap.h"
+#include "libclamav/readdb.h"
 
 #define MAX_DEL_LOOKAHEAD   200
 
@@ -1645,6 +1646,41 @@ static int verifydiff(const char *diff, const char *cvd, const char *incdir)
     return ret;
 }
 
+static int matchsig(const char *sig, int fd)
+{
+	struct cl_engine *engine;
+	int ret;
+
+    if(!(engine = cl_engine_new())) {
+	mprintf("!matchsig: Can't create new engine\n");
+	return 0;
+    }
+
+    if(cli_initroots(engine, 0) != CL_SUCCESS) {
+	mprintf("!matchsig: cli_initroots() failed\n");
+	cl_engine_free(engine);
+	return 0;
+    }
+
+    if(cli_parse_add(engine->root[0], "test", sig, 0, 0, "*", 0, NULL, 0) != CL_SUCCESS) {
+	mprintf("!matchsig: Can't parse signature\n");
+	cl_engine_free(engine);
+	return 0;
+    }
+
+    if(cl_engine_compile(engine) != CL_SUCCESS) {
+	mprintf("!matchsig: Can't compile engine\n");
+	cl_engine_free(engine);
+	return 0;
+    }
+
+    lseek(fd, 0, SEEK_SET);
+    ret = cl_scandesc(fd, NULL, NULL, engine, CL_SCAN_STDOPT);
+    cl_engine_free(engine);
+
+    return (ret == CL_VIRUS) ? 1 : 0;
+}
+
 static char *decodehexstr(const char *hex, unsigned int *dlen)
 {
 	uint16_t *str16;
@@ -1665,23 +1701,19 @@ static char *decodehexstr(const char *hex, unsigned int *dlen)
 	if(str16[i] & CLI_MATCH_WILDCARD) {
 	    switch(str16[i] & CLI_MATCH_WILDCARD) {
 		case CLI_MATCH_IGNORE:
-		    p += sprintf(decoded + p, "{WILDCARD_IGNORE@%u}", i);
-		    break;
-
-		case CLI_MATCH_SPECIAL:
-		    p += sprintf(decoded + p, "{WILDCARD_SPECIAL@%u:<!TODO!>}", i);
+		    p += sprintf(decoded + p, "{WILDCARD_IGNORE}");
 		    break;
 
 		case CLI_MATCH_NIBBLE_HIGH:
-		    p += sprintf(decoded + p, "{WILDCARD_NIBBLE_HIGH@%u:0x%x}", i, str16[i] & 0x00f0);
+		    p += sprintf(decoded + p, "{WILDCARD_NIBBLE_HIGH:0x%x}", str16[i] & 0x00f0);
 		    break;
 
 		case CLI_MATCH_NIBBLE_LOW:
-		    p += sprintf(decoded + p, "{WILDCARD_NIBBLE_LOW@%u:0x%x}", i, str16[i] & 0x000f);
+		    p += sprintf(decoded + p, "{WILDCARD_NIBBLE_LOW:0x%x}", str16[i] & 0x000f);
 		    break;
 
 		default:
-		    mprintf("!decodehexstr: Unknown wildcard (0x%x)\n", str16[i] & CLI_MATCH_WILDCARD);
+		    mprintf("!decodehexstr: Unknown wildcard (0x%x@%u)\n", str16[i] & CLI_MATCH_WILDCARD, i);
 		    free(decoded);
 		    return NULL;
 	    }
@@ -1697,6 +1729,160 @@ static char *decodehexstr(const char *hex, unsigned int *dlen)
     return decoded;
 }
 
+static char *decodehexspecial(const char *hex, unsigned int *dlen)
+{
+	char *pt, *start, *hexcpy, *decoded, *h, *c;
+	unsigned int i, len = 0, hlen, negative, altnum, alttype;
+	char *buff;
+
+
+    hexcpy = strdup(hex);
+    if(!hexcpy) {
+	mprintf("!decodehexspecial: strdup(hex) failed\n");
+	return NULL;
+    }
+    pt = strchr(hexcpy, '(');
+    if(!pt) {
+	free(hexcpy);
+	return decodehexstr(hex, dlen);
+    } else {
+	buff = calloc(strlen(hex) + 512, sizeof(char));
+	if(!buff) {
+	    mprintf("!decodehexspecial: Can't allocate memory for buff\n");
+	    return NULL;
+	}
+	start = hexcpy;
+	do {
+	    negative = 0;
+	    *pt++ = 0;
+	    if(!start) {
+		mprintf("!decodehexspecial: Unexpected EOL\n");
+		return NULL;
+	    }
+	    if(pt >= hexcpy + 2) {
+		if(pt[-2] == '!') {
+		    negative = 1;
+		    pt[-2] = 0;
+		}
+	    }
+	    if(!(decoded = decodehexstr(start, &hlen))) {
+		mprintf("!Decoding failed (1): %s\n", pt);
+		free(hexcpy);
+		return NULL;
+	    }
+	    memcpy(&buff[len], decoded, hlen);
+	    len += hlen;
+	    free(decoded);
+
+	    if(!(start = strchr(pt, ')'))) {
+		mprintf("!decodehexspecial: Missing closing parethesis\n");
+		free(hexcpy);
+		return NULL;
+	    }
+
+	    *start++ = 0;
+	    if(!strlen(pt)) {
+		mprintf("!cli_ac_addsig: Empty block\n");
+		free(hexcpy);
+		return NULL;
+	    }
+
+	    if(!strcmp(pt, "B")) {
+		if(!*start) {
+		    if(negative)
+			len += sprintf(buff + len, "{NOT_BOUNDARY_RIGHT}");
+		    else
+			len += sprintf(buff + len, "{BOUNDARY_RIGHT}");
+		    continue;
+		} else if(pt - 1 == hexcpy) {
+		    if(negative)
+			len += sprintf(buff + len, "{NOT_BOUNDARY_LEFT}");
+		    else
+			len += sprintf(buff + len, "{BOUNDARY_LEFT}");
+		    continue;
+		}
+	    } else if(!strcmp(pt, "L")) {
+		if(!*start) {
+		    if(negative)
+			len += sprintf(buff + len, "{NOT_LINE_MARKER_RIGHT}");
+		    else
+			len += sprintf(buff + len, "{LINE_MARKER_RIGHT}");
+		    continue;
+		} else if(pt - 1 == hexcpy) {
+		    if(negative)
+			len += sprintf(buff + len, "{NOT_LINE_MARKER_LEFT}");
+		    else
+			len += sprintf(buff + len, "{LINE_MARKER_LEFT}");
+		    continue;
+		}
+	    } else {
+		altnum = 0;
+		for(i = 0; i < strlen(pt); i++)
+		    if(pt[i] == '|')
+			altnum++;
+
+		if(!altnum) {
+		    mprintf("!cli_ac_addsig: Empty block\n");
+		    free(hexcpy);
+		    return NULL;
+		}
+		altnum++;
+
+		if(3 * altnum - 1 == (uint16_t) strlen(pt)) {
+		    alttype = 1; /* char */
+		    if(negative)
+			len += sprintf(buff + len, "{EXCLUDING_CHAR_ALTERNATIVE:");
+		    else
+			len += sprintf(buff + len, "{CHAR_ALTERNATIVE:");
+		} else {
+		    alttype = 2; /* str */
+		    if(negative)
+			len += sprintf(buff + len, "{EXCLUDING_STRING_ALTERNATIVE:");
+		    else
+			len += sprintf(buff + len, "{STRING_ALTERNATIVE:");
+		}
+
+		for(i = 0; i < altnum; i++) {
+		    if(!(h = cli_strtok(pt, i, "|"))) {
+			free(hexcpy);
+			return NULL;
+		    }
+
+		    if(!(c = cli_hex2str(h))) {
+			free(h);
+			free(hexcpy);
+			return NULL;
+		    }
+
+		    if(alttype == 1) {
+			buff[len++] = *c;
+		    } else {
+			memcpy(&buff[len], c, strlen(h) / 2);
+			len += strlen(h) / 2;
+		    }
+		    if(i + 1 != altnum)
+			buff[len++] = '|';
+		}
+		buff[len++] = '}';
+	    }
+	} while((pt = strchr(start, '(')));
+
+	if(start) {
+	    if(!(decoded = decodehexstr(start, &hlen))) {
+		mprintf("!Decoding failed (2)\n");
+		free(hexcpy);
+		return NULL;
+	    }
+	    memcpy(&buff[len], decoded, hlen);
+	    len += hlen;
+	}
+    }
+    free(hexcpy);
+    if(dlen)
+	*dlen = len;
+    return buff;
+}
+
 static int decodehex(const char *hexsig)
 {
 	char *pt, *hexcpy, *start, *n, *decoded;
@@ -1706,12 +1892,12 @@ static int decodehex(const char *hexsig)
 
 
     hexlen = strlen(hexsig);
-    if(strchr(hexsig, '{')) {
-	if(!(hexcpy = cli_strdup(hexsig)))
+    if(strchr(hexsig, '{') || strchr(hexsig, '[')) {
+	if(!(hexcpy = strdup(hexsig)))
 	    return -1;
 
 	for(i = 0; i < hexlen; i++)
-	    if(hexsig[i] == '{' || hexsig[i] == '*')
+	    if(hexsig[i] == '{' || hexsig[i] == '[' || hexsig[i] == '*')
 		parts++;
 
 	if(parts)
@@ -1721,7 +1907,7 @@ static int decodehex(const char *hexsig)
 	for(i = 1; i <= parts; i++) {
 	    if(i != parts) {
 		for(j = 0; j < strlen(start); j++) {
-		    if(start[j] == '{') {
+		    if(start[j] == '{' || start[j] == '[') {
 			asterisk = 0;
 			pt = start + j;
 			break;
@@ -1745,7 +1931,7 @@ static int decodehex(const char *hexsig)
 	    else if(maxdist)
 		mprintf("{WILDCARD_ANY_STRING(LENGTH<=%u)}", maxdist);
 
-	    if(!(decoded = decodehexstr(start, &dlen))) {
+	    if(!(decoded = decodehexspecial(start, &dlen))) {
 		mprintf("!Decoding failed\n");
 		free(hexcpy);
 		return -1;
@@ -1766,7 +1952,7 @@ static int decodehex(const char *hexsig)
 		continue;
 	    }
 
-	    if(!(start = strchr(pt, '}'))) {
+	    if(!(start = strchr(pt, '}')) && !(start = strchr(pt, ']'))) {
 		error = 1;
 		break;
 	    }
@@ -1826,7 +2012,7 @@ static int decodehex(const char *hexsig)
 		mprintf("!Can't extract part %u of partial signature\n", i);
 		return -1;
 	    }
-	    if(!(decoded = decodehexstr(pt, &dlen))) {
+	    if(!(decoded = decodehexspecial(pt, &dlen))) {
 		mprintf("!Decoding failed\n");
 		return -1;
 	    }
@@ -1838,7 +2024,7 @@ static int decodehex(const char *hexsig)
 	}
 
     } else {
-	if(!(decoded = decodehexstr(hexsig, &dlen))) {
+	if(!(decoded = decodehexspecial(hexsig, &dlen))) {
 	    mprintf("!Decoding failed\n");
 	    return -1;
 	}
@@ -1850,7 +2036,7 @@ static int decodehex(const char *hexsig)
     return 0;
 }
 
-static int decodesig(char *sig)
+static int decodesig(char *sig, int fd)
 {
 	char *pt;
 	const char *tokens[68];
@@ -1887,8 +2073,12 @@ static int decodesig(char *sig)
 	    } else {
 		mprintf(" +-> OFFSET: ANY\n");
 	    }
-	    mprintf(" +-> DECODED SUBSIGNATURE:\n");
-	    decodehex(tokens[3 + i]);
+	    if(fd == -1) {
+		mprintf(" +-> DECODED SUBSIGNATURE:\n");
+		decodehex(tokens[3 + i]);
+	    } else {
+		mprintf(" +-> MATCH: %s\n", matchsig(tokens[3 + i], fd) ? "YES" : "** NO **");
+	    }
 	}
     } else if(strchr(sig, ':')) { /* ndb */
 	tokens_count = cli_strtokenize(sig, ':', 6 + 1, tokens);
@@ -1944,13 +2134,21 @@ static int decodesig(char *sig)
 		return -1;
 	}
 	mprintf("OFFSET: %s\n", tokens[2]);
-	mprintf("DECODED SIGNATURE:\n");
-	decodehex(tokens[3]);
+	if(fd == -1) {
+	    mprintf("DECODED SIGNATURE:\n");
+	    decodehex(tokens[3]);
+	} else {
+	    mprintf("MATCH: %s\n", matchsig(tokens[3], fd) ? "YES" : "** NO **");
+	}
     } else if((pt = strchr(sig, '='))) {
 	*pt++ = 0;
 	mprintf("VIRUS NAME: %s\n", sig);
-	mprintf("DECODED SIGNATURE:\n");
-	decodehex(pt);
+	if(fd == -1) {
+	    mprintf("DECODED SIGNATURE:\n");
+	    decodehex(pt);
+	} else {
+	    mprintf("MATCH: %s\n", matchsig(pt, fd) ? "YES" : "** NO **");
+	}
     } else {
 	mprintf("decodesig: Not supported signature format\n");
 	return -1;
@@ -1968,10 +2166,55 @@ static int decodesigs(void)
 	cli_chomp(buffer);
 	if(!strlen(buffer))
 	    break;
-	if(decodesig(buffer) == -1)
+	if(decodesig(buffer, -1) == -1)
 	    return -1;
     }
     return 0;
+}
+
+static int testsigs(const struct optstruct *opts)
+{
+	char buffer[32769];
+	FILE *sigs;
+	int ret = 0, fd;
+
+
+    if(!opts->filename) {
+	mprintf("!--test-sigs requires two arguments\n");
+	return -1;
+    }
+
+    if(cl_init(CL_INIT_DEFAULT) != CL_SUCCESS) {
+	mprintf("!testsigs: Can't initialize libclamav: %s\n", cl_strerror(ret));
+	return -1;
+    }
+
+    sigs = fopen(optget(opts, "test-sigs")->strarg, "rb");
+    if(!sigs) {
+	mprintf("!testsigs: Can't open file %s\n", optget(opts, "test-sigs")->strarg);
+	return -1;
+    }
+
+    fd = open(opts->filename[0], O_RDONLY|O_BINARY);
+    if(fd == -1) {
+	mprintf("!testsigs: Can't open file %s\n", optget(opts, "test-sigs")->strarg);
+	fclose(sigs);
+	return -1;
+    }
+
+    while(fgets(buffer, sizeof(buffer), sigs)) {
+	cli_chomp(buffer);
+	if(!strlen(buffer))
+	    break;
+	if(decodesig(buffer, fd) == -1) {
+	    ret = -1;
+	    break;
+	}
+    }
+
+    close(fd);
+    fclose(sigs);
+    return ret;
 }
 
 static int diffdirs(const char *old, const char *new, const char *patch)
@@ -2180,6 +2423,7 @@ static void help(void)
     mprintf("    --list-sigs[=FILE]     -l[FILE]        List signature names\n");
     mprintf("    --find-sigs=REGEX      -fREGEX         Find signatures matching REGEX\n");
     mprintf("    --decode-sigs                          Decode signatures from stdin\n");
+    mprintf("    --test-sigs=DATABASE TARGET_FILE       Test signatures from DATABASE against TARGET_FILE\n");
     mprintf("    --vba=FILE                             Extract VBA/Word6 macro code\n");
     mprintf("    --vba-hex=FILE                         Extract Word6 macro code with hex values\n");
     mprintf("    --diff=OLD NEW         -d OLD NEW      Create diff for OLD and NEW CVDs\n");
@@ -2247,6 +2491,8 @@ int main(int argc, char **argv)
 	ret = listsigs(opts, 1);
     else if(optget(opts, "decode-sigs")->active)
 	ret = decodesigs();
+    else if(optget(opts, "test-sigs")->enabled)
+	ret = testsigs(opts);
     else if(optget(opts, "vba")->enabled || optget(opts, "vba-hex")->enabled)
 	ret = vbadump(opts);
     else if(optget(opts, "diff")->enabled)

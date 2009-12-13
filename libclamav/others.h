@@ -41,6 +41,8 @@
 #include "fmap.h"
 #include "libclamunrar_iface/unrar_iface.h"
 #include "regex/regex.h"
+#include "bytecode.h"
+#include "bytecode_api.h"
 
 /*
  * CL_FLEVEL is the signature f-level specific to the current code and
@@ -113,6 +115,43 @@ typedef struct {
     fmap_t **fmap;
 } cli_ctx;
 
+
+typedef struct {uint64_t v[2][4];} icon_groupset;
+
+struct icomtr {
+    unsigned int group[2];
+    unsigned int color_avg[3];
+    unsigned int color_x[3];
+    unsigned int color_y[3];
+    unsigned int gray_avg[3];
+    unsigned int gray_x[3];
+    unsigned int gray_y[3];
+    unsigned int bright_avg[3];
+    unsigned int bright_x[3];
+    unsigned int bright_y[3];
+    unsigned int dark_avg[3];
+    unsigned int dark_x[3];
+    unsigned int dark_y[3];
+    unsigned int edge_avg[3];
+    unsigned int edge_x[3];
+    unsigned int edge_y[3];
+    unsigned int noedge_avg[3];
+    unsigned int noedge_x[3];
+    unsigned int noedge_y[3];
+    unsigned int rsum;
+    unsigned int gsum;
+    unsigned int bsum;
+    unsigned int ccount;
+    char *name;
+};
+
+struct icon_matcher {
+    char **group_names[2];
+    unsigned int group_counts[2];
+    struct icomtr *icons[3];
+    unsigned int icon_counts[3];
+};
+
 struct cl_engine {
     uint32_t refcount; /* reference counter */
     uint32_t sdb;
@@ -177,11 +216,19 @@ struct cl_engine {
     /* PUA categories (to be included or excluded) */
     char *pua_cats;
 
+    /* Icon reference storage */
+    struct icon_matcher *iconcheck;
+
     /* Used for memory pools */
     mpool_t *mempool;
 
-    /* Callback for Scanning */
+/* Callback for Scanning */
     int (*callback)(int desc, int bytes);
+
+    /* Used for bytecode */
+    struct cli_all_bc bcs;
+    unsigned *hooks[_BC_LAST_HOOK - _BC_START_HOOKS];
+    unsigned hooks_cnt[_BC_LAST_HOOK - _BC_START_HOOKS];
 };
 
 struct cl_settings {
@@ -236,6 +283,20 @@ extern int have_rar;
 		     (((v) & 0xff00000000000000ULL) >> 56))
 
 
+union unaligned_64 {
+	uint64_t una_u64;
+	int64_t una_s64;
+} __attribute__((packed));
+
+union unaligned_32 {
+	uint32_t una_u32;
+	int32_t una_s32;
+} __attribute__((packed));
+
+union unaligned_16 {
+	uint16_t una_u16;
+	int16_t una_s16;
+} __attribute__((packed));
 #if WORDS_BIGENDIAN == 0
 
 #ifndef HAVE_ATTRIB_PACKED 
@@ -248,14 +309,6 @@ extern int have_rar;
 #pragma pack 1
 #endif
 
-union unaligned_32 {
-	uint32_t una_u32;
-	int32_t una_s32;
-} __attribute__((packed));
-
-union unaligned_16 {
-	int16_t una_s16;
-} __attribute__((packed));
 
 #ifdef HAVE_PRAGMA_PACK
 #pragma pack()
@@ -343,8 +396,10 @@ void cli_errmsg(const char *str, ...);
  * such as debug paths, and error paths */
 #if (__GNUC__ >= 4) || (__GNUC__ == 3 && __GNUC_MINOR__ >= 2)
 #define UNLIKELY(cond) __builtin_expect(!!(cond), 0)
+#define LIKELY(cond) __builtin_expect(!!(cond), 1)
 #else
 #define UNLIKELY(cond) (cond)
+#define LIKELY(cond) (cond)
 #endif
 
 #ifdef __GNUC__

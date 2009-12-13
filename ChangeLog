@@ -1,3 +1,31 @@
+Fri Dec 11 00:54:52 CET 2009 (acab)
+---------------------------------
+ * libclamav: merge icon extraction and matching branch(exeicons)
+
+Wed Dec  9 23:31:54 CET 2009 (tk)
+---------------------------------
+ * sigtool: add --test-sigs (basic functionality) (bb#1246)
+
+Fri Dec  4 15:55:51 CET 2009 (tk)
+---------------------------------
+ * freshclam/manager.c: improve handling of problematic mirrors (bb#1758)
+
+Fri Dec  4 14:19:23 CET 2009 (tk)
+---------------------------------
+ * clamscan: properly describe --include/exclude (bb#1765)
+
+Wed Dec  2 23:17:27 CET 2009 (tk)
+---------------------------------
+ * libclamav/qsort.c: fix CMP1 macro (bb#1769)
+
+Tue Dec  1 23:17:53 CET 2009 (tk)
+---------------------------------
+ * libclamav/readdb.c: make sure static sigs with floating chars go into AC
+
+Mon Nov 30 21:16:35 CET 2009 (tk)
+---------------------------------
+ * sigtool: --decode-sigs: handle alternatives
+
 Thu Nov 26 19:43:06 CET 2009 (tk)
 ---------------------------------
  * sigtool: --decode-sigs: handle .ldb sigs
@@ -224,6 +252,10 @@ Fri Oct  2 14:35:42 CEST 2009 (tk)
 Fri Oct  2 14:33:09 CEST 2009 (tk)
 ----------------------------------
  * libclamav/scanners.c: fix whitelisting of scripts (bb#1706)
+
+Fri Oct 30 14:04:43 EET 2009 (edwin)
+------------------------------------
+ * configure, m4/acinclude.m4: Avoid trailing slash in libdir for old gcc (#1738).
 
 Wed Sep 30 19:41:43 EEST 2009 (edwin)
 -------------------------------------

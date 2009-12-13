@@ -16,7 +16,9 @@
 #include "w32_errno.h"
 #include "w32_stat.h"
 
+#ifndef __cplusplus
 typedef unsigned short mode_t;
+#endif
 
 #define strcasecmp lstrcmpi
 #define strncasecmp strnicmp
@@ -41,7 +43,7 @@ char *strptime(const char *s, const char *format, struct tm *tm);
 #define inet_ntop w32_inet_ntop
 #define gethostbyname w32_gethostbyname
 #define select w32_select
-
+#define ftruncate _chsize
 #define getpid GetCurrentProcessId
 
 #define PATH_MAX 32767
