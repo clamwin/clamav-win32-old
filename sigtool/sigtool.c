@@ -159,12 +159,6 @@ static int md5sig(const struct optstruct *opts, unsigned int mdb)
 	    } else {
 		if((sb.st_mode & S_IFMT) == S_IFREG) {
 		    if((md5 = cli_md5file(opts->filename[i]))) {
-#ifdef _WIN32 /* clamav will stop at : */
-            {
-                char *p = opts->filename[i];
-                while (*p) { if ((*p == ':') || (*p == '\\')) *p = '_'; p++; }
-            }
-#endif
 			if(mdb)
 			    mprintf("%u:%s:%s\n", (unsigned int) sb.st_size, md5, opts->filename[i]);
 			else
@@ -310,13 +304,7 @@ static char *getdsig(const char *host, const char *user, const unsigned char *da
 	    return NULL;
 	}
 #endif
-#ifdef __GLIBC__
 	if(scanf("%as", &pt) == EOF) {
-#else
-    pt = cli_malloc(30);
-    if(scanf("%30s", pt) != 1) {
-        free(pt);
-#endif
 	    mprintf("!getdsig: Can't get password\n");
 #ifdef HAVE_TERMIOS_H
 	    tcsetattr(0, TCSAFLUSH, &old);
@@ -703,13 +691,7 @@ static int build(const struct optstruct *opts)
 	builder[sizeof(builder)-1]='\0';
     } else {
 	mprintf("Builder name: ");
-#ifdef __GLIBC__
 	if(scanf("%as", &pt) == EOF) {
-#else
-    pt = cli_malloc(32);
-    if(scanf("%32s", pt) != 1) {
-        free(pt);
-#endif
 	    mprintf("!build: Can't get builder name\n");
 	    return -1;
 	}
@@ -1782,7 +1764,7 @@ static char *decodehexspecial(const char *hex, unsigned int *dlen)
 
 	    *start++ = 0;
 	    if(!strlen(pt)) {
-		mprintf("!cli_ac_addsig: Empty block\n");
+		mprintf("!decodehexspecial: Empty block\n");
 		free(hexcpy);
 		return NULL;
 	    }
@@ -1822,7 +1804,7 @@ static char *decodehexspecial(const char *hex, unsigned int *dlen)
 			altnum++;
 
 		if(!altnum) {
-		    mprintf("!cli_ac_addsig: Empty block\n");
+		    mprintf("!decodehexspecial: Empty block\n");
 		    free(hexcpy);
 		    return NULL;
 		}

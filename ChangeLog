@@ -1,3 +1,19 @@
+Mon Dec 14 17:16:07 CET 2009 (tk)
+---------------------------------
+ * libclamav: integrate ldb sigs with icon matcher
+
+Mon Dec 14 15:04:45 CET 2009 (tk)
+---------------------------------
+ * sigtool: fix some messages (bb#1777)
+
+Mon Dec 14 14:31:19 CET 2009 (tk)
+---------------------------------
+ * man/freshclam.conf.5: describe SafeBrowsing (bb#1772)
+
+Mon Dec 14 14:25:29 CET 2009 (tk)
+---------------------------------
+ * man/clamd.8: add info about signals
+
 Fri Dec 11 00:54:52 CET 2009 (acab)
 ---------------------------------
  * libclamav: merge icon extraction and matching branch(exeicons)
