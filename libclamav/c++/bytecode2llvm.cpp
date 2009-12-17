@@ -175,6 +175,8 @@ public:
 		case DArrayType:
 		    Ty = ArrayType::get(Elts[0], type->numElements);
 		    break;
+		default:
+		    llvm_unreachable("type->kind");
 	    }
 	    // Make the opaque type a concrete type, doing recursive type
 	    // unification if needed.
@@ -199,21 +201,24 @@ private:
     const struct cli_bc *bc;
     Module *M;
     LLVMContext &Context;
-    LLVMTypeMapper *TypeMap;
-    Function **apiFuncs;
-    FunctionMapTy &compiledFunctions;
-    LLVMTypeMapper &apiMap;
-    Twine BytecodeID;
     ExecutionEngine *EE;
+    FunctionPassManager &PM;
+    LLVMTypeMapper *TypeMap;
+
+    Function **apiFuncs;
+    LLVMTypeMapper &apiMap;
+    FunctionMapTy &compiledFunctions;
+    Twine BytecodeID;
+
     TargetFolder Folder;
     IRBuilder<false, TargetFolder> Builder;
+
     std::vector<Value*> globals;
-    Value **Values;
-    FunctionPassManager &PM;
-    unsigned numLocals;
-    unsigned numArgs;
     DenseMap<unsigned, unsigned> GVoffsetMap;
     DenseMap<unsigned, const Type*> GVtypeMap;
+    Value **Values;
+    unsigned numLocals;
+    unsigned numArgs;
     std::vector<MDNode*> mdnodes;
 
     Value *getOperand(const struct cli_bc_func *func, const Type *Ty, operand_t operand)
@@ -236,6 +241,10 @@ private:
 		return V;
 	    }
 	    V = Builder.CreateLoad(V);
+	    if (V->getType() != Ty &&
+		isa<PointerType>(V->getType()) &&
+		isa<PointerType>(Ty))
+		V = Builder.CreateBitCast(V, Ty);
 	    if (V->getType() != Ty) {
 		errs() << operand << " ";
 		V->dump();
@@ -305,6 +314,8 @@ private:
 		Ty = Type::getInt64Ty(Context);
 		v = *(uint64_t*)c;
 		break;
+	    default:
+		llvm_unreachable("width");
 	}
 	return ConstantInt::get(Ty, v);
     }
@@ -375,7 +386,7 @@ private:
 	   return ConstantStruct::get(STy, elements);
 	}
 	Ty->dump();
-	assert(0 && "Not reached");
+	llvm_unreachable("invalid type");
 	return 0;
     }
 
@@ -384,11 +395,11 @@ public:
     LLVMCodegen(const struct cli_bc *bc, Module *M, FunctionMapTy &cFuncs,
 		ExecutionEngine *EE, FunctionPassManager &PM,
 		Function **apiFuncs, LLVMTypeMapper &apiMap)
-	: bc(bc), M(M), Context(M->getContext()), compiledFunctions(cFuncs),
-	BytecodeID("bc"+Twine(bc->id)), EE(EE),
-	Folder(EE->getTargetData()), Builder(Context, Folder), PM(PM),
-	apiFuncs(apiFuncs), apiMap(apiMap)
-    {
+	: bc(bc), M(M), Context(M->getContext()), EE(EE),
+	PM(PM), apiFuncs(apiFuncs),apiMap(apiMap),
+	compiledFunctions(cFuncs), BytecodeID("bc"+Twine(bc->id)),
+	Folder(EE->getTargetData()), Builder(Context, Folder) {
+
 	for (unsigned i=0;i<cli_apicall_maxglobal - _FIRST_GLOBAL;i++) {
 	    unsigned id = cli_globals[i].globalid;
 	    GVoffsetMap[id] = cli_globals[i].offset;
@@ -418,8 +429,10 @@ public:
 	assert(dest >= numArgs && dest < numLocals+numArgs && "Instruction destination out of range");
 	const Type *ETy = cast<PointerType>(cast<PointerType>(Values[dest]->getType())->getElementType())->getElementType();
 	Value *V = createGEP(Base, ETy, Start, End);
-	if (!V)
+	if (!V) {
+	    errs() << "@ " << dest << "\n";
 	    return false;
+	}
 	V = Builder.CreateBitCast(V, PointerType::getUnqual(ETy));
 	Store(dest, V);
 	return true;
@@ -478,7 +491,7 @@ public:
 	FHandler->setDoesNotReturn();
 	FHandler->setDoesNotThrow();
 	FHandler->addFnAttr(Attribute::NoInline);
-	EE->addGlobalMapping(FHandler, (void*)jit_exception_handler);
+	EE->addGlobalMapping(FHandler, (void*)(intptr_t)jit_exception_handler);
 
 	std::vector<const Type*> args;
 	args.push_back(PointerType::getUnqual(Type::getInt8Ty(Context)));
@@ -512,13 +525,13 @@ public:
 	FunctionType* DummyTy = FunctionType::get(Type::getVoidTy(Context), false);
 	Function *FRealMemset = Function::Create(DummyTy, GlobalValue::ExternalLinkage,
 						 "memset", M);
-	EE->addGlobalMapping(FRealMemset, (void*)memset);
+	EE->addGlobalMapping(FRealMemset, (void*)(intptr_t)memset);
 	Function *FRealMemmove = Function::Create(DummyTy, GlobalValue::ExternalLinkage,
 						 "memmove", M);
-	EE->addGlobalMapping(FRealMemmove, (void*)memmove);
+	EE->addGlobalMapping(FRealMemmove, (void*)(intptr_t)memmove);
 	Function *FRealMemcpy = Function::Create(DummyTy, GlobalValue::ExternalLinkage,
 						 "memcpy", M);
-	EE->addGlobalMapping(FRealMemcpy, (void*)memcpy);
+	EE->addGlobalMapping(FRealMemcpy, (void*)(intptr_t)memcpy);
 
 	args.clear();
 	args.push_back(PointerType::getUnqual(Type::getInt8Ty(Context)));
@@ -527,7 +540,7 @@ public:
 	FunctionType* FuncTy_5 = FunctionType::get(Type::getInt32Ty(Context),
 						   args, false);
 	Function* FRealMemcmp = Function::Create(FuncTy_5, GlobalValue::ExternalLinkage, "memcmp", M);
-	EE->addGlobalMapping(FRealMemcmp, (void*)memcmp);
+	EE->addGlobalMapping(FRealMemcmp, (void*)(intptr_t)memcmp);
 
 	// The hidden ctx param to all functions
 	const Type *HiddenCtx = PointerType::getUnqual(Type::getInt8Ty(Context));
@@ -591,7 +604,7 @@ public:
 	    Values = new Value*[func->numValues];
 	    Builder.SetInsertPoint(BB[0]);
 	    Function::arg_iterator I = F->arg_begin();
-	    assert(F->arg_size() == func->numArgs + 1 && "Mismatched args");
+	    assert(F->arg_size() == (unsigned)(func->numArgs + 1) && "Mismatched args");
 	    ++I;
 	    for (unsigned i=0;i<func->numArgs; i++) {
 		assert(I != F->arg_end());
@@ -611,7 +624,6 @@ public:
 
 	    if (FakeGVs.any()) {
 		Argument *Ctx = F->arg_begin();
-		struct cli_bc_ctx *N = 0;
 		for (unsigned i=0;i<bc->num_globals;i++) {
 		    if (!FakeGVs[i])
 			continue;
@@ -624,6 +636,7 @@ public:
 		    Ty = PointerType::getUnqual(PointerType::getUnqual(Ty));
 		    Value *Cast = Builder.CreateBitCast(GEP, Ty);
 		    Value *SpecialGV = Builder.CreateLoad(Cast);
+		    SpecialGV->setName("g"+Twine(g-_FIRST_GLOBAL)+"_");
 		    Value *C[] = {
 			ConstantInt::get(Type::getInt32Ty(Context), 0),
 			ConstantInt::get(Type::getInt32Ty(Context), bc->globals[i][0])
@@ -634,8 +647,10 @@ public:
 			Ty->dump();
 			llvm_report_error("(libclamav) unable to create fake global");
 		    }
-		    else if(GetElementPtrInst *GI = dyn_cast<GetElementPtrInst>(globals[i]))
+		    else if(GetElementPtrInst *GI = dyn_cast<GetElementPtrInst>(globals[i])) {
 			GI->setIsInBounds(true);
+			GI->setName("geped"+Twine(i)+"_");
+		    }
 		}
 	    }
 
@@ -668,7 +683,6 @@ public:
 			case OP_BC_SEXT:
 			case OP_BC_TRUNC:
 			case OP_BC_GEP1:
-			case OP_BC_GEP2:
 			case OP_BC_GEPN:
 			case OP_BC_STORE:
 			case OP_BC_COPY:
@@ -859,7 +873,6 @@ public:
 			case OP_BC_CALL_API:
 			{
 			    assert(inst->u.ops.funcid < cli_apicall_maxapi && "APICall out of range");
-			    const struct cli_apicall *api = &cli_apicalls[inst->u.ops.funcid];
 			    std::vector<Value*> args;
 			    Function *DestF = apiFuncs[inst->u.ops.funcid];
 			    args.push_back(&*F->arg_begin()); // pass hidden arg
@@ -872,28 +885,20 @@ public:
 			}
 			case OP_BC_GEP1:
 			{
-			    Value *V = convertOperand(func, inst, inst->u.binop[0]);
-			    Value *Op = convertOperand(func, I32Ty, inst->u.binop[1]);
+			    const Type *SrcTy = mapType(inst->u.three[0]);
+			    Value *V = convertOperand(func, SrcTy, inst->u.three[1]);
+			    Value *Op = convertOperand(func, I32Ty, inst->u.three[2]);
 			    if (!createGEP(inst->dest, V, &Op, &Op+1))
-				return false;
-			    break;
-			}
-			case OP_BC_GEP2:
-			{
-			    std::vector<Value*> Idxs;
-			    Value *V = convertOperand(func, inst, inst->u.three[0]);
-			    Idxs.push_back(convertOperand(func, I32Ty, inst->u.three[1]));
-			    Idxs.push_back(convertOperand(func, I32Ty, inst->u.three[2]));
-			    if (!createGEP(inst->dest, V, Idxs.begin(), Idxs.end()))
 				return false;
 			    break;
 			}
 			case OP_BC_GEPN:
 			{
 			    std::vector<Value*> Idxs;
-			    assert(inst->u.ops.numOps > 1);
-			    Value *V = convertOperand(func, inst, inst->u.binop[0]);
-			    for (unsigned a=1;a<inst->u.ops.numOps;a++)
+			    assert(inst->u.ops.numOps > 2);
+			    const Type *SrcTy = mapType(inst->u.ops.ops[0]);
+			    Value *V = convertOperand(func, SrcTy, inst->u.ops.ops[1]);
+			    for (unsigned a=2;a<inst->u.ops.numOps;a++)
 				Idxs.push_back(convertOperand(func, I32Ty, inst->u.ops.ops[a]));
 			    if (!createGEP(inst->dest, V, Idxs.begin(), Idxs.end()))
 				return false;
@@ -1051,8 +1056,8 @@ int cli_vm_execute_jit(const struct cli_all_bc *bcs, struct cli_bc_ctx *ctx,
     // execute;
     if (setjmp(env) == 0) {
 	// setup exception handler to longjmp back here
-	ExceptionReturn.set(&env);
-	uint32_t result = ((uint32_t (*)(struct cli_bc_ctx *))code)(ctx);
+	ExceptionReturn.set((const jmp_buf*)&env);
+	uint32_t result = ((uint32_t (*)(struct cli_bc_ctx *))(intptr_t)code)(ctx);
 	*(uint32_t*)ctx->values = result;
 	return 0;
     }
@@ -1069,7 +1074,7 @@ int cli_bytecode_prepare_jit(struct cli_all_bc *bcs)
       return CL_EBYTECODE;
   jmp_buf env;
   // setup exception handler to longjmp back here
-  ExceptionReturn.set(&env);
+  ExceptionReturn.set((const jmp_buf*)&env);
   if (setjmp(env) != 0) {
       errs() << "\n";
       errs().changeColor(raw_ostream::RED, true) << MODULE 
@@ -1124,11 +1129,13 @@ int cli_bytecode_prepare_jit(struct cli_all_bc *bcs)
 	    void *dest;
 	    switch (api->kind) {
 		case 0:
-		    dest = (void*)cli_apicalls0[api->idx];
+		    dest = (void*)(intptr_t)cli_apicalls0[api->idx];
 		    break;
 		case 1:
-		    dest = (void*)cli_apicalls1[api->idx];
+		    dest = (void*)(intptr_t)cli_apicalls1[api->idx];
 		    break;
+		default:
+		    llvm_unreachable("invalid api type");
 	    }
 	    EE->addGlobalMapping(F, dest);
 	    apiFuncs[i] = F;
@@ -1221,13 +1228,13 @@ void cli_bytecode_debug(int argc, char **argv)
   cl::ParseCommandLineOptions(argc, argv);
 }
 
-struct lines {
+typedef struct lines {
     MemoryBuffer *buffer;
     std::vector<const char*> linev;
-};
+} linesTy;
 
 static struct lineprinter {
-    StringMap<struct lines*> files;
+    StringMap<linesTy*> files;
 } LinePrinter;
 
 void cli_bytecode_debug_printsrc(const struct cli_bc_ctx *ctx)
@@ -1241,10 +1248,10 @@ void cli_bytecode_debug_printsrc(const struct cli_bc_ctx *ctx)
     sys::SmartScopedLock<false> lock(mtx);
 
     std::string path = std::string(ctx->directory) + "/" + std::string(ctx->file);
-    StringMap<struct lines*>::iterator I = LinePrinter.files.find(path);
-    struct lines *lines;
+    StringMap<linesTy*>::iterator I = LinePrinter.files.find(path);
+    linesTy *lines;
     if (I == LinePrinter.files.end()) {
-	lines = new struct lines;
+	lines = new linesTy;
 	std::string ErrorMessage;
 	lines->buffer = MemoryBuffer::getFile(path, &ErrorMessage);
 	if (!lines->buffer) {

@@ -1984,7 +1984,6 @@ int cli_scanpe(cli_ctx *ctx, icon_groupset *iconset)
 
 
     /* yC 1.3 & variants */
-
     if((DCONF & PE_CONF_YC) && nsections > 1 &&
        (EC32(optional_hdr32.AddressOfEntryPoint) == exe_sections[nsections - 1].rva + 0x60)) {
 
