@@ -23,6 +23,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/CallingConv.h"
 #include "llvm/DerivedTypes.h"
 #include "llvm/Function.h"
@@ -98,7 +99,6 @@ struct cli_bcengine {
 namespace {
 
 static sys::ThreadLocal<const jmp_buf> ExceptionReturn;
-static sys::ThreadLocal<const jmp_buf> MatchCounts;
 
 void do_shutdown() {
     llvm_shutdown();
@@ -106,7 +106,7 @@ void do_shutdown() {
 
 static void NORETURN jit_exception_handler(void)
 {
-    longjmp(*const_cast<jmp_buf*>(ExceptionReturn.get()), 1);
+    longjmp(*(jmp_buf*)(ExceptionReturn.get()), 1);
 }
 
 static void NORETURN jit_ssp_handler(void)
@@ -120,6 +120,75 @@ void llvm_error_handler(void *user_data, const std::string &reason)
     // Output it to stderr, it might exceed the 1k/4k limit of cli_errmsg
     errs() << MODULE << reason;
     jit_exception_handler();
+}
+
+// Since libgcc is not available on all compilers (for example on win32),
+// just define what these functions should do, the compiler will forward to
+// the appropriate libcall if needed.
+static int64_t rtlib_sdiv_i64(int64_t a, int64_t b)
+{
+    return a/b;
+}
+
+static uint64_t rtlib_udiv_i64(uint64_t a, uint64_t b)
+{
+    return a/b;
+}
+
+static int64_t rtlib_srem_i64(int64_t a, int64_t b)
+{
+    return a%b;
+}
+
+static uint64_t rtlib_urem_i64(uint64_t a, uint64_t b)
+{
+    return a%b;
+}
+
+static int64_t rtlib_mul_i64(uint64_t a, uint64_t b)
+{
+    return a*b;
+}
+
+static int64_t rtlib_shl_i64(int64_t a, int32_t b)
+{
+    return a << b;
+}
+
+static int64_t rtlib_srl_i64(int64_t a, int32_t b)
+{
+    return (uint64_t)a >> b;
+}
+/* Implementation independent sign-extended signed right shift */
+#ifdef HAVE_SAR
+#define CLI_SRS(n,s) ((n)>>(s))
+#else
+#define CLI_SRS(n,s) ((((n)>>(s)) ^ (1<<(sizeof(n)*8-1-s))) - (1<<(sizeof(n)*8-1-s)))
+#endif
+static int64_t rtlib_sra_i64(int64_t a, int32_t b)
+{
+    return CLI_SRS(a, b);//CLI_./..
+}
+
+// Resolve integer libcalls, but nothing else.
+static void* noUnknownFunctions(const std::string& name) {
+    void *addr =
+	StringSwitch<void*>(name)
+	.Case("__divdi3", (void*)(intptr_t)rtlib_sdiv_i64)
+	.Case("__udivdi3", (void*)(intptr_t)rtlib_udiv_i64)
+	.Case("__moddi3", (void*)(intptr_t)rtlib_srem_i64)
+	.Case("__umoddi3", (void*)(intptr_t)rtlib_urem_i64)
+	.Case("__muldi3", (void*)(intptr_t)rtlib_mul_i64)
+	.Case("__ashrdi3", (void*)(intptr_t)rtlib_sra_i64)
+	.Case("__ashldi3", (void*)(intptr_t)rtlib_shl_i64)
+	.Case("__lshrdi3", (void*)(intptr_t)rtlib_srl_i64)
+	.Default(0);
+    if (addr)
+	return addr;
+
+    std::string reason((Twine("Attempt to call external function ")+name).str());
+    llvm_error_handler(0, reason);
+    return 0;
 }
 
 class LLVMTypeMapper {
@@ -518,7 +587,7 @@ public:
 	FHandler->setDoesNotThrow();
 	FHandler->addFnAttr(Attribute::NoInline);
 	EE->addGlobalMapping(FHandler, (void*)(intptr_t)jit_exception_handler);
-
+        EE->InstallLazyFunctionCreator(noUnknownFunctions);
 
 	std::vector<const Type*> args;
 	args.push_back(PointerType::getUnqual(Type::getInt8Ty(Context)));
@@ -549,6 +618,27 @@ public:
 	FMemcpy->setDoesNotThrow();
 	FMemcpy->setDoesNotCapture(1, true);
 
+	args.clear();
+	args.push_back(Type::getInt16Ty(Context));
+	FunctionType *FuncTy_5 = FunctionType::get(Type::getInt16Ty(Context), args, false);
+	Function *FBSwap16 = Function::Create(FuncTy_5, GlobalValue::ExternalLinkage,
+					      "llvm.bswap.i16", M);
+	FBSwap16->setDoesNotThrow();
+
+	args.clear();
+	args.push_back(Type::getInt32Ty(Context));
+	FunctionType *FuncTy_6 = FunctionType::get(Type::getInt32Ty(Context), args, false);
+	Function *FBSwap32 = Function::Create(FuncTy_6, GlobalValue::ExternalLinkage,
+					      "llvm.bswap.i32", M);
+	FBSwap32->setDoesNotThrow();
+
+	args.clear();
+	args.push_back(Type::getInt64Ty(Context));
+	FunctionType *FuncTy_7 = FunctionType::get(Type::getInt64Ty(Context), args, false);
+	Function *FBSwap64 = Function::Create(FuncTy_7, GlobalValue::ExternalLinkage,
+					      "llvm.bswap.i64", M);
+	FBSwap16->setDoesNotThrow();
+
 	FunctionType* DummyTy = FunctionType::get(Type::getVoidTy(Context), false);
 	Function *FRealMemset = Function::Create(DummyTy, GlobalValue::ExternalLinkage,
 						 "memset", M);
@@ -564,7 +654,7 @@ public:
 	args.push_back(PointerType::getUnqual(Type::getInt8Ty(Context)));
 	args.push_back(PointerType::getUnqual(Type::getInt8Ty(Context)));
 	args.push_back(EE->getTargetData()->getIntPtrType(Context));
-	FunctionType* FuncTy_5 = FunctionType::get(Type::getInt32Ty(Context),
+	FuncTy_5 = FunctionType::get(Type::getInt32Ty(Context),
 						   args, false);
 	Function* FRealMemcmp = Function::Create(FuncTy_5, GlobalValue::ExternalLinkage, "memcmp", M);
 	EE->addGlobalMapping(FRealMemcmp, (void*)(intptr_t)memcmp);
@@ -1018,6 +1108,31 @@ public:
 				unreachable = true;
 			    }
 			    break;
+			case OP_BC_BSWAP16:
+			    {
+				CallInst *C = Builder.CreateCall(FBSwap16, convertOperand(func, inst, inst->u.unaryop));
+				C->setTailCall(true);
+				C->setDoesNotThrow(true);
+				Store(inst->dest, C);
+				break;
+			    }
+			case OP_BC_BSWAP32:
+			    {
+				CallInst *C = Builder.CreateCall(FBSwap32, convertOperand(func, inst, inst->u.unaryop));
+				C->setTailCall(true);
+				C->setDoesNotThrow(true);
+				Store(inst->dest, C);
+				break;
+			    }
+			case OP_BC_BSWAP64:
+			    {
+				CallInst *C = Builder.CreateCall(FBSwap64, convertOperand(func, inst, inst->u.unaryop));
+				C->setTailCall(true);
+				C->setDoesNotThrow(true);
+				Store(inst->dest, C);
+				break;
+			    }
+
 			default:
 			    errs() << MODULE << "JIT doesn't implement opcode " <<
 				inst->opcode << " yet!\n";
@@ -1277,7 +1392,7 @@ int bytecode_init(void)
 int cli_bytecode_init_jit(struct cli_all_bc *bcs)
 {
     //TODO: if !llvm_is_multi...
-    bcs->engine = new(std::nothrow) struct cli_bcengine;
+    bcs->engine = new(std::nothrow) cli_bcengine;
     if (!bcs->engine)
 	return CL_EMEM;
     bcs->engine->EE = 0;
