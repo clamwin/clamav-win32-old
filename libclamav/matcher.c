@@ -47,6 +47,7 @@
 #include "macho.h"
 #include "fmap.h"
 #include "pe_icons.h"
+#include "regex/regex.h"
 
 int cli_scanbuff(const unsigned char *buffer, uint32_t length, uint32_t offset, cli_ctx *ctx, cli_file_t ftype, struct cli_ac_data **acdata)
 {
@@ -180,6 +181,9 @@ int cli_caloff(const char *offstr, struct cli_target_info *info, fmap_t *map, un
 		return CL_EMALFDB;
 	    }
 	    offdata[1] = atoi(&offcpy[4]);
+	} else if(!strncmp(offcpy, "VI", 2)) {
+	    /* versioninfo */
+	    offdata[0] = CLI_OFF_VERSION;
 	} else {
 	    offdata[0] = CLI_OFF_ABSOLUTE;
 	    if(!cli_isnumber(offcpy)) {
@@ -256,7 +260,9 @@ int cli_caloff(const char *offstr, struct cli_target_info *info, fmap_t *map, un
 		else
 		    *offset_min = info->exeinfo.section[offdata[3]].raw + offdata[1];
 		break;
-
+	    case CLI_OFF_VERSION:
+		*offset_min = *offset_max = CLI_OFF_ANY;
+		break;
 	    default:
 		cli_errmsg("cli_caloff: Not a relative offset (type: %u)\n", offdata[0]);
 		return CL_EARG;
@@ -536,4 +542,53 @@ int cli_fmap_scandesc(cli_ctx *ctx, cli_file_t ftype, uint8_t ftonly, struct cli
     }
 
     return (acmode & AC_SCAN_FT) ? type : CL_CLEAN;
+}
+
+int cli_matchmeta(cli_ctx *ctx, cli_file_t ftype, const char *fname, size_t fsizec, size_t fsizer, int encrypted, void *res1, void *res2)
+{
+	const struct cli_cdb *cdb;
+
+    if(!(cdb = ctx->engine->cdb))
+	return CL_CLEAN;
+
+    do {
+	if(cdb->ctype != CL_TYPE_ANY && cdb->ctype != ctx->container_type)
+	    continue;
+
+	if(cdb->ftype != CL_TYPE_ANY && cdb->ftype != ftype)
+	    continue;
+
+	if(cdb->encrypted != 2 && cdb->encrypted != encrypted)
+	    continue;
+
+	if(cdb->csize[0] != CLI_OFF_ANY) {
+	    if(cdb->csize[0] == cdb->csize[1] && cdb->csize[0] != ctx->container_size)
+		continue;
+	    else if(cdb->csize[0] != cdb->csize[1] && ((cdb->csize[0] && cdb->csize[0] > ctx->container_size) || (cdb->csize[1] && cdb->csize[1] < ctx->container_size)))
+		continue;
+	}
+
+	if(cdb->fsizec[0] != CLI_OFF_ANY) {
+	    if(cdb->fsizec[0] == cdb->fsizec[1] && cdb->fsizec[0] != fsizec)
+		continue;
+	    else if(cdb->fsizec[0] != cdb->fsizec[1] && ((cdb->fsizec[0] && cdb->fsizec[0] > fsizec) || (cdb->fsizec[1] && cdb->fsizec[1] < fsizec)))
+		continue;
+	}
+
+	if(cdb->fsizer[0] != CLI_OFF_ANY) {
+	    if(cdb->fsizer[0] == cdb->fsizer[1] && cdb->fsizer[0] != fsizer)
+		continue;
+	    else if(cdb->fsizer[0] != cdb->fsizer[1] && ((cdb->fsizer[0] && cdb->fsizer[0] > fsizer) || (cdb->fsizer[1] && cdb->fsizer[1] < fsizer)))
+		continue;
+	}
+
+	if(cdb->name.re_magic && (!fname || cli_regexec(&cdb->name, fname, 0, NULL, 0) == REG_NOMATCH))
+	    continue;
+
+	*ctx->virname = cdb->virname;
+	return CL_VIRUS;
+
+    } while((cdb = cdb->next));
+
+    return CL_CLEAN;
 }
