@@ -24,6 +24,7 @@
 #include <cwdefs.h>
 #include <winsock2.h>
 #include <windows.h>
+#include <ws2tcpip.h> /* ipv6 */
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
@@ -75,6 +76,15 @@ extern int cw_unlink(const char *pathname);
 
 #define mkdir(a, b) mkdir(a)
 #define match_regex cli_matchregex
+
+/* no ipv6 on windows < 2000 */
+#undef getaddrinfo
+#undef freeaddrinfo
+#define getaddrinfo cw_getaddrinfo
+#define freeaddrinfo cw_freeaddrinfo
+extern int cw_getaddrinfo(const char *node, const char *service,
+                          const struct addrinfo *hints, struct addrinfo **res);
+extern void cw_freeaddrinfo(struct addrinfo *res);
 
 #ifdef _MSC_VER
 extern void cw_scanning(const char *filename);

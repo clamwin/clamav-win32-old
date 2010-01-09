@@ -189,7 +189,7 @@
 #define HAVE_FSEEKO 1
 
 /* have getaddrinfo() */
-#undef HAVE_GETADDRINFO
+#define HAVE_GETADDRINFO 1
 
 /* Define to 1 if getpagesize() is available */
 #undef HAVE_GETPAGESIZE
@@ -497,7 +497,7 @@
 #define STDC_HEADERS 1
 
 /* Support for IPv6 */
-#undef SUPPORT_IPv6
+#define SUPPORT_IPv6 1
 
 /* enable memory pools */
 #undef USE_MPOOL

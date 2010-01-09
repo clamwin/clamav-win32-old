@@ -42,10 +42,14 @@ static void dynLoad(void)
     memset(&helpers.av32, 0, sizeof(advapi32_t));
     memset(&helpers.k32, 0, sizeof(kernel32_t));
     memset(&helpers.psapi, 0, sizeof(psapi_t));
+    memset(&helpers.ws2, 0, sizeof(ws2_32_t));
 
     helpers.k32.hLib = LoadLibraryA("kernel32.dll");
     helpers.av32.hLib = LoadLibraryA("advapi32.dll");
     helpers.psapi.hLib = LoadLibraryA("psapi.dll");
+    helpers.ws2.hLib = LoadLibraryA("wship6.dll");
+    if (!helpers.ws2.hLib)
+        helpers.ws2.hLib = LoadLibraryA("ws2_32.dll");
 
     /* kernel 32*/
     if (helpers.k32.hLib) /* Unlikely */
@@ -90,6 +94,14 @@ static void dynLoad(void)
         IMPORT_FUNC_OR_FAIL(psapi, GetModuleFileNameExA);
         IMPORT_FUNC_OR_FAIL(psapi, GetModuleFileNameExW);
         IMPORT_FUNC_OR_FAIL(psapi, GetModuleInformation);
+    }
+
+    /* ws2_32 ipv6 */
+    if (helpers.ws2.hLib)
+    {
+        helpers.ws2.ok = TRUE;
+        IMPORT_FUNC_OR_FAIL(ws2, getaddrinfo);
+        IMPORT_FUNC_OR_FAIL(ws2, freeaddrinfo);
     }
 }
 static void dynUnLoad(void)

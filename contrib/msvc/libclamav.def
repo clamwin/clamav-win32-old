@@ -52,6 +52,8 @@ cw_movefileex
 cw_unlink
 cw_strerror
 cw_perror
+cw_getaddrinfo
+cw_freeaddrinfo
 
 ; clamwin internals @ 50
 cw_gethelpers               @50 NONAME

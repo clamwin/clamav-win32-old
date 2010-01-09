@@ -240,3 +240,77 @@ int cw_movefile(const char *source, const char *dest, int reboot)
     cli_warnmsg("error scheduling the move operation for reboot (%lu)\n", GetLastError());
     return 0;
 }
+
+#define fill_ai(ai, addr)                                               \
+    ai = calloc(1, sizeof(struct addrinfo));                            \
+    ai->ai_family = AF_INET;                                            \
+    ai->ai_socktype = hints->ai_socktype;                               \
+    ai->ai_protocol = hints->ai_protocol;                               \
+    ai->ai_addrlen = sizeof(struct sockaddr_in);                        \
+    ai->ai_addr = calloc(1, sizeof(struct sockaddr_in));                \
+    ((struct sockaddr_in *) ai->ai_addr)->sin_family = he->h_addrtype;  \
+    ((struct sockaddr_in *) ai->ai_addr)->sin_port = port;              \
+    ((struct sockaddr_in *) ai->ai_addr)->sin_addr.s_addr = ((struct in_addr *) addr)->s_addr
+
+#undef gethostbyname
+int cw_getaddrinfo(const char *node, const char *service, const struct addrinfo *hints, struct addrinfo **res)
+{
+    helpers_t *h = cw_gethelpers();
+    struct hostent *he;
+    struct addrinfo *ai;
+    u_short port = 0;
+    char *p = NULL;
+    int i;
+
+    if (h->ws2.ok)
+        return h->ws2.getaddrinfo(node, service, hints, res);
+
+    if (!node && !service)
+        return EAI_NONAME;
+
+    if (hints->ai_flags)
+        return EAI_BADFLAGS;
+
+    if ((hints->ai_family != AF_UNSPEC) && (hints->ai_family != AF_INET))
+        return EAI_FAMILY;
+
+    if ((hints->ai_socktype != SOCK_STREAM) && (hints->ai_socktype != SOCK_DGRAM))
+        return EAI_SOCKTYPE;
+
+    if (!(he = gethostbyname(node)))
+        return WSAGetLastError();
+
+    if (service)
+        port = htons(strtoul(service, &p, 10));
+
+    fill_ai(ai, he->h_addr_list[0]);
+    *res = ai;
+
+    for (i = 1; he->h_addr_list[i]; i++)
+    {
+        fill_ai(ai->ai_next, he->h_addr_list[i]);
+        ai = ai->ai_next;
+    }
+    ai->ai_next = NULL;
+    return 0;
+}
+
+void cw_freeaddrinfo(struct addrinfo *res)
+{
+    struct addrinfo *prev;
+    helpers_t *h = cw_gethelpers();
+
+    if (h->ws2.ok)
+    {
+        h->ws2.freeaddrinfo(res);
+        return;
+    }
+
+    do
+    {
+        prev = res;
+        res = res->ai_next;
+        if (prev->ai_addr) free(prev->ai_addr);
+        free(prev);
+    } while (res);
+}

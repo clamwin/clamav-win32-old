@@ -24,6 +24,9 @@
 #include <tlhelp32.h>
 #include <psapi.h>
 
+#undef getaddrinfo
+#undef freeaddrinfo
+
 /* kernel32 */
 typedef HANDLE (WINAPI *imp_CreateToolhelp32Snapshot)(DWORD, DWORD);
 typedef BOOL (WINAPI *imp_Process32First)(HANDLE, PROCESSENTRY32 *);
@@ -55,6 +58,10 @@ typedef BOOL (WINAPI *imp_ChangeServiceConfig2A)(SC_HANDLE, DWORD, LPVOID);
 typedef BOOL (WINAPI *imp_IsWow64Process) (HANDLE, PBOOL);
 typedef BOOL (WINAPI *imp_Wow64DisableWow64FsRedirection)(LPVOID *OldValue);
 typedef BOOL (WINAPI *imp_Wow64RevertWow64FsRedirection)(LPVOID *OldValue);
+
+/* ws2_32 ipv6 */
+typedef int (WSAAPI *imp_getaddrinfo)(const char*, const char*, const struct addrinfo*, struct addrinfo**);
+typedef void (WSAAPI *imp_freeaddrinfo)(struct addrinfo*);
 
 /* dbghelp32 */
 #ifdef _MSC_VER
@@ -111,11 +118,20 @@ typedef struct _psapi_t
     imp_GetModuleInformation GetModuleInformation;
 } psapi_t;
 
+typedef struct _ws2_32_t
+{
+    BOOL ok;
+    HINSTANCE hLib;
+    imp_getaddrinfo getaddrinfo;
+    imp_freeaddrinfo freeaddrinfo;
+} ws2_32_t;
+
 typedef struct _helpers_t
 {
     kernel32_t k32;
     advapi32_t av32;
     psapi_t psapi;
+    ws2_32_t ws2;
 } helpers_t;
 
 typedef int (*proc_callback)(PROCESSENTRY32 ProcStruct, MODULEENTRY32 me32, void *data);
