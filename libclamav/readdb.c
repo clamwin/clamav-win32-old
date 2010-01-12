@@ -923,7 +923,7 @@ struct lsig_attrib {
 static int lsigattribs(char *attribs, struct cli_lsig_tdb *tdb)
 {
 	struct lsig_attrib attrtab[] = {
-#define ATTRIB_TOKENS	7
+#define ATTRIB_TOKENS	8
 	    { "Target",		    CLI_TDB_UINT,	(void **) &tdb->target	    },
 	    { "Engine",		    CLI_TDB_RANGE,	(void **) &tdb->engine	    },
 
@@ -934,6 +934,7 @@ static int lsigattribs(char *attribs, struct cli_lsig_tdb *tdb)
 	    { "IconGroup1",	    CLI_TDB_STR,	(void **) &tdb->icongrp1    },
 	    { "IconGroup2",	    CLI_TDB_STR,	(void **) &tdb->icongrp2    },
 
+	    { "Container",	    CLI_TDB_FTYPE,	(void **) &tdb->container   },
 /*
 	    { "SectOff",    CLI_TDB_RANGE2,	(void **) &tdb->sectoff	    },
 	    { "SectRVA",    CLI_TDB_RANGE2,	(void **) &tdb->sectrva	    },
@@ -972,7 +973,7 @@ static int lsigattribs(char *attribs, struct cli_lsig_tdb *tdb)
 
 	if(!apt) {
 	    cli_dbgmsg("lsigattribs: Unknown attribute name '%s'\n", tokens[i]);
-	    continue;
+	    return 1;
 	}
 
 	switch(apt->type) {
@@ -988,6 +989,20 @@ static int lsigattribs(char *attribs, struct cli_lsig_tdb *tdb)
 		    return -1;
 		}
 		tdb->val[cnt] = atoi(pt);
+		break;
+
+	    case CLI_TDB_FTYPE:
+		if((v1 = cli_ftcode(pt)) == CL_TYPE_ERROR) {
+		    cli_dbgmsg("lsigattribs: Unknown file type in %s\n", tokens[i]);
+		    return 1; /* skip */
+		}
+		off[i] = cnt = tdb->cnt[CLI_TDB_UINT]++;
+		tdb->val = (uint32_t *) mpool_realloc2(tdb->mempool, tdb->val, tdb->cnt[CLI_TDB_UINT] * sizeof(uint32_t));
+		if(!tdb->val) {
+		    tdb->cnt[CLI_TDB_UINT] = 0;
+		    return -1;
+		}
+		tdb->val[cnt] = v1;
 		break;
 
 	    case CLI_TDB_RANGE:
@@ -1062,6 +1077,7 @@ static int lsigattribs(char *attribs, struct cli_lsig_tdb *tdb)
 	    continue;
 	switch(apt->type) {
 	    case CLI_TDB_UINT:
+	    case CLI_TDB_FTYPE:
 		*apt->pt = (uint32_t *) &tdb->val[off[i]];
 		break;
 
@@ -1101,7 +1117,7 @@ static int load_oneldb(char *buffer, int chkpua, int chkign, struct cl_engine *e
     uint32_t lsigid[2];
     int ret;
 
-	tokens_count = cli_strtokenize(buffer, ';', LDB_TOKENS + 1, (const char **) tokens);
+    tokens_count = cli_strtokenize(buffer, ';', LDB_TOKENS + 1, (const char **) tokens);
     if(tokens_count < 4) {
 	return CL_EMALFDB;
     }
@@ -1142,16 +1158,22 @@ static int load_oneldb(char *buffer, int chkpua, int chkign, struct cl_engine *e
 #ifdef USE_MPOOL
     tdb.mempool = engine->mempool;
 #endif
-    if(lsigattribs(tokens[1], &tdb) == -1) {
+    if((ret = lsigattribs(tokens[1], &tdb))) {
 	FREE_TDB(tdb);
+	if(ret == 1) {
+	    cli_dbgmsg("cli_loadldb: Not supported attribute(s) in logical signature for %s, skipping\n", virname);
+	    *sigs--;
+	    return CL_SUCCESS;
+	}
 	return CL_EMALFDB;
     }
+
     if(!tdb.target) {
 	cli_errmsg("cli_loadldb: No target specified in TDB\n");
 	FREE_TDB(tdb);
 	return CL_EMALFDB;
     } else if(tdb.target[0] >= CLI_MTARGETS) {
-	cli_dbgmsg("cli_loadldb: Not supported target type in logical signature for %s\n", virname);
+	cli_dbgmsg("cli_loadldb: Not supported target type in logical signature for %s, skipping\n", virname);
 	FREE_TDB(tdb);
 	*sigs--;
 	return CL_SUCCESS;
@@ -1215,9 +1237,8 @@ static int load_oneldb(char *buffer, int chkpua, int chkign, struct cl_engine *e
 	    sig = tokens[3 + i];
 	}
 
-	if((ret = cli_parse_add(root, virname, sig, 0, 0, offset, target, lsigid, options))) {
-	    return CL_EMALFDB;
-	}
+	if((ret = cli_parse_add(root, virname, sig, 0, 0, offset, target, lsigid, options)))
+	    return ret;
 
 	if(tdb.engine) {
 	    if(tdb.engine[0] > cl_retflevel()) {
