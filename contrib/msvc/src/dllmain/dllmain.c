@@ -317,6 +317,7 @@ const char *CONFDIR_MILTER = _CONFDIR_MILTER;
 #define CONFDIR_FRESHCLAM _CONFDIR_FRESHCLAM
 #define CONFDIR_MILTER _CONFDIR_MILTER
 
+#undef HAVE_CONFIG_H
 #include <shared/getopt.c>
 #include <shared/optparser.c>
 
