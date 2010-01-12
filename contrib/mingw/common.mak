@@ -7,7 +7,7 @@ CFLAGS+=-I$(top)/win32/3rdparty/bzip2 -I$(top)/win32/3rdparty/pthreads -I$(top)/
 CFLAGS+=-DHAVE_CONFIG_H
 CFLAGS+=-Wall -Wextra -Wno-unused -Wno-sign-compare -Wno-switch -Wno-pointer-sign -Wno-format -pipe
 CFLAGS+=-fno-strict-aliasing
-CFLAGS+=-O2 -mtune=generic -march=i686 -fomit-frame-pointer -ffast-math
+CFLAGS+=-O3 -mtune=generic -march=i686 -fomit-frame-pointer -ffast-math
 
 CC=$(MINGW32_CROSS_PREFIX)gcc
 WINDRES=$(MINGW32_CROSS_PREFIX)windres
