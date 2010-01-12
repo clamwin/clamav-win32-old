@@ -60,8 +60,8 @@ typedef BOOL (WINAPI *imp_Wow64DisableWow64FsRedirection)(LPVOID *OldValue);
 typedef BOOL (WINAPI *imp_Wow64RevertWow64FsRedirection)(LPVOID *OldValue);
 
 /* ws2_32 ipv6 */
-typedef int (WSAAPI *imp_getaddrinfo)(const char*, const char*, const struct addrinfo*, struct addrinfo**);
-typedef void (WSAAPI *imp_freeaddrinfo)(struct addrinfo*);
+typedef int (WINAPI *imp_getaddrinfo)(const char*, const char*, const struct addrinfo*, struct addrinfo**);
+typedef void (WINAPI *imp_freeaddrinfo)(struct addrinfo*);
 
 /* dbghelp32 */
 #ifdef _MSC_VER
