@@ -21,9 +21,7 @@
 #ifndef _OSDEPS_H_
 #define _OSDEPS_H_
 
-#define WITHIN_OSDEPS
 #include <platform.h>
-#undef WITHIN_OSDEPS
 #include <assert.h>
 #include <stdarg.h>
 #include <string.h>

@@ -153,7 +153,6 @@ typedef unsigned int in_addr_t;
 #define LIBCLAMAV_API __declspec(dllimport)
 #endif
 
-#ifndef WITHIN_OSDEPS
 #undef DATADIR
 #undef CONFDIR
 LIBCLAMAV_API extern const char *DATADIR;
@@ -161,7 +160,5 @@ LIBCLAMAV_API extern const char *CONFDIR;
 LIBCLAMAV_API extern const char *CONFDIR_CLAMD;
 LIBCLAMAV_API extern const char *CONFDIR_FRESHCLAM;
 LIBCLAMAV_API extern const char *CONFDIR_MILTER;
-#undef HAVE_CONFIG_H
-#endif
 
 #endif /* _PLATFORM_H */
