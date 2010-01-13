@@ -226,7 +226,7 @@ static inline int inl_listen(SOCKET sockfd, int backlog)
 
 static inline ssize_t inl_recv(SOCKET s, void *buf, size_t len, int flags)
 {
-    ssize_t result = recv(s, buf, (int) len, flags);
+    ssize_t result = recv(s, (char *) buf, (int) len, flags);
     if (result == SOCKET_ERROR)
         cw_wseterrno();
     return result;
@@ -236,7 +236,7 @@ static inline ssize_t inl_recv(SOCKET s, void *buf, size_t len, int flags)
 static inline ssize_t inl_recvfrom(SOCKET s, void *buf, size_t len, int flags,
                                   struct sockaddr *from, socklen_t *fromlen)
 {
-    ssize_t result = (ssize_t) recvfrom(s, buf, (int) len, flags, from, fromlen);
+    ssize_t result = (ssize_t) recvfrom(s, (char *) buf, (int) len, flags, from, fromlen);
     if (result == SOCKET_ERROR)
         cw_wseterrno();
     return result;
@@ -258,7 +258,7 @@ static inline int inl_select(int nfds, fd_set *readfds, fd_set *writefds,
 
 static inline ssize_t inl_send(SOCKET s, const void *buf, size_t len, int flags)
 {
-    ssize_t result = send(s, buf, (int) len, flags & (MSG_DONTROUTE | MSG_OOB));
+    ssize_t result = send(s, (const char *) buf, (int) len, flags & (MSG_DONTROUTE | MSG_OOB));
     if (result == SOCKET_ERROR)
         cw_wseterrno();
     return result;
@@ -268,7 +268,7 @@ static inline ssize_t inl_send(SOCKET s, const void *buf, size_t len, int flags)
 static inline ssize_t inl_sendto(SOCKET s, const void *buf, size_t len, int flags,
                                 const struct sockaddr *to, socklen_t tolen)
 {
-    ssize_t result = sendto(s, buf, (int) len, flags & (MSG_DONTROUTE | MSG_OOB), to, tolen);
+    ssize_t result = sendto(s, (const char *) buf, (int) len, flags & (MSG_DONTROUTE | MSG_OOB), to, tolen);
     if (result == SOCKET_ERROR)
         cw_wseterrno();
     return result;
