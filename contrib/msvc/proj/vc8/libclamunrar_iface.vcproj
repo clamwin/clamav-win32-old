@@ -67,7 +67,7 @@
 				Name="VCLinkerTool"
 				OutputFile="$(OutDir)\$(ProjectName)d.dll"
 				LinkIncremental="2"
-				ModuleDefinitionFile="..\..\libclamunrar_iface.def"
+				ModuleDefinitionFile="..\..\$(ProjectName).def"
 				GenerateDebugInformation="true"
 				SubSystem="2"
 				TargetMachine="1"
@@ -147,7 +147,7 @@
 				Name="VCLinkerTool"
 				OutputFile="$(OutDir)\$(ProjectName)d.dll"
 				LinkIncremental="2"
-				ModuleDefinitionFile="..\..\libclamunrar_iface.def"
+				ModuleDefinitionFile="..\..\$(ProjectName).def"
 				GenerateDebugInformation="true"
 				SubSystem="2"
 				TargetMachine="17"
@@ -223,7 +223,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				LinkIncremental="1"
-				ModuleDefinitionFile="..\..\libclamunrar_iface.def"
+				ModuleDefinitionFile="..\..\$(ProjectName).def"
 				GenerateDebugInformation="true"
 				SubSystem="2"
 				OptimizeReferences="2"
@@ -302,7 +302,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				LinkIncremental="1"
-				ModuleDefinitionFile="..\..\libclamunrar_iface.def"
+				ModuleDefinitionFile="..\..\$(ProjectName).def"
 				GenerateDebugInformation="true"
 				SubSystem="2"
 				OptimizeReferences="2"
@@ -363,7 +363,7 @@
 			Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav"
 			>
 			<File
-				RelativePath="..\..\resources\libclamunrar_iface.rc"
+				RelativePath="..\..\resources\$(ProjectName).rc"
 				>
 			</File>
 		</Filter>

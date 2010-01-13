@@ -170,3 +170,16 @@ gzdopen                     @251 NONAME
 gzgets                      @252 NONAME
 gzopen                      @253 NONAME
 gzwrite                     @254 NONAME
+
+; llvm
+cli_apicalls1               @300 NONAME
+cli_apicalls0               @301 NONAME
+cli_apicalls                @302 NONAME
+cli_apicall_maxapi          @303 NONAME
+cli_apicall_types           @304 NONAME
+cli_apicall_maxtypes        @305 NONAME
+cli_globals                 @306 NONAME
+cli_apicall_maxglobal       @307 NONAME
+cli_md5_final               @308 NONAME
+cli_md5_update              @309 NONAME
+cli_md5_init                @310 NONAME

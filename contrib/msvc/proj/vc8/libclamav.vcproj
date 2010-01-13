@@ -70,7 +70,7 @@
 				OutputFile="$(OutDir)\$(ProjectName)d.dll"
 				LinkIncremental="2"
 				IgnoreDefaultLibraryNames=""
-				ModuleDefinitionFile="..\..\libclamav.def"
+				ModuleDefinitionFile="..\..\$(ProjectName).def"
 				GenerateDebugInformation="true"
 				SubSystem="2"
 				ImportLibrary="$(TargetDir)$(TargetName).lib"
@@ -155,7 +155,7 @@
 				OutputFile="$(OutDir)\$(ProjectName)d.dll"
 				LinkIncremental="2"
 				IgnoreDefaultLibraryNames="msvcrt.lib"
-				ModuleDefinitionFile="..\..\libclamav.def"
+				ModuleDefinitionFile="..\..\$(ProjectName).def"
 				GenerateDebugInformation="true"
 				SubSystem="2"
 				ImportLibrary="$(TargetDir)$(TargetName).lib"
@@ -238,7 +238,7 @@
 				ShowProgress="0"
 				LinkIncremental="1"
 				IgnoreDefaultLibraryNames=""
-				ModuleDefinitionFile="..\..\libclamav.def"
+				ModuleDefinitionFile="..\..\$(ProjectName).def"
 				GenerateDebugInformation="true"
 				SubSystem="2"
 				OptimizeReferences="2"
@@ -322,7 +322,7 @@
 				ShowProgress="0"
 				LinkIncremental="1"
 				IgnoreDefaultLibraryNames="libcmt.lib"
-				ModuleDefinitionFile="..\..\libclamav.def"
+				ModuleDefinitionFile="..\..\$(ProjectName).def"
 				GenerateDebugInformation="true"
 				SubSystem="2"
 				OptimizeReferences="2"
@@ -397,10 +397,6 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\libclamav\bytecode_api_decl.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\libclamav\bytecode_nojit.c"
 				>
 			</File>
 			<File
@@ -1268,7 +1264,7 @@
 			UniqueIdentifier="{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}"
 			>
 			<File
-				RelativePath="..\..\resources\libclamav.rc"
+				RelativePath="..\..\resources\$(ProjectName).rc"
 				>
 			</File>
 		</Filter>
@@ -1364,6 +1360,10 @@
 				</File>
 				<File
 					RelativePath="..\..\src\dllmain\dllmain.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\src\dllmain\jit-dynload.c"
 					>
 				</File>
 				<File

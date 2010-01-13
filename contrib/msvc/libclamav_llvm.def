@@ -1,0 +1,9 @@
+EXPORTS
+
+cli_bytecode_prepare_jit
+cli_vm_execute_jit
+cli_bytecode_done_jit
+cli_bytecode_debug
+bytecode_init
+cli_bytecode_debug_printsrc
+cli_bytecode_printversion

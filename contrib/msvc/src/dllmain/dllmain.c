@@ -26,6 +26,8 @@ static helpers_t helpers;
 
 extern uint32_t cw_getplatform(void) { return platform; };
 extern helpers_t *cw_gethelpers(void) { return &helpers; }
+extern void jit_init(void);
+extern void jit_uninit(void);
 
 #define Q(string) # string
 
@@ -103,12 +105,16 @@ static void dynLoad(void)
         IMPORT_FUNC_OR_FAIL(ws2, getaddrinfo);
         IMPORT_FUNC_OR_FAIL(ws2, freeaddrinfo);
     }
+
+    /* DynLoad jit */
+    jit_init();
 }
 static void dynUnLoad(void)
 {
     if (helpers.k32.hLib) FreeLibrary(helpers.k32.hLib);
     if (helpers.av32.hLib) FreeLibrary(helpers.av32.hLib);
     if (helpers.psapi.hLib) FreeLibrary(helpers.psapi.hLib);
+    jit_uninit();
 }
 
 static uint32_t GetWindowsVersion(void)

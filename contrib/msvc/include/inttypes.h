@@ -46,7 +46,9 @@ typedef uint8_t  u_int8_t;
 typedef unsigned long int uintmax_t;
 typedef long int intmax_t;
 
+#ifndef __cplusplus
 typedef uint32_t mode_t;
+#endif
 
 #ifdef  _WIN64
 typedef __int64 ssize_t;
