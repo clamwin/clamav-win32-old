@@ -129,13 +129,8 @@ void jit_init(void)
     }
     while (0);
 
-    if (have_clamjit)
+    if (!have_clamjit)
     {
-        printf("JIT dynamically loaded\n");
-    }
-    else
-    {
-        printf("JIT fallback to non jit functions\n");
         if (llvm) FreeLibrary(llvm);
         llvm = NULL;
         pf_cli_bytecode_prepare_jit = (imp_cli_bytecode_prepare_jit) nojit_cli_bytecode_prepare_jit;
