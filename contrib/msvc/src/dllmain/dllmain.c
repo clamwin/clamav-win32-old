@@ -302,12 +302,11 @@ static int cw_getregvalue(const char *key, char *path, char *default_value)
 }
 
 /* look at win32/compat/libclamav_main.c for more info */
-#include "clamav-config.h"
-char _DATADIR[MAX_PATH] = DATADIR;
-char _CONFDIR[MAX_PATH] = CONFDIR;
-char _CONFDIR_CLAMD[MAX_PATH] = CONFDIR"\\clamd.conf";
-char _CONFDIR_FRESHCLAM[MAX_PATH] = CONFDIR"\\freshclam.conf";
-char _CONFDIR_MILTER[MAX_PATH] = CONFDIR"\\clamav-milter.conf";
+char _DATADIR[MAX_PATH] = "db";
+char _CONFDIR[MAX_PATH] = ".";
+char _CONFDIR_CLAMD[MAX_PATH] = "clamd.conf";
+char _CONFDIR_FRESHCLAM[MAX_PATH] = "freshclam.conf";
+char _CONFDIR_MILTER[MAX_PATH] = "clamav-milter.conf";
 
 #undef DATADIR
 #undef CONFDIR
@@ -323,7 +322,6 @@ const char *CONFDIR_MILTER = _CONFDIR_MILTER;
 #define CONFDIR_FRESHCLAM _CONFDIR_FRESHCLAM
 #define CONFDIR_MILTER _CONFDIR_MILTER
 
-#undef HAVE_CONFIG_H
 #include <shared/getopt.c>
 #include <shared/optparser.c>
 

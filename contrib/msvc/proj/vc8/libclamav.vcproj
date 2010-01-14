@@ -1383,6 +1383,10 @@
 					>
 				</File>
 				<File
+					RelativePath="..\..\src\dllmain\shared-misc.c"
+					>
+				</File>
+				<File
 					RelativePath="..\..\src\dllmain\termios.c"
 					>
 				</File>

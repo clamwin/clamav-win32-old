@@ -131,6 +131,11 @@ uniq_get                    @157 NONAME
 fmap                        @158 NONAME
 funmap                      @159 NONAME
 
+; shared/misc
+print_version               @160 NONAME
+freshdbdir                  @161 NONAME
+match_regex                 @162 NONAME
+
 ; optparser
 optget                      @170 NONAME
 optparse                    @171 NONAME

@@ -75,7 +75,6 @@ extern int cw_unlink(const char *pathname);
 #define perror cw_perror
 
 #define mkdir(a, b) mkdir(a)
-#define match_regex cli_matchregex
 
 /* no ipv6 on windows < 2000 */
 #undef getaddrinfo
@@ -151,10 +150,9 @@ typedef unsigned int in_addr_t;
 #define LIBCLAMAV_API
 #else
 #define LIBCLAMAV_API __declspec(dllimport)
+#define CL_NOLIBCLAMAV
 #endif
 
-#undef DATADIR
-#undef CONFDIR
 LIBCLAMAV_API extern const char *DATADIR;
 LIBCLAMAV_API extern const char *CONFDIR;
 LIBCLAMAV_API extern const char *CONFDIR_CLAMD;
