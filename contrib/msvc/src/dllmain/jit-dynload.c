@@ -120,6 +120,7 @@ void jit_init(void)
             break;
         IMPORT_FUNC(cli_bytecode_prepare_jit);
         IMPORT_FUNC(cli_vm_execute_jit);
+        IMPORT_FUNC(cli_bytecode_init_jit);
         IMPORT_FUNC(cli_bytecode_done_jit);
         IMPORT_FUNC(cli_bytecode_debug);
         IMPORT_FUNC(bytecode_init);
