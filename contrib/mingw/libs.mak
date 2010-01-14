@@ -42,6 +42,11 @@ libclamav_OBJECTS+=$(msvc)/resources/libclamav-rc.o
 libclamav.dll: $(libclamav_OBJECTS) $(gnulib_OBJECTS)
 	$(DLLWRAP) $(LDFLAGS) --def $(msvc)/libclamav.def --implib $@.a -o $@ $^ -lws2_32
 
+include llvm.mak
+libclamav_llvm_OBJECTS=$(libclamav_llvm_SOURCES:.cpp=.o)
+libclamav_llvm.dll: $(libclamav_llvm_OBJECTS) libclamav.dll
+	$(DLLWRAP) $(LDFLAGS) --def $(msvc)/libclamav_llvm.def --implib $@.a -o $@ $^
+
 clean:
-	@-rm -f *.dll *.a $(gnulib_OBJECTS) $(libclamunrar_OBJECTS) $(libclamunrar_iface_OBJECTS) $(libclamav_OBJECTS)
-	@echo Object files removed
+	@-rm -f *.dll *.a $(gnulib_OBJECTS) $(libclamunrar_OBJECTS) $(libclamunrar_iface_OBJECTS) $(libclamav_OBJECTS) $(libclamav_llvm_OBJECTS)
+	@echo Project cleaned
