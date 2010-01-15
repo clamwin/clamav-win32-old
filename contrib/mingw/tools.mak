@@ -30,8 +30,8 @@ clamscan_SOURCES+=$(msvc)/src/helpers/scanmem.c
 clamscan_SOURCES+=$(msvc)/src/helpers/exeScanner.c
 clamscan_OBJECTS=$(clamscan_SOURCES:.c=.o)
 clamscan_OBJECTS+=$(msvc)/resources/clamscan-rc.o
-clamscan.exe: libclamav.dll $(clamscan_OBJECTS) $(shared_OBJECTS) -lws2_32
-	$(CC) $(LDFLAGS) $^ -o $@ libclamav.dll.a
+clamscan.exe: libclamav.dll $(clamscan_OBJECTS) $(shared_OBJECTS)
+	$(CC) $(LDFLAGS) $^ -o $@ libclamav.dll.a -lws2_32
 
 freshclam_SOURCES=$(wildcard $(top)/freshclam/*.c)
 freshclam_SOURCES+=$(msvc)/src/helpers/cw_main.c
