@@ -345,7 +345,7 @@ int cli_scandesc(int desc, cli_ctx *ctx, cli_file_t ftype, uint8_t ftonly, struc
     fmap_t *map = *ctx->fmap;
 
     if((*ctx->fmap = fmap(desc, 0, 0))) {
-	ret = cli_fmap_scandesc(ctx, ftype, ftonly, ftoffset, acmode);
+	ret = cli_fmap_scandesc(ctx, ftype, ftonly, ftoffset, acmode, NULL);
 	funmap(*ctx->fmap);
     }
     *ctx->fmap = map;
@@ -353,7 +353,7 @@ int cli_scandesc(int desc, cli_ctx *ctx, cli_file_t ftype, uint8_t ftonly, struc
 }
 
 
-int cli_fmap_scandesc(cli_ctx *ctx, cli_file_t ftype, uint8_t ftonly, struct cli_matched_type **ftoffset, unsigned int acmode)
+int cli_fmap_scandesc(cli_ctx *ctx, cli_file_t ftype, uint8_t ftonly, struct cli_matched_type **ftoffset, unsigned int acmode, unsigned char *refhash)
 {
  	unsigned char *buff;
 	int ret = CL_CLEAN, type = CL_CLEAN, bytes;
@@ -421,7 +421,7 @@ int cli_fmap_scandesc(cli_ctx *ctx, cli_file_t ftype, uint8_t ftonly, struct cli
 	}
     }
 
-    if(!ftonly && ctx->engine->md5_hdb)
+    if(!refhash && !ftonly && ctx->engine->md5_hdb)
 	cli_md5_init(&md5ctx);
 
     while(offset < map->len) {
@@ -461,7 +461,7 @@ int cli_fmap_scandesc(cli_ctx *ctx, cli_file_t ftype, uint8_t ftonly, struct cli
 		    type = ret;
 	    }
 
-	    if(ctx->engine->md5_hdb)
+	    if(!refhash && ctx->engine->md5_hdb)
 		cli_md5_update(&md5ctx, buff + maxpatlen * (offset!=0), bytes - maxpatlen * (offset!=0));
 	}
 
@@ -538,15 +538,18 @@ int cli_fmap_scandesc(cli_ctx *ctx, cli_file_t ftype, uint8_t ftonly, struct cli
 
     if(!ftonly && ctx->engine->md5_hdb) {
 	    const struct cli_bm_patt *patt;
-	cli_md5_final(digest, &md5ctx);
-	if(cli_bm_scanbuff(digest, 16, ctx->virname, &patt, ctx->engine->md5_hdb, 0, NULL, NULL) == CL_VIRUS && patt->filesize == map->len && (cli_bm_scanbuff(digest, 16, NULL, &patt, ctx->engine->md5_fp, 0, NULL, NULL) != CL_VIRUS || patt->filesize != map->len))
+	if(!refhash) {
+	    cli_md5_final(digest, &md5ctx);
+	    refhash = digest;
+	}
+	if(cli_bm_scanbuff(refhash, 16, ctx->virname, &patt, ctx->engine->md5_hdb, 0, NULL, NULL) == CL_VIRUS && patt->filesize == map->len && (cli_bm_scanbuff(refhash, 16, NULL, &patt, ctx->engine->md5_fp, 0, NULL, NULL) != CL_VIRUS || patt->filesize != map->len))
 	    return CL_VIRUS;
     }
 
     return (acmode & AC_SCAN_FT) ? type : CL_CLEAN;
 }
 
-int cli_matchmeta(cli_ctx *ctx, cli_file_t ftype, const char *fname, size_t fsizec, size_t fsizer, int encrypted, int filepos, int res1, void *res2)
+int cli_matchmeta(cli_ctx *ctx, const char *fname, size_t fsizec, size_t fsizer, int encrypted, int filepos, int res1, void *res2)
 {
 	const struct cli_cdb *cdb;
 
@@ -555,9 +558,6 @@ int cli_matchmeta(cli_ctx *ctx, cli_file_t ftype, const char *fname, size_t fsiz
 
     do {
 	if(cdb->ctype != CL_TYPE_ANY && cdb->ctype != ctx->container_type)
-	    continue;
-
-	if(cdb->ftype != CL_TYPE_ANY && cdb->ftype != ftype)
 	    continue;
 
 	if(cdb->encrypted != 2 && cdb->encrypted != encrypted)

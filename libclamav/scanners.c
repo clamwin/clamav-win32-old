@@ -85,6 +85,7 @@
 #include "ishield.h"
 #include "7z.h"
 #include "fmap.h"
+#include "cache.h"
 
 #ifdef HAVE_BZLIB_H
 #include <bzlib.h>
@@ -178,7 +179,7 @@ static int cli_unrar_scanmetadata(int desc, unrar_metadata_t *metadata, cli_ctx 
 	(unsigned int) metadata->unpack_size, metadata->method,
 	metadata->pack_size ? (unsigned int) (metadata->unpack_size / metadata->pack_size) : 0);
 
-    if(cli_matchmeta(ctx, CL_TYPE_ANY, metadata->filename, metadata->pack_size, metadata->unpack_size, metadata->encrypted, files, metadata->crc, NULL) == CL_VIRUS)
+    if(cli_matchmeta(ctx, metadata->filename, metadata->pack_size, metadata->unpack_size, metadata->encrypted, files, metadata->crc, NULL) == CL_VIRUS)
 	return CL_VIRUS;
 
     if(DETECT_ENCRYPTED && metadata->encrypted) {
@@ -318,7 +319,7 @@ static int cli_scanrar(int desc, cli_ctx *ctx, off_t sfx_offset, uint32_t *sfx_c
 
 static int cli_scanarj(int desc, cli_ctx *ctx, off_t sfx_offset, uint32_t *sfx_check)
 {
-	int ret = CL_CLEAN, rc;
+	int ret = CL_CLEAN, rc, file = 0;
 	arj_metadata_t metadata;
 	char *dir;
 
@@ -352,6 +353,10 @@ static int cli_scanarj(int desc, cli_ctx *ctx, off_t sfx_offset, uint32_t *sfx_c
 	if (ret != CL_SUCCESS) {
 	   break;
 	}
+	file++;
+	if(cli_matchmeta(ctx, metadata.filename, metadata.comp_size, metadata.orig_size, metadata.encrypted, file, 0, NULL) == CL_VIRUS)
+	    return CL_VIRUS;
+
 	if ((ret = cli_checklimits("ARJ", ctx, metadata.orig_size, metadata.comp_size, 0))!=CL_CLEAN) {
 	    ret = CL_SUCCESS;
 	    if (metadata.filename)
@@ -643,8 +648,8 @@ static int cli_scanmscab(int desc, cli_ctx *ctx, off_t sfx_offset)
     for(file = cab.files; file; file = file->next) {
 	files++;
 
-	if(!(tempname = cli_gentemp(ctx->engine->tmpdir))) {
-	    ret = CL_EMEM;
+	if(cli_matchmeta(ctx, file->name, 0, file->length, 0, files, 0, NULL) == CL_VIRUS) {
+	    ret = CL_VIRUS;
 	    break;
 	}
 
@@ -652,6 +657,12 @@ static int cli_scanmscab(int desc, cli_ctx *ctx, off_t sfx_offset)
 	    ret = CL_CLEAN;
 	    break;
 	}
+
+	if(!(tempname = cli_gentemp(ctx->engine->tmpdir))) {
+	    ret = CL_EMEM;
+	    break;
+	}
+
 	if(ctx->engine->maxscansize && ctx->scansize + ctx->engine->maxfilesize >= ctx->engine->maxscansize)
 	    file->max_size = ctx->engine->maxscansize - ctx->scansize;
 	else
@@ -1653,7 +1664,7 @@ static int cli_scanraw(cli_ctx *ctx, cli_file_t type, uint8_t typercg, cli_file_
     if(typercg)
 	acmode |= AC_SCAN_FT;
 
-    ret = cli_fmap_scandesc(ctx, type == CL_TYPE_TEXT_ASCII ? 0 : type, 0, &ftoffset, acmode);
+    ret = cli_fmap_scandesc(ctx, type == CL_TYPE_TEXT_ASCII ? 0 : type, 0, &ftoffset, acmode, NULL);
 
     if(ret >= CL_TYPENO) {
 	ctx->recursion++;
@@ -1802,7 +1813,8 @@ int cli_magic_scandesc(int desc, cli_ctx *ctx)
 	struct stat sb;
 	uint8_t typercg = 1;
 	cli_file_t current_container_type = ctx->container_type; /* TODO: container tracking code TBD - bb#1293 */
-	size_t current_container_size = ctx->container_size;
+	size_t current_container_size = ctx->container_size, hashed_size;
+	unsigned char hash[16];
 
     if(ctx->engine->maxreclevel && ctx->recursion > ctx->engine->maxreclevel) {
         cli_dbgmsg("cli_magic_scandesc: Archive recursion limit exceeded (%u, max: %u)\n", ctx->recursion, ctx->engine->maxreclevel);
@@ -1835,16 +1847,28 @@ int cli_magic_scandesc(int desc, cli_ctx *ctx)
     ctx->fmap++;
     if(!(*ctx->fmap = fmap(desc, 0, sb.st_size))) {
 	cli_errmsg("CRITICAL: fmap() failed\n");
+	ctx->fmap--;
 	return CL_EMEM;
     }
+
+    if(cache_check(hash, ctx) == CL_CLEAN) {
+	funmap(*ctx->fmap);
+	ctx->fmap--;
+	return CL_CLEAN;
+    }
+    hashed_size = (*ctx->fmap)->len;
 
     if(!ctx->options || (ctx->recursion == ctx->engine->maxreclevel)) { /* raw mode (stdin, etc.) or last level of recursion */
 	if(ctx->recursion == ctx->engine->maxreclevel)
 	    cli_dbgmsg("cli_magic_scandesc: Hit recursion limit, only scanning raw file\n");
 	else
 	    cli_dbgmsg("Raw mode: No support for special files\n");
-	if((ret = cli_fmap_scandesc(ctx, 0, 0, NULL, AC_SCAN_VIR)) == CL_VIRUS)
+
+	if((ret = cli_fmap_scandesc(ctx, 0, 0, NULL, AC_SCAN_VIR, hash)) == CL_VIRUS)
 	    cli_dbgmsg("%s found in descriptor %d\n", *ctx->virname, desc);
+	else
+	    cache_add(hash, hashed_size, ctx);
+
 	funmap(*ctx->fmap);
 	ctx->fmap--; 
 	return ret;
@@ -2163,7 +2187,7 @@ int cli_magic_scandesc(int desc, cli_ctx *ctx)
     ctx->fmap--;
 
     if(ret == CL_VIRUS)
-	return cli_checkfp(desc, ctx) ? CL_CLEAN : CL_VIRUS;
+	ret = cli_checkfp(desc, ctx) ? CL_CLEAN : CL_VIRUS;
 
     switch(ret) {
 	case CL_EFORMAT:
@@ -2171,6 +2195,8 @@ int cli_magic_scandesc(int desc, cli_ctx *ctx)
 	case CL_EMAXSIZE:
 	case CL_EMAXFILES:
 	    cli_dbgmsg("Descriptor[%d]: %s\n", desc, cl_strerror(ret));
+	case CL_CLEAN:
+	    cache_add(hash, hashed_size, ctx);
 	    return CL_CLEAN;
 	default:
 	    return ret;
