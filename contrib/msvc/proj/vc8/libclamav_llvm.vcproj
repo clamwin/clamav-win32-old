@@ -293,6 +293,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
+				WholeProgramOptimization="false"
 				AdditionalIncludeDirectories="../..;../../include;../../include/llvmbuild;../../../../libclamav;&quot;../../../../libclamav/c++&quot;;&quot;../../../../libclamav/c++/llvm/include&quot;;&quot;../../../../libclamav/c++/llvm/lib/Target/X86&quot;"
 				PreprocessorDefinitions="WIN32;NDEBUG;WIN32_LEAN_AND_MEAN;HAVE_CONFIG_H;_BIND_TO_CURRENT_VCLIBS_VERSION=1;__STDC_LIMIT_MACROS;__STDC_CONSTANT_MACROS"
 				SmallerTypeCheck="false"
@@ -317,6 +318,7 @@
 				GenerateDebugInformation="true"
 				SubSystem="2"
 				OptimizeReferences="2"
+				LinkTimeCodeGeneration="0"
 				SetChecksum="true"
 				TargetMachine="17"
 			/>
