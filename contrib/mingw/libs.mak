@@ -52,7 +52,10 @@ llvm: libclamav_llvm.dll
 
 llvm-clean:
 	@rm -f libclamav_llvm.dll $(libclamav_llvm_OBJECTS)
+	@echo LLVM objects cleaned
 
 clean:
-	@rm -f $(CLAMAV_LIBS) $(addsuffix .a,$(CLAMAV_LIBS)) $(gnulib_OBJECTS) $(libclamunrar_OBJECTS) $(libclamunrar_iface_OBJECTS) $(libclamav_OBJECTS)
+	@rm -f libclamav.dll libclamav.dll.a
+	@rm -f $(CLAMAV_LIBS) $(addsuffix .a,$(CLAMAV_LIBS))
+	@rm -f $(gnulib_OBJECTS) $(libclamunrar_OBJECTS) $(libclamunrar_iface_OBJECTS) $(libclamav_OBJECTS)
 	@echo Project cleaned
