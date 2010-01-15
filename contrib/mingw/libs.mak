@@ -46,8 +46,13 @@ include llvm.mak
 libclamav_llvm_OBJECTS=$(libclamav_llvm_SOURCES:.cpp=.o)
 libclamav_llvm_OBJECTS:=$(libclamav_llvm_OBJECTS:.c=.o)
 libclamav_llvm.dll: $(libclamav_llvm_OBJECTS) libclamav.dll.a
-	$(DLLWRAP) --driver-name=$(CXX) $(LDFLAGS) --def $(msvc)/libclamav_llvm.def --implib $@.a -o $@ $^ -liphlpapi -limagehlp -lpsapi
+	$(DLLWRAP) --driver-name=$(CXX) $(LDFLAGS) --def $(msvc)/libclamav_llvm.def -o $@ $^ -liphlpapi -limagehlp -lpsapi
+
+llvm: libclamav_llvm.dll
+
+llvm-clean:
+	@rm -f libclamav_llvm.dll $(libclamav_llvm_OBJECTS)
 
 clean:
-	@-rm -f *.dll *.a $(gnulib_OBJECTS) $(libclamunrar_OBJECTS) $(libclamunrar_iface_OBJECTS) $(libclamav_OBJECTS) $(libclamav_llvm_OBJECTS)
+	@rm -f $(CLAMAV_LIBS) $(addsuffix .a,$(CLAMAV_LIBS)) $(gnulib_OBJECTS) $(libclamunrar_OBJECTS) $(libclamunrar_iface_OBJECTS) $(libclamav_OBJECTS)
 	@echo Project cleaned

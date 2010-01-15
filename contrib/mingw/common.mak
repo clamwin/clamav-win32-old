@@ -10,11 +10,8 @@ CFLAGS+=-fno-strict-aliasing
 CFLAGS+=-O3 -mtune=generic -march=i686 -fomit-frame-pointer -ffast-math
 
 LLVM=-I$(top)/libclamav/c++ -I$(top)/libclamav/c++/llvm/include
-LLVM+=-I$(top)/libclamav/c++/llvm/lib/Target/X86 -I$(top)/win32/llvmbuild/include
-LLVM+=-DHAVE_LIBIMAGEHLP -DHAVE_LIBPSAPI -DNDEBUG
-LLVM+=-D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS
-LLVM+=-DHAVE_INTTYPES_H -DHAVE_UINT64_T
-LLVM+=-DHAVE_ISINF_IN_MATH_H -DHAVE_ISNAN_IN_MATH_H
+LLVM+=-I$(top)/libclamav/c++/llvm/lib/Target/X86 -I$(msvc)/include/llvmbuild
+LLVM+=-DNDEBUG -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS
 
 CC=$(MINGW32_CROSS_PREFIX)gcc
 CXX=$(MINGW32_CROSS_PREFIX)g++

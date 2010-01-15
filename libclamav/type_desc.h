@@ -61,16 +61,24 @@ struct cli_apiglobal {
 #ifdef __cplusplus
 extern "C" {
 #endif
-extern const struct cli_bc_type cli_apicall_types[];
-extern const unsigned cli_apicall_maxtypes;
 
-extern const struct cli_apiglobal cli_globals[];
+/* really an hack here ;( */
+#if defined(_WIN32) && defined(__cplusplus)
+#define BCAPI __declspec(dllimport)
+#else
+#define BCAPI
+#endif
 
-extern const struct cli_apicall cli_apicalls[];
-extern const cli_apicall_int2 cli_apicalls0[];
-extern const cli_apicall_pointer cli_apicalls1[];
-extern const unsigned cli_apicall_maxapi;
-extern const unsigned cli_apicall_maxglobal;
+BCAPI extern const struct cli_bc_type cli_apicall_types[];
+BCAPI extern const unsigned cli_apicall_maxtypes;
+
+BCAPI extern const struct cli_apiglobal cli_globals[];
+
+BCAPI extern const struct cli_apicall cli_apicalls[];
+BCAPI extern const cli_apicall_int2 cli_apicalls0[];
+BCAPI extern const cli_apicall_pointer cli_apicalls1[];
+BCAPI extern const unsigned cli_apicall_maxapi;
+BCAPI extern const unsigned cli_apicall_maxglobal;
 
 #ifdef __cplusplus
 }

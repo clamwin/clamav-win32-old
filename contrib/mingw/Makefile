@@ -8,6 +8,12 @@ libclamav.dll $(CLAMAV_LIBS):
 $(CLAMAV_PROGRAMS) $(CLAMAV_TOOLS):
 	make -f tools.mak $@
 
+llvm:
+	make -f libs.mak llvm
+
+llvm-clean:
+	make -f libs.mak llvm-clean
+
 clean:
 	make -f libs.mak clean
 	make -f tools.mak clean
