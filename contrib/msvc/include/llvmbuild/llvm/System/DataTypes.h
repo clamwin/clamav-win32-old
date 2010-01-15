@@ -39,10 +39,13 @@ typedef unsigned __int16 uint16_t;
 typedef signed __int16 int16_t;
 typedef unsigned __int8 uint8_t;
 typedef signed __int8 int8_t;
+
 #ifdef  _WIN64
 typedef __int64 ssize_t;
 #else
 typedef int ssize_t;
+#endif
+
 #define INT8_MAX 127
 #define INT8_MIN -128
 #define UINT8_MAX 255
@@ -52,6 +55,7 @@ typedef int ssize_t;
 #define INT32_MAX 2147483647
 #define INT32_MIN -2147483648
 #define UINT32_MAX 4294967295U
+
 /* Certain compatibility updates to VC++ introduce the `cstdint'
  * header, which defines the INT*_C macros. On default installs they
  * are absent. */
@@ -79,7 +83,7 @@ typedef int ssize_t;
 #ifndef UINT64_C
 # define UINT64_C(C) ((uint64_t) C ## ULL)
 #endif
-#endif
+
 #elif defined(__MINGW32__)
 #define HAVE_INTTYPES_H 1
 #define HAVE_STDINT_H 1
