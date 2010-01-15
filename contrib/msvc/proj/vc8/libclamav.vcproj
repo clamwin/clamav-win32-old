@@ -408,6 +408,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\..\libclamav\cache.c"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\..\libclamav\chmunpack.c"
 				>
 			</File>
@@ -919,6 +923,10 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\libclamav\cab.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\cache.h"
 				>
 			</File>
 			<File
