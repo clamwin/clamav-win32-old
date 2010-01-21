@@ -116,9 +116,10 @@ cli_strtokenize             @136 NONAME
 cli_utf16toascii            @137 NONAME
 cli_vba_inflate             @138 NONAME
 cli_vba_readdir             @139 NONAME
-cli_wm_decrypt_macro        @140 NONAME
-cli_wm_readdir              @141 NONAME
-cli_writen                  @142 NONAME
+cli_versig2                 @140 NONAME
+cli_wm_decrypt_macro        @141 NONAME
+cli_wm_readdir              @142 NONAME
+cli_writen                  @143 NONAME
 
 html_normalise_map          @150 NONAME
 mp_clear                    @151 NONAME
@@ -188,4 +189,6 @@ cli_apicall_types           @313 NONAME DATA
 cli_apicalls                @314 NONAME DATA
 cli_apicalls0               @315 NONAME DATA
 cli_apicalls1               @316 NONAME DATA
-cli_globals                 @317 NONAME DATA
+cli_apicalls2               @317 NONAME DATA
+cli_apicalls3               @318 NONAME DATA
+cli_globals                 @319 NONAME DATA

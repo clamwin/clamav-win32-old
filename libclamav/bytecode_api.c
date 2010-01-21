@@ -30,6 +30,7 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <string.h>
 #include "cltypes.h"
 #include "clambc.h"
 #include "bytecode.h"
@@ -38,6 +39,8 @@
 #include "bytecode_api.h"
 #include "bytecode_api_impl.h"
 #include "others.h"
+#include "pe.h"
+#include "disasm.h"
 
 uint32_t cli_bcapi_test0(struct cli_bc_ctx *ctx, struct foo* s, uint32_t u)
 {
@@ -47,6 +50,11 @@ uint32_t cli_bcapi_test0(struct cli_bc_ctx *ctx, struct foo* s, uint32_t u)
 uint32_t cli_bcapi_test1(struct cli_bc_ctx *ctx, uint32_t a, uint32_t b)
 {
     return (a==0xf00dbeef && b==0xbeeff00d) ? 0x12345678 : 0x55;
+}
+
+uint32_t cli_bcapi_test2(struct cli_bc_ctx *ctx, uint32_t a)
+{
+    return a == 0xf00d ? 0xd00f : 0x5555;
 }
 
 int32_t cli_bcapi_read(struct cli_bc_ctx* ctx, uint8_t *data, int32_t size)
@@ -84,7 +92,7 @@ uint32_t cli_bcapi_debug_print_str(struct cli_bc_ctx *ctx, const uint8_t *str, u
     return 0;
 }
 
-uint32_t cli_bcapi_debug_print_uint(struct cli_bc_ctx *ctx, uint32_t a, uint32_t b)
+uint32_t cli_bcapi_debug_print_uint(struct cli_bc_ctx *ctx, uint32_t a)
 {
     cli_dbgmsg("bytecode debug: %u\n", a);
     return 0;
@@ -101,8 +109,19 @@ uint32_t cli_bcapi_setvirusname(struct cli_bc_ctx* ctx, const uint8_t *name, uin
 
 uint32_t cli_bcapi_disasm_x86(struct cli_bc_ctx *ctx, struct DISASM_RESULT *res, uint32_t len)
 {
-    //TODO: call disasm_x86_wrap, which outputs a MARIO struct
-    return -1;
+    int n;
+    const char *buf;
+    const char* next;
+    if (!res || !ctx->fmap || ctx->off >= ctx->fmap->len)
+	return -1;
+    /* 32 should be longest instr we support decoding.
+     * When we'll support mmx/sse instructions this should be updated! */
+    n = MIN(32, ctx->fmap->len - ctx->off);
+    buf = fmap_need_off_once(ctx->fmap, ctx->off, n);
+    next = cli_disasm_one(buf, n, res, 0);
+    if (!next)
+	return -1;
+    return ctx->off + next - buf;
 }
 
 /* TODO: field in ctx, id of last bytecode that called magicscandesc, reset
@@ -239,3 +258,91 @@ uint32_t cli_bcapi_trace_ptr(struct cli_bc_ctx *ctx, const const uint8_t* ptr, u
 	ctx->trace_ptr(ctx, ptr);
     return 0;
 }
+
+uint32_t cli_bcapi_pe_rawaddr(struct cli_bc_ctx *ctx, uint32_t rva)
+{
+  uint32_t ret;
+  int err = 0;
+  const struct cli_pe_hook_data *pe = ctx->hooks.pedata;
+  ret = cli_rawaddr(rva, pe->exe_info.section, pe->exe_info.nsections, &err,
+		    ctx->file_size, pe->hdr_size);
+  if (err)
+    return PE_INVALID_RVA;
+  return ret;
+}
+
+static inline const char* cli_memmem(const char *haystack, unsigned hlen,
+				     const unsigned char *needle, unsigned nlen)
+{
+    const char *p;
+    unsigned char c;
+    if (!needle || !haystack)
+	return NULL;
+    c = *needle++;
+    if (nlen == 1)
+	return memchr(haystack, c, hlen);
+
+    while (hlen >= nlen) {
+	p = haystack;
+	haystack = memchr(haystack, c, hlen - nlen + 1);
+	if (!haystack)
+	    return NULL;
+	p = haystack + 1;
+	if (!memcmp(p, needle, nlen-1))
+	    return haystack;
+	hlen -= p - haystack;
+	haystack = p;
+    }
+    return NULL;
+}
+
+int32_t cli_bcapi_file_find(struct cli_bc_ctx *ctx, const uint8_t* data, uint32_t len)
+{
+    char buf[4096];
+    fmap_t *map = ctx->fmap;
+    uint32_t off = ctx->off, newoff;
+    int n;
+
+    if (!map || len > sizeof(buf)/4 || len <= 0)
+	return -1;
+    for (;;) {
+	const char *p;
+	n = fmap_readn(map, buf, off, sizeof(buf));
+	if ((unsigned)n < len)
+	    return -1;
+	p = cli_memmem(buf, n, data, len);
+	if (p)
+	    return off + p - buf;
+	off += n-len;
+    }
+    return -1;
+}
+
+int32_t cli_bcapi_file_byteat(struct cli_bc_ctx *ctx, uint32_t off)
+{
+    unsigned char c;
+    if (!ctx->fmap)
+	return -1;
+    if (fmap_readn(ctx->fmap, &c, off, 1) != 1)
+	return -1;
+    return c;
+}
+
+uint8_t* cli_bcapi_malloc(struct cli_bc_ctx *ctx, uint32_t size)
+{
+#if USE_MPOOL
+    if (!ctx->mpool) {
+	ctx->mpool = mpool_create();
+	if (!ctx->mpool) {
+	    cli_dbgmsg("bytecode: mpool_create failed!\n");
+	    return NULL;
+	}
+    }
+    return mpool_malloc(ctx->mpool, size);
+#else
+    /* TODO: implement using a list of pointers we allocated! */
+    cli_errmsg("cli_bcapi_malloc not implemented for systems without mmap yet!\n");
+    return NULL;
+#endif
+}
+

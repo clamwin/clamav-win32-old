@@ -112,7 +112,8 @@ int scancallback(int desc, int bytes)
 
 static int scanfile(const char *filename, struct cl_engine *engine, const struct optstruct *opts, unsigned int options)
 {
-  int ret = 0, fd, included, printclean = 1, fsize;
+  int ret = 0, fd, included, printclean = 1;
+  unsigned int fsize;
 	const struct optstruct *opt;
 	const char *virname;
 #ifdef C_LINUX
@@ -382,7 +383,7 @@ int scanmanager(const struct optstruct *opts)
 {
 	mode_t fmode;
 	int ret = 0, fmodeint, i;
-	unsigned int options = 0, dboptions = CL_DB_CVDNOTMP;
+	unsigned int options = 0, dboptions = 0;
 	struct cl_engine *engine;
 	struct stat sb;
 	char *file, cwd[1024], *pua_cats = NULL;

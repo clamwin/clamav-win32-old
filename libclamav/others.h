@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2007-2008 Sourcefire, Inc.
+ *  Copyright (C) 2007-2010 Sourcefire, Inc.
  *
  *  Authors: Tomasz Kojm
  *
@@ -99,8 +99,14 @@ extern uint8_t cli_debug_flag;
 #define NAME_MAX 256
 #endif
 
+typedef struct bitset_tag
+{
+        unsigned char *bitset;
+        unsigned long length;
+} bitset_t;
+
 /* internal clamav context */
-typedef struct {
+typedef struct cli_ctx_tag {
     const char **virname;
     unsigned long int *scanned;
     const struct cli_matcher *root;
@@ -114,6 +120,7 @@ typedef struct {
     size_t container_size;
     struct cli_dconf *dconf;
     fmap_t **fmap;
+    bitset_t* hook_lsig_matches;
 } cli_ctx;
 
 
@@ -151,6 +158,14 @@ struct icon_matcher {
     unsigned int group_counts[2];
     struct icomtr *icons[3];
     unsigned int icon_counts[3];
+};
+
+struct cli_dbinfo {
+    char *name;
+    unsigned char *hash;
+    size_t size;
+    struct cl_cvd *cvd;
+    struct cli_dbinfo *next;
 };
 
 struct cl_engine {
@@ -220,6 +235,9 @@ struct cl_engine {
     /* Negative cache storage */
     struct CACHE *cache;
 
+    /* Database information from .info files */
+    struct cli_dbinfo *dbinfo;
+
     /* Used for memory pools */
     mpool_t *mempool;
 
@@ -230,6 +248,7 @@ struct cl_engine {
     struct cli_all_bc bcs;
     unsigned *hooks[_BC_LAST_HOOK - _BC_START_HOOKS];
     unsigned hooks_cnt[_BC_LAST_HOOK - _BC_START_HOOKS];
+    unsigned hook_lsig_ids;
 };
 
 struct cl_settings {
@@ -374,12 +393,6 @@ static inline void cli_writeint32(char *offset, uint32_t value)
 #define CLI_SRS(n,s) ((((n)>>(s)) ^ (1<<(sizeof(n)*8-1-s))) - (1<<(sizeof(n)*8-1-s)))
 #endif
 #define CLI_SAR(n,s) n = CLI_SRS(n,s)
-
-typedef struct bitset_tag
-{
-        unsigned char *bitset;
-        unsigned long length;
-} bitset_t;
 
 #ifdef __GNUC__
 void cli_warnmsg(const char *str, ...) __attribute__((format(printf, 1, 2)));

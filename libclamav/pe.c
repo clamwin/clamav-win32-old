@@ -1874,13 +1874,21 @@ int cli_scanpe(cli_ctx *ctx, icon_groupset *iconset)
 	}
 
 	if(cli_memstr(UPX_LZMA2, 20, epbuff + 0x2f, 20)) {
-	  uint32_t strictdsize=cli_readint32(epbuff+0x21);
-	  if(strictdsize<=dsize)
-	    upx_success = upx_inflatelzma(src, ssize, dest, &strictdsize, exe_sections[i].rva, exe_sections[i + 1].rva, vep) >=0;
+	    uint32_t strictdsize=cli_readint32(epbuff+0x21), skew = 0;
+	    if(ssize > 0x15 && epbuff[0] == '\x60' && epbuff[1] == '\xbe') {
+		skew = cli_readint32(epbuff+2) - exe_sections[i + 1].rva - optional_hdr32.ImageBase;
+		if(skew!=0x15) skew = 0;
+	    }
+	    if(strictdsize<=dsize)
+		upx_success = upx_inflatelzma(src+skew, ssize-skew, dest, &strictdsize, exe_sections[i].rva, exe_sections[i + 1].rva, vep) >=0;
 	} else if (cli_memstr(UPX_LZMA1, 20, epbuff + 0x39, 20)) {
-	  uint32_t strictdsize=cli_readint32(epbuff+0x2b);
-	  if(strictdsize<=dsize)
-	    upx_success = upx_inflatelzma(src, ssize, dest, &strictdsize, exe_sections[i].rva, exe_sections[i + 1].rva, vep) >=0;
+	    uint32_t strictdsize=cli_readint32(epbuff+0x2b), skew = 0;
+	    if(ssize > 0x15 && epbuff[0] == '\x60' && epbuff[1] == '\xbe') {
+		skew = cli_readint32(epbuff+2) - exe_sections[i + 1].rva - optional_hdr32.ImageBase;
+		if(skew!=0x15) skew = 0;
+	    }
+	    if(strictdsize<=dsize)
+		upx_success = upx_inflatelzma(src+skew, ssize-skew, dest, &strictdsize, exe_sections[i].rva, exe_sections[i + 1].rva, vep) >=0;
 	}
 
 	if(!upx_success) {
@@ -2236,9 +2244,10 @@ int cli_scanpe(cli_ctx *ctx, icon_groupset *iconset)
     pedata.e_lfanew = e_lfanew;
     pedata.overlays = overlays;
     pedata.overlays_sz = fsize - overlays;
+    pedata.hdr_size = hdr_size;
     cli_bytecode_context_setpe(bc_ctx, &pedata);
     cli_bytecode_context_setctx(bc_ctx, ctx);
-    ret = cli_bytecode_runhook(ctx->engine, bc_ctx, BC_PE_UNPACKER, map, ctx->virname);
+    ret = cli_bytecode_runhook(ctx, ctx->engine, bc_ctx, BC_PE_UNPACKER, map, ctx->virname);
     switch (ret) {
 	case CL_VIRUS:
 	    return CL_VIRUS;

@@ -56,6 +56,8 @@ enum BytecodeKind {
     _BC_LAST_HOOK
 };
 
+enum { PE_INVALID_RVA = 0xFFFFFFFF };
+
 #ifdef __CLAMBC__
 
 /** @brief Logical signature match counts
@@ -68,6 +70,8 @@ extern const uint32_t __clambc_match_counts[64];
 extern const struct cli_exe_info __clambc_exeinfo;
 /** PE data, if this is a PE hook */
 extern const struct cli_pe_hook_data __clambc_pedata;
+/** File size (max 4G) */
+extern const uint32_t __clambc_filesize[1];
 
 /** Kind of the bytecode */
 const uint16_t __clambc_kind;
@@ -137,10 +141,9 @@ uint32_t debug_print_str(const uint8_t *str, uint32_t len);
  * Prints a number as a debug message.
  *
  * @param[in] a number to print
- * @param b unused
  * @return 0
  */
-uint32_t debug_print_uint(uint32_t a, uint32_t b);
+uint32_t debug_print_uint(uint32_t a);
 
 /**
  * Disassembles starting from current file position, the specified amount of
@@ -153,7 +156,7 @@ uint32_t debug_print_uint(uint32_t a, uint32_t b);
  * This is a low-level API, the result is in ClamAV type-8 signature format 
  * (64 bytes/instruction).
  *  \sa DisassembleAt
- * */
+ */
 uint32_t disasm_x86(struct DISASM_RESULT* result, uint32_t len);
 
 /* tracing API */
@@ -165,6 +168,34 @@ uint32_t trace_source(const uint8_t* srcfile, uint32_t line);
 uint32_t trace_op(const uint8_t* opname, uint32_t column);
 uint32_t trace_value(const uint8_t* name, uint32_t v);
 uint32_t trace_ptr(const uint8_t* ptr, uint32_t dummy);
+
+/** Converts a RVA (Relative Virtual Address) to
+  * an absolute PE file offset.
+  * @param rva a rva address from the PE file
+  * @return absolute file offset mapped to the \p rva,
+  * or PE_INVALID_RVA if the \p rva is invalid.
+  */
+uint32_t pe_rawaddr(uint32_t rva);
+
+/** Looks for the specified sequence of bytes in the current file.
+  * @param[in] data the sequence of bytes to look for
+  * @param len length of \p data, cannot be more than 1024
+  * @return offset in the current file if match is found, -1 otherwise */
+int32_t file_find(const uint8_t* data, uint32_t len); 
+
+/** Read a single byte from current file
+  * @param offset file offset
+  * @return byte at offset \p off in the current file, or -1 if offset is
+  * invalid */
+int32_t file_byteat(uint32_t offset);
+
+/** Allocates memory. Currently this memory is freed automatically on exit
+  from the bytecode, and there is no way to free it sooner.
+  @param size amount of memory to allocate in bytes
+  @return pointer to allocated memory */
+void* malloc(uint32_t size);
+
+uint32_t test2(uint32_t a);
 
 #endif
 #endif

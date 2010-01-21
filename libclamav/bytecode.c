@@ -64,6 +64,7 @@ struct cli_bc_ctx *cli_bytecode_context_alloc(void)
     ctx->directory = "";
     ctx->line = 0;
     ctx->col = 0;
+    ctx->mpool = NULL;
     return ctx;
 }
 
@@ -104,6 +105,14 @@ static int cli_bytecode_context_reset(struct cli_bc_ctx *ctx)
 	ctx->tempfile = NULL;
 	ctx->outfd = -1;
     }
+#if USE_MPOOL
+    if (ctx->mpool) {
+	mpool_destroy(ctx->mpool);
+	ctx->mpool = NULL;
+    }
+#else
+    //TODO: implement for no-mmap case too
+#endif
     return CL_SUCCESS;
 }
 
@@ -656,13 +665,18 @@ static int types_equal(const struct cli_bc *bc, uint16_t *apity2ty, uint16_t tid
 	 cli_dbgmsg("bytecode: type numElements mismatch: %u != %u\n", ty->numElements, apity->numElements);
 	 return 0;
      }
-    for (i=0;i<ty->numElements;i++) {
+     for (i=0;i<ty->numElements;i++) {
 	if (apity->containedTypes[i] < BC_START_TID) {
-	    if (ty->containedTypes[i] != apity->containedTypes[i])
+	    if (ty->containedTypes[i] != apity->containedTypes[i]) {
+		cli_dbgmsg("bytecode: contained type mismatch: %u != %u\n",
+			   ty->containedTypes[i], apity->containedTypes[i]);
 		return 0;
+	    }
 	} else if (!types_equal(bc, apity2ty, ty->containedTypes[i], apity->containedTypes[i] - BC_START_TID))
 	    return 0;
-    }
+	if (ty->kind == DArrayType)
+	    break;/* validated the contained type already */
+     }
     return 1;
 }
 
@@ -1092,7 +1106,7 @@ static int parseBB(struct cli_bc *bc, unsigned func, unsigned bb, unsigned char 
 		if (ok) {
 		    inst.u.ops.numOps = numOp+2;
 		    inst.u.ops.opsizes = NULL;
-		    inst.u.ops.ops = cli_calloc(numOp, sizeof(*inst.u.ops.ops));
+		    inst.u.ops.ops = cli_calloc(numOp+2, sizeof(*inst.u.ops.ops));
 		    if (!inst.u.ops.ops) {
 			cli_errmsg("Out of memory allocating operands\n");
 			return CL_EMEM;
@@ -1217,6 +1231,7 @@ int cli_bytecode_load(struct cli_bc *bc, FILE *f, struct cli_dbio *dbio)
     enum parse_state state;
     int rc;
 
+    memset(bc, 0, sizeof(*bc));
     if (!f && !dbio) {
 	cli_errmsg("Unable to load bytecode (null file)\n");
 	return CL_ENULLARG;
@@ -1605,13 +1620,22 @@ int cli_bytecode_context_setfile(struct cli_bc_ctx *ctx, fmap_t *map)
 {
     ctx->fmap = map;
     ctx->file_size = map->len + map->offset;
+    ctx->hooks.filesize = &ctx->file_size;
     return 0;
 }
 
-int cli_bytecode_runlsig(const struct cli_all_bc *bcs, const struct cli_bc *bc, const char **virname, const uint32_t* lsigcnt, fmap_t *map)
+int cli_bytecode_runlsig(cli_ctx *cctx, const struct cli_all_bc *bcs, const struct cli_bc *bc, const char **virname, const uint32_t* lsigcnt, fmap_t *map)
 {
     int ret;
     struct cli_bc_ctx ctx;
+
+    if (bc->hook_lsig_id) {
+	/* this is a bytecode for a hook, defer running it until hook is
+	 * executed, so that it has all the info for the hook */
+	if (cctx->hook_lsig_matches)
+	    cli_bitset_set(cctx->hook_lsig_matches, bc->hook_lsig_id-1);
+	return CL_SUCCESS;
+    }
     memset(&ctx, 0, sizeof(ctx));
     cli_bytecode_context_setfuncid(&ctx, bc, 0);
     ctx.hooks.match_counts = lsigcnt;
@@ -1636,7 +1660,7 @@ int cli_bytecode_runlsig(const struct cli_all_bc *bcs, const struct cli_bc *bc, 
     return CL_SUCCESS;
 }
 
-int cli_bytecode_runhook(const struct cl_engine *engine, struct cli_bc_ctx *ctx,
+int cli_bytecode_runhook(cli_ctx *cctx, const struct cl_engine *engine, struct cli_bc_ctx *ctx,
 			 unsigned id, fmap_t *map, const char **virname)
 {
     const unsigned *hooks = engine->hooks[id - _BC_START_HOOKS];
@@ -1647,6 +1671,12 @@ int cli_bytecode_runhook(const struct cl_engine *engine, struct cli_bc_ctx *ctx,
     cli_dbgmsg("Bytecode executing hook id %u (%u hooks)\n", id, hooks_cnt);
     for (i=0;i < hooks_cnt;i++) {
 	const struct cli_bc *bc = &engine->bcs.all_bcs[hooks[i]];
+	if (bc->lsig) {
+	    if (!cctx->hook_lsig_matches ||
+		!cli_bitset_test(cctx->hook_lsig_matches, bc->hook_lsig_id-1))
+		continue;
+	    cli_dbgmsg("Bytecode: executing bytecode %u (lsig matched)" , bc->id);
+	}
 	cli_bytecode_context_setfuncid(ctx, bc, 0);
 	ret = cli_bytecode_run(&engine->bcs, bc, ctx);
 	if (ret != CL_SUCCESS) {

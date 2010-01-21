@@ -43,6 +43,8 @@ struct cli_bc_type {
 
 typedef uint32_t (*cli_apicall_int2)(struct cli_bc_ctx *, uint32_t, uint32_t);
 typedef uint32_t (*cli_apicall_pointer)(struct cli_bc_ctx *, void*, uint32_t);
+typedef uint32_t (*cli_apicall_int1)(struct cli_bc_ctx *, uint32_t);
+typedef void* (*cli_apicall_malloclike)(struct cli_bc_ctx *, uint32_t);
 
 struct cli_apicall {
     const char *name;
@@ -61,7 +63,6 @@ struct cli_apiglobal {
 #ifdef __cplusplus
 extern "C" {
 #endif
-
 /* really an hack here ;( */
 #if defined(_WIN32) && defined(__cplusplus)
 #define BCAPI __declspec(dllimport)
@@ -77,6 +78,8 @@ BCAPI extern const struct cli_apiglobal cli_globals[];
 BCAPI extern const struct cli_apicall cli_apicalls[];
 BCAPI extern const cli_apicall_int2 cli_apicalls0[];
 BCAPI extern const cli_apicall_pointer cli_apicalls1[];
+BCAPI extern const cli_apicall_int1 cli_apicalls2[];
+BCAPI extern const cli_apicall_malloclike cli_apicalls3[];
 BCAPI extern const unsigned cli_apicall_maxapi;
 BCAPI extern const unsigned cli_apicall_maxglobal;
 
