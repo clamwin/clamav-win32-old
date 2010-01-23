@@ -1316,6 +1316,8 @@ static int cli_loadcbc(FILE *fs, struct cl_engine *engine, unsigned int *signo, 
     struct cli_all_bc *bcs = &engine->bcs;
     struct cli_bc *bc;
     unsigned sigs = 0;
+    unsigned security_trust = 0;
+
 
     /* TODO: virusname have a common prefix, and whitelist by that */
     if((rc = cli_initroots(engine, options)))
@@ -1331,7 +1333,26 @@ static int cli_loadcbc(FILE *fs, struct cl_engine *engine, unsigned int *signo, 
     }
     bcs->count++;
     bc = &bcs->all_bcs[bcs->count-1];
-    rc = cli_bytecode_load(bc, fs, dbio);
+    bc->id = bcs->count;
+
+    switch (engine->bytecode_security) {
+	case CL_BYTECODE_TRUST_ALL:
+	    security_trust = 1;
+	    cli_dbgmsg("bytecode: trusting all bytecode!\n");
+	    break;
+	case CL_BYTECODE_TRUST_SIGNED:
+	    if (dbio && (!engine->dbinfo || !engine->dbinfo->cvd
+			 || !engine->dbinfo->cvd->dsig)) {
+		cli_errmsg("CVD without signed .info?\n");
+		return CL_EMALFDB;
+	    }
+	    security_trust = dbio ? 1 : 0;
+	    break;
+	default:
+	    security_trust = 0;
+    }
+
+    rc = cli_bytecode_load(bc, fs, dbio, security_trust);
     if (rc != CL_SUCCESS) {
 	cli_errmsg("Unable to load %s bytecode: %s\n", dbname, cl_strerror(rc));
 	return rc;
@@ -1342,7 +1363,7 @@ static int cli_loadcbc(FILE *fs, struct cl_engine *engine, unsigned int *signo, 
 	    cli_errmsg("Bytecode %s has logical kind, but missing logical signature!\n", dbname);
 	    return CL_EMALFDB;
 	}
-	cli_dbgmsg("Bytecode %s has logical signature: %s\n", dbname, bc->lsig);
+	cli_dbgmsg("Bytecode %s(%u) has logical signature: %s\n", dbname, bc->id, bc->lsig);
 	rc = load_oneldb(bc->lsig, 0, 0, engine, options, dbname, 0, &sigs, bc, NULL);
 	if (rc != CL_SUCCESS) {
 	    cli_errmsg("Problem parsing logical signature %s for bytecode %s: %s\n",

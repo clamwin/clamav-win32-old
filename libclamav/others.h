@@ -249,6 +249,7 @@ struct cl_engine {
     unsigned *hooks[_BC_LAST_HOOK - _BC_START_HOOKS];
     unsigned hooks_cnt[_BC_LAST_HOOK - _BC_START_HOOKS];
     unsigned hook_lsig_ids;
+    enum bytecode_security bytecode_security;
 };
 
 struct cl_settings {
@@ -383,8 +384,10 @@ static inline void cli_writeint32(char *offset, uint32_t value)
 #endif
 
 /* used by: spin, yc (C) aCaB */
-#define CLI_ROL(a,b) a = ( a << (b % (sizeof(a)<<3) ))  |  (a >> (  (sizeof(a)<<3)  -  (b % (sizeof(a)<<3 )) ) )
-#define CLI_ROR(a,b) a = ( a >> (b % (sizeof(a)<<3) ))  |  (a << (  (sizeof(a)<<3)  -  (b % (sizeof(a)<<3 )) ) )
+#define __SHIFTBITS(a) (sizeof(a)<<3)
+#define __SHIFTMASK(a) (__SHIFTBITS(a)-1)
+#define CLI_ROL(a,b) a = ( a << ((b) & __SHIFTMASK(a)) ) | ( a >> ((__SHIFTBITS(a) - (b)) & __SHIFTMASK(a)) )
+#define CLI_ROR(a,b) a = ( a >> ((b) & __SHIFTMASK(a)) ) | ( a << ((__SHIFTBITS(a) - (b)) & __SHIFTMASK(a)) )
 
 /* Implementation independent sign-extended signed right shift */
 #ifdef HAVE_SAR

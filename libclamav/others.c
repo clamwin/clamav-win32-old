@@ -210,8 +210,6 @@ const char *cl_strerror(int clerror)
 	    return "Can't verify database integrity";
 	case CL_EUNPACK:
 	    return "Can't unpack some data";
-	case CL_EUSERABORT:
-	    return "Aborted by user";
 
 	/* I/O and memory errors */
 	case CL_EOPEN:
@@ -294,6 +292,7 @@ struct cl_engine *cl_engine_new(void)
     new->min_ssn_count = CLI_DEFAULT_MIN_SSN_COUNT;
 
     new->callback = NULL;
+    new->bytecode_security = CL_BYTECODE_TRUST_SIGNED;
     new->refcount = 1;
     new->ac_only = 0;
     new->ac_mindepth = CLI_DEFAULT_AC_MINDEPTH;
@@ -375,6 +374,9 @@ int cl_engine_set_num(struct cl_engine *engine, enum cl_engine_field field, long
 	    break;
 	case CL_ENGINE_KEEPTMP:
 	    engine->keeptmp = num;
+	    break;
+	case CL_ENGINE_BYTECODE_SECURITY:
+	    engine->bytecode_security = num;
 	    break;
 	default:
 	    cli_errmsg("cl_engine_set_num: Incorrect field number\n");
