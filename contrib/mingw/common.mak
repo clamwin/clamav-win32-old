@@ -20,7 +20,7 @@ DLLWRAP=$(MINGW32_CROSS_PREFIX)dllwrap
 AR=$(MINGW32_CROSS_PREFIX)ar
 RANLIB=$(MINGW32_CROSS_PREFIX)ranlib
 
-CLAMAV_PROGRAMS=clamd.exe clamdscan.exe clamscan.exe freshclam.exe sigtool.exe
+CLAMAV_PROGRAMS=clamd.exe clamdscan.exe clamscan.exe freshclam.exe sigtool.exe clambc.exe
 CLAMAV_LIBS=libclamunrar.dll libclamunrar_iface.dll
 CLAMAV_TOOLS=profiler.exe exeScanner.exe
 

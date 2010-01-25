@@ -50,6 +50,13 @@ sigtool_OBJECTS+=$(msvc)/resources/sigtool-rc.o
 sigtool.exe: libclamav.dll $(sigtool_OBJECTS) $(shared_OBJECTS)
 	$(CC) $(LDFLAGS) $^ -o $@ libclamav.dll.a -lws2_32
 
+clambc_SOURCES=$(wildcard $(top)/clambc/*.c)
+clambc_SOURCES+=$(msvc)/src/helpers/cw_main.c
+clambc_OBJECTS=$(clambc_SOURCES:.c=.o)
+clambc_OBJECTS+=$(msvc)/resources/clambc-rc.o
+clambc.exe: libclamav.dll $(clambc_OBJECTS) $(shared_OBJECTS)
+	$(CC) $(LDFLAGS) $^ -o $@ libclamav.dll.a -lws2_32
+
 profiler_SOURCES=$(msvc)/tools/profiler.c
 profiler_OBJECTS=$(msvc)/tools/profiler.o
 profiler_OBJECTS+=$(msvc)/tools/profiler-rc.o
@@ -61,6 +68,6 @@ exeScanner.exe: $(exeScanner_OBJECTS) $(msvc)/tools/exeScanner_app.c $(msvc)/src
 	$(CC) $(CFLAGS) -DEXESCANNER_STANDALONE $(LDFLAGS) $(msvc)/tools/exeScanner_app.c $(msvc)/src/helpers/exeScanner.c $(exeScanner_OBJECTS) -o $@
 
 clean:
-	@-rm -f *.exe $(clamd_OBJECTS) $(clamdscan_OBJECTS) $(clamscan_OBJECTS) $(freshclam_OBJECTS) $(sigtool_OBJECTS) $(shared_OBJECTS)
+	@-rm -f *.exe $(clamd_OBJECTS) $(clamdscan_OBJECTS) $(clamscan_OBJECTS) $(freshclam_OBJECTS) $(sigtool_OBJECTS) $(clambc_OBJECTS) $(shared_OBJECTS)
 	@-rm -f $(profiler_OBJECTS) $(exeScanner_OBJECTS)
 	@echo Object files removed

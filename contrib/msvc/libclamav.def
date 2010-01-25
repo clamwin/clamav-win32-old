@@ -192,3 +192,22 @@ cli_apicalls1               @316 NONAME DATA
 cli_apicalls2               @317 NONAME DATA
 cli_apicalls3               @318 NONAME DATA
 cli_globals                 @319 NONAME DATA
+
+; clambc
+cli_bytecode_context_alloc          @350 NONAME
+cli_bytecode_context_destroy        @351 NONAME
+cli_bytecode_context_getresult_int  @352 NONAME
+cli_bytecode_context_set_trace      @353 NONAME
+cli_bytecode_context_setfile        @354 NONAME
+cli_bytecode_context_setfuncid      @355 NONAME
+cli_bytecode_context_setparam_int   @356 NONAME
+cli_bytecode_debug                  @357 NONAME
+cli_bytecode_debug_printsrc         @358 NONAME
+cli_bytecode_describe               @359 NONAME
+cli_bytecode_destroy                @360 NONAME
+cli_bytecode_done                   @361 NONAME
+cli_bytecode_init                   @362 NONAME
+cli_bytecode_load                   @363 NONAME
+cli_bytecode_prepare                @364 NONAME
+cli_bytecode_printversion           @365 NONAME
+cli_bytecode_run                    @366 NONAME

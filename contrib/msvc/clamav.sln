@@ -14,6 +14,14 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "freshclam", "proj\vc8\fresh
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "sigtool", "proj\vc8\sigtool.vcproj", "{5163901E-4C74-421E-A053-7599C3A9D9B8}"
+	ProjectSection(ProjectDependencies) = postProject
+		{0E45E0DC-F9DB-4F31-A58C-1515EDE2A95B} = {0E45E0DC-F9DB-4F31-A58C-1515EDE2A95B}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "clambc", "proj\vc8\clambc.vcproj", "{DC895474-F301-4553-B8CF-0BA7EED24E1E}"
+	ProjectSection(ProjectDependencies) = postProject
+		{0E45E0DC-F9DB-4F31-A58C-1515EDE2A95B} = {0E45E0DC-F9DB-4F31-A58C-1515EDE2A95B}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "unscrambler", "proj\vc8\unscrambler.vcproj", "{0B19CBAF-D36F-48F0-A35B-BB5F73E662AD}"
 EndProject
@@ -86,6 +94,14 @@ Global
 		{5163901E-4C74-421E-A053-7599C3A9D9B8}.Release|Win32.Build.0 = Release|Win32
 		{5163901E-4C74-421E-A053-7599C3A9D9B8}.Release|x64.ActiveCfg = Release|x64
 		{5163901E-4C74-421E-A053-7599C3A9D9B8}.Release|x64.Build.0 = Release|x64
+		{DC895474-F301-4553-B8CF-0BA7EED24E1E}.Debug|Win32.ActiveCfg = Debug|Win32
+		{DC895474-F301-4553-B8CF-0BA7EED24E1E}.Debug|Win32.Build.0 = Debug|Win32
+		{DC895474-F301-4553-B8CF-0BA7EED24E1E}.Debug|x64.ActiveCfg = Debug|x64
+		{DC895474-F301-4553-B8CF-0BA7EED24E1E}.Debug|x64.Build.0 = Debug|x64
+		{DC895474-F301-4553-B8CF-0BA7EED24E1E}.Release|Win32.ActiveCfg = Release|Win32
+		{DC895474-F301-4553-B8CF-0BA7EED24E1E}.Release|Win32.Build.0 = Release|Win32
+		{DC895474-F301-4553-B8CF-0BA7EED24E1E}.Release|x64.ActiveCfg = Release|x64
+		{DC895474-F301-4553-B8CF-0BA7EED24E1E}.Release|x64.Build.0 = Release|x64
 		{0B19CBAF-D36F-48F0-A35B-BB5F73E662AD}.Debug|Win32.ActiveCfg = Debug|Win32
 		{0B19CBAF-D36F-48F0-A35B-BB5F73E662AD}.Debug|Win32.Build.0 = Debug|Win32
 		{0B19CBAF-D36F-48F0-A35B-BB5F73E662AD}.Debug|x64.ActiveCfg = Debug|Win32
