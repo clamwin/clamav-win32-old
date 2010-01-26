@@ -25,7 +25,7 @@ llvm_base = '../../libclamav/c++/'
 vcprefix = '../../' + llvm_base
 vcproj = 'proj/vc8/libclamav_llvm.vcproj'
 mingwmake = '../mingw/llvm.mak'
-projects = [ 'libclamavcxx', 'libllvmsystem', 'libllvmcodegen', 'libllvmx86codegen', 'libllvmjit', 'libllvmsupport' ]
+projects = [ 'libclamavcxx', 'libllvmsystem', 'libllvmcodegen', 'libllvmx86codegen', 'libllvmjit' ]
 
 def skip_line(line):
     line = line.strip()
@@ -59,7 +59,7 @@ def relpath(path):
     rel = vcprefix + path
     return rel.replace('/', '\\')
 
-def gen_vcproj(path, collected):
+def gen_vcproj(path, mksources):
     proj = objectify.parse(open(path))
     root = proj.getroot()
     source_files = root.xpath('Files/Filter[@Name="Source Files"]')[0]
@@ -69,14 +69,17 @@ def gen_vcproj(path, collected):
         s = f.attrib['RelativePath'].replace('\\', '/').replace(vcprefix, '')
         sources.append(s)
     sources.sort()
-    if sources == collected:
+    print 'Files in vcproj: %d - files in Makefile.am: %d' % (len(sources), len(mksources))
+    if sources == mksources:
         print 'VC Project unchanged'
     else:
         print 'Updating VC Project'
         source_files.clear()
         source_files.attrib['Name'] = "Source Files"
-        for source in sources:
-            f = lxml.etree.fromstring('<File RelativePath="%s"></File>' % source)
+        for newfile in mksources:
+            newfile = vcprefix + newfile
+            newfile = newfile.replace('/', '\\')
+            f = lxml.etree.fromstring('<File RelativePath="%s"></File>' % newfile)
             source_files.append(f)
         out = open(path, 'w')
         out.write('<?xml version="1.0" encoding="Windows-1252"?>\n')

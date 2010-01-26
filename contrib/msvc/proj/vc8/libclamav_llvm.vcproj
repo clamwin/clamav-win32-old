@@ -50,6 +50,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="0"
 				AdditionalIncludeDirectories="../..;../../include;../../include/llvmbuild;../../../../libclamav;&quot;../../../../libclamav/c++&quot;;&quot;../../../../libclamav/c++/llvm/include&quot;;&quot;../../../../libclamav/c++/llvm/lib/Target/X86&quot;"
+				AdditionalUsingDirectories=""
 				PreprocessorDefinitions="WIN32;_DEBUG;WIN32_LEAN_AND_MEAN;HAVE_CONFIG_H;_BIND_TO_CURRENT_VCLIBS_VERSION=1;__STDC_LIMIT_MACROS;__STDC_CONSTANT_MACROS"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -362,8 +363,6 @@
 		</Filter>
 		<Filter
 			Name="Source Files"
-			Filter="cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx"
-			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
 				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Transforms\Utils\AddrModeMatcher.cpp"
@@ -395,10 +394,6 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Support\APInt.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Support\APSInt.cpp"
 				>
 			</File>
 			<File
@@ -514,10 +509,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Support\DeltaAlgorithm.cpp"
-				>
-			</File>
-			<File
 				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Transforms\Utils\DemoteRegToStack.cpp"
 				>
 			</File>
@@ -594,10 +585,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Support\FileUtilities.cpp"
-				>
-			</File>
-			<File
 				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Support\FoldingSet.cpp"
 				>
 			</File>
@@ -671,14 +658,6 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\VMCore\IntrinsicInst.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Support\IsInf.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Support\IsNAN.cpp"
 				>
 			</File>
 			<File
@@ -946,10 +925,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Support\MemoryObject.cpp"
-				>
-			</File>
-			<File
 				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\VMCore\Metadata.cpp"
 				>
 			</File>
@@ -998,10 +973,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Support\PluginLoader.cpp"
-				>
-			</File>
-			<File
 				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\CodeGen\PostRASchedulerList.cpp"
 				>
 			</File>
@@ -1046,10 +1017,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Support\raw_os_ostream.cpp"
-				>
-			</File>
-			<File
 				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Support\raw_ostream.cpp"
 				>
 			</File>
@@ -1062,35 +1029,11 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Support\regcomp.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Support\regerror.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Support\Regex.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Support\regexec.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Support\regfree.c"
-				>
-			</File>
-			<File
 				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\CodeGen\RegisterCoalescer.cpp"
 				>
 			</File>
 			<File
 				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\CodeGen\RegisterScavenging.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Support\regstrlcpy.c"
 				>
 			</File>
 			<File
@@ -1178,10 +1121,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Support\SlowOperationInformer.cpp"
-				>
-			</File>
-			<File
 				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Support\SmallPtrSet.cpp"
 				>
 			</File>
@@ -1235,10 +1174,6 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Target\SubtargetFeature.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Support\SystemUtils.cpp"
 				>
 			</File>
 			<File
