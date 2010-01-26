@@ -18,9 +18,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-#include <platform.h>
 #include <posix-errno.h>
-#include <assert.h>
 #include <others.h>
 
 static const char *const cw_errlist[MAX_CW_ERRNO] =
@@ -287,7 +285,6 @@ int cw_leerrno(void)
         case ERROR_BAD_NET_NAME:
             return (errno = ENOENT);
         case ERROR_MOD_NOT_FOUND:
-        case ERROR_DLL_NOT_FOUND:
             return (errno = ENOMOD);
         case ERROR_PROC_NOT_FOUND:
             return (errno = ENOPROC);
