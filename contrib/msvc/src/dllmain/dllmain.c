@@ -21,6 +21,8 @@
 #include <osdeps.h>
 #include <pthread.h>
 
+BOOL WINAPI IsDebuggerPresent(void);
+
 static uint32_t platform = 0;
 static helpers_t helpers;
 
@@ -156,12 +158,12 @@ static void cwi_processattach(void)
     platform = GetWindowsVersion();
     dynLoad();
 
-#ifndef _DEBUG
-    if (helpers.k32.HeapSetInformation &&
-        !helpers.k32.HeapSetInformation(GetProcessHeap(),
-        HeapCompatibilityInformation, &HeapFragValue, sizeof(HeapFragValue)))
-        fprintf(stderr, "[DllMain] Error setting up low-fragmentation heap: %d\n", GetLastError());
-#endif
+    if (helpers.k32.HeapSetInformation && !IsDebuggerPresent())
+    {
+        if (!helpers.k32.HeapSetInformation(GetProcessHeap(), HeapCompatibilityInformation, &HeapFragValue, sizeof(HeapFragValue))
+            && (GetLastError() != ERROR_NOT_SUPPORTED))
+            fprintf(stderr, "[DllMain] Error setting up low-fragmentation heap: %d\n", GetLastError());
+    }
 
     if (WSAStartup(MAKEWORD(2,2), &wsaData) != NO_ERROR)
         fprintf(stderr, "[DllMain] Error at WSAStartup(): %d\n", WSAGetLastError());
