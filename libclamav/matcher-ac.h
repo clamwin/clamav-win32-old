@@ -37,6 +37,7 @@ struct cli_ac_data {
     int32_t ***offmatrix;
     uint32_t partsigs, lsigs, reloffsigs;
     uint32_t **lsigcnt;
+    uint32_t **lsigsuboff;
     uint32_t *offset;
     /** Hashset for versioninfo matching */
     struct cli_hashset vinfo;
@@ -79,6 +80,7 @@ struct cli_ac_node {
 struct cli_ac_result {
     const char *virname;
     void *customdata;
+    off_t offset;
     struct cli_ac_result *next;
 };
 

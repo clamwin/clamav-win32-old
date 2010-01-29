@@ -69,11 +69,11 @@
 #include <limits.h>
 #include "shared/optparser.h"
 #include "shared/output.h"
+#include "shared/misc.h"
 #include "libclamav/others.h"
 
 #include "session.h"
 #include "others.h"
-#include "misc.h"
 
 #ifdef	_WIN32
 void virusaction(const char *filename, const char *virname, const struct optstruct *opts)
@@ -282,8 +282,21 @@ int read_fd_data(struct fd_buf *buf)
       n = recvmsg(buf->fd, &msg, 0);
       if (n < 0)
 	  return -1;
-      if ((msg.msg_flags & MSG_TRUNC) || (msg.msg_flags & MSG_CTRUNC)) {
-	  logg("^Control message truncated");
+      if (msg.msg_flags & MSG_TRUNC) {
+	  logg("^Message truncated at %d bytes\n", (int)n);
+	  return -1;
+      }
+      if (msg.msg_flags & MSG_CTRUNC) {
+	  if (msg.msg_controllen > 0)
+	      logg("^Control message truncated at %d bytes, %d data read\n",
+		   (int)msg.msg_controllen, (int)n);
+	  else
+	      logg("^Control message truncated, no control data received, %d bytes read"
+#ifdef C_LINUX
+		   "(Is SELinux/AppArmor enabled, and blocking file descriptor passing?)"
+#endif
+		   "\n",
+		   (int)n);
 	  return -1;
       }
       if (msg.msg_controllen) {
@@ -558,6 +571,7 @@ int fds_poll_recv(struct fd_data *data, int timeout, int check_signals)
 	}
     } while (retval == -1 && !check_signals && errno == EINTR);
 #else
+    {
     fd_set rfds;
     struct timeval tv;
     int maxfd = -1;
@@ -635,6 +649,7 @@ int fds_poll_recv(struct fd_data *data, int timeout, int check_signals)
 	    continue;
 	}
     } while (retval == -1 && !check_signals && errno == EINTR);
+    }
 #endif
 
     if (retval == -1 && errno != EINTR) {

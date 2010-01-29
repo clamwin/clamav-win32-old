@@ -20,6 +20,10 @@
 
 #include <winsock2.h>
 #include <Ws2tcpip.h>
+/* #define W2K_DNSAAPI_COMPAT */
+#ifdef W2K_DNSAAPI_COMPAT
+#include <Wspiapi.h>
+#endif
 #include "net.h"
 #include "w32_errno.h"
 
@@ -319,4 +323,28 @@ int w32_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, s
 	return -1;
     }
     return ret;
+}
+
+int w32_accept(int sockfd, const struct sockaddr *addr, socklen_t *addrlen) {
+    if(accept((SOCKET)sockfd, addr, addrlen)) {
+	wsock2errno();
+	return -1;
+    }
+    return 0;
+}
+
+int w32_listen(int sockfd, int backlog) {
+    if(listen((SOCKET)sockfd, backlog)) {
+	wsock2errno();
+	return -1;
+    }
+    return 0;
+}
+
+int w32_shutdown(int sockfd, int how) {
+    if(shutdown((SOCKET)sockfd, how)) {
+	wsock2errno();
+	return -1;
+    }
+    return 0;
 }
