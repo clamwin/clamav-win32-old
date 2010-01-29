@@ -661,6 +661,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\VMCore\IRBuilder.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Analysis\IVUsers.cpp"
 				>
 			</File>
@@ -841,15 +845,15 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\CodeGen\MachOWriter.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Support\ManagedStatic.cpp"
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\VMCore\Mangler.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\CodeGen\MaxStackAlignment.cpp"
+				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Target\Mangler.cpp"
 				>
 			</File>
 			<File
@@ -869,6 +873,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\MC\MCAssembler.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\MC\MCCodeEmitter.cpp"
 				>
 			</File>
@@ -882,6 +890,10 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\MC\MCInst.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\MC\MCMachOStreamer.cpp"
 				>
 			</File>
 			<File
@@ -946,6 +958,10 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\ExecutionEngine\JIT\OProfileJITEventListener.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\CodeGen\OptimizeExts.cpp"
 				>
 			</File>
 			<File
@@ -1022,10 +1038,6 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\CodeGen\RegAllocLinearScan.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\CodeGen\RegAllocLocal.cpp"
 				>
 			</File>
 			<File
