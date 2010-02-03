@@ -363,7 +363,7 @@
 			Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav"
 			>
 			<File
-				RelativePath="..\..\resources\$(ProjectName).rc"
+				RelativePath="..\..\resources\libclamunrar_iface.rc"
 				>
 			</File>
 		</Filter>
