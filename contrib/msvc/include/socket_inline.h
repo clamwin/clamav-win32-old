@@ -331,6 +331,8 @@ typedef struct mypollfd
 
 #define pollfd mypollfd
 
+extern int poll_with_event(struct pollfd *fds, int nfds, int timeout, HANDLE event);
+
 #ifndef POLLRDNORM
 #define POLLRDNORM  0x0100
 #define POLLRDBAND  0x0200
