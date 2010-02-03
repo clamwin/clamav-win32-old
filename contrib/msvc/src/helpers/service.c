@@ -83,7 +83,6 @@ int cw_installservice(const char *name, const char *dname, const char *desc)
     SC_HANDLE sm, svc;
     char modulepath[MAX_PATH];
     char binpath[MAX_PATH];
-    helpers_t *h = cw_gethelpers();
     SERVICE_DESCRIPTIONA sdesc = { (char *) desc };
 
     if (!GetModuleFileName(NULL, modulepath, MAX_PATH - 1))
@@ -127,8 +126,8 @@ int cw_installservice(const char *name, const char *dname, const char *desc)
     }
 
     /* ChangeServiceConfig2A() */
-    if (h->av32.ChangeServiceConfig2A &&
-        (!h->av32.ChangeServiceConfig2A(svc, SERVICE_CONFIG_DESCRIPTION, &sdesc)))
+    if (cw_helpers.av32.ChangeServiceConfig2A &&
+        (!cw_helpers.av32.ChangeServiceConfig2A(svc, SERVICE_CONFIG_DESCRIPTION, &sdesc)))
         fprintf(stderr, "Unable to set description for Service %s (%d)\n", name, GetLastError());
 
     CloseServiceHandle(svc);

@@ -21,53 +21,58 @@
 #include <osdeps.h>
 #include <pthread.h>
 
-BOOL WINAPI IsDebuggerPresent(void);
+uint32_t cw_platform = 0;
+helpers_t cw_helpers;
 
-static uint32_t platform = 0;
-static helpers_t helpers;
-
-extern uint32_t cw_getplatform(void) { return platform; };
-extern helpers_t *cw_gethelpers(void) { return &helpers; }
 extern void jit_init(void);
 extern void jit_uninit(void);
 
 #define Q(string) # string
 
 #define IMPORT_FUNC(m, x) \
-    helpers.m.x = ( imp_##x ) GetProcAddress(helpers.m.hLib, Q(x));
+    cw_helpers.m.x = ( imp_##x ) GetProcAddress(cw_helpers.m.hLib, Q(x));
 
 #define IMPORT_FUNC_OR_FAIL(m, x) \
     IMPORT_FUNC(m, x); \
-    if (!helpers.m.x) helpers.m.ok = FALSE;
+    if (!cw_helpers.m.x) cw_helpers.m.ok = FALSE;
+
+#define IMPORT_FUNC_OR_DISABLE(m, x, o) \
+    IMPORT_FUNC(m, x); \
+    if (!cw_helpers.m.x) cw_helpers.m.o = FALSE;
 
 static void dynLoad(void)
 {
-    memset(&helpers, 0, sizeof(helpers_t));
-    memset(&helpers.av32, 0, sizeof(advapi32_t));
-    memset(&helpers.k32, 0, sizeof(kernel32_t));
-    memset(&helpers.psapi, 0, sizeof(psapi_t));
-    memset(&helpers.ws2, 0, sizeof(ws2_32_t));
+    memset(&cw_helpers, 0, sizeof(cw_helpers));
+    memset(&cw_helpers.av32, 0, sizeof(advapi32_t));
+    memset(&cw_helpers.k32, 0, sizeof(kernel32_t));
+    memset(&cw_helpers.psapi, 0, sizeof(psapi_t));
+    memset(&cw_helpers.ws2, 0, sizeof(ws2_32_t));
 
-    helpers.k32.hLib = LoadLibraryA("kernel32.dll");
-    helpers.av32.hLib = LoadLibraryA("advapi32.dll");
-    helpers.psapi.hLib = LoadLibraryA("psapi.dll");
-    helpers.ws2.hLib = LoadLibraryA("wship6.dll");
-    if (!helpers.ws2.hLib)
-        helpers.ws2.hLib = LoadLibraryA("ws2_32.dll");
+    cw_helpers.k32.hLib = LoadLibraryA("kernel32.dll");
+    cw_helpers.av32.hLib = LoadLibraryA("advapi32.dll");
+    cw_helpers.psapi.hLib = LoadLibraryA("psapi.dll");
+    cw_helpers.ws2.hLib = LoadLibraryA("wship6.dll");
+    if (!cw_helpers.ws2.hLib)
+        cw_helpers.ws2.hLib = LoadLibraryA("ws2_32.dll");
 
     /* kernel 32*/
-    if (helpers.k32.hLib) /* Unlikely */
+    if (cw_helpers.k32.hLib) /* Unlikely */
     {
         /* Win2k + */
         IMPORT_FUNC(k32, HeapSetInformation);
 
         /* Win64 WoW from 32 applications */
-        IMPORT_FUNC(k32, IsWow64Process);
-        IMPORT_FUNC(k32, Wow64DisableWow64FsRedirection);
-        IMPORT_FUNC(k32, Wow64RevertWow64FsRedirection);
+        cw_helpers.k32.wow64 = TRUE;
+        IMPORT_FUNC_OR_DISABLE(k32, IsWow64Process, wow64);
+        IMPORT_FUNC_OR_DISABLE(k32, Wow64DisableWow64FsRedirection, wow64);
+        IMPORT_FUNC_OR_DISABLE(k32, Wow64RevertWow64FsRedirection, wow64);
+
+        cw_helpers.k32.tpool = TRUE;
+        IMPORT_FUNC_OR_DISABLE(k32, RegisterWaitForSingleObject, tpool);
+        IMPORT_FUNC_OR_DISABLE(k32, UnregisterWaitEx, tpool);
 
         /* kernel32 */
-        helpers.k32.ok = TRUE;
+        cw_helpers.k32.ok = TRUE;
         IMPORT_FUNC_OR_FAIL(k32, CreateToolhelp32Snapshot);
         IMPORT_FUNC_OR_FAIL(k32, Process32First);
         IMPORT_FUNC_OR_FAIL(k32, Process32Next);
@@ -77,21 +82,21 @@ static void dynLoad(void)
     }
 
     /* advapi32 */
-    if (helpers.av32.hLib) /* Unlikely */
+    if (cw_helpers.av32.hLib) /* Unlikely */
     {
         /* Win2k + */
         IMPORT_FUNC(av32, ChangeServiceConfig2A);
 
-        helpers.av32.ok = TRUE;
+        cw_helpers.av32.ok = TRUE;
         IMPORT_FUNC_OR_FAIL(av32, OpenProcessToken);
         IMPORT_FUNC_OR_FAIL(av32, LookupPrivilegeValueA);
         IMPORT_FUNC_OR_FAIL(av32, AdjustTokenPrivileges);
     }
 
     /* psapi */
-    if (helpers.psapi.hLib)
+    if (cw_helpers.psapi.hLib)
     {
-        helpers.psapi.ok = TRUE;
+        cw_helpers.psapi.ok = TRUE;
         IMPORT_FUNC_OR_FAIL(psapi, EnumProcessModules);
         IMPORT_FUNC_OR_FAIL(psapi, EnumProcesses);
         IMPORT_FUNC_OR_FAIL(psapi, GetModuleBaseNameA);
@@ -101,9 +106,9 @@ static void dynLoad(void)
     }
 
     /* ws2_32 ipv6 */
-    if (helpers.ws2.hLib)
+    if (cw_helpers.ws2.hLib)
     {
-        helpers.ws2.ok = TRUE;
+        cw_helpers.ws2.ok = TRUE;
         IMPORT_FUNC_OR_FAIL(ws2, getaddrinfo);
         IMPORT_FUNC_OR_FAIL(ws2, freeaddrinfo);
     }
@@ -113,9 +118,9 @@ static void dynLoad(void)
 }
 static void dynUnLoad(void)
 {
-    if (helpers.k32.hLib) FreeLibrary(helpers.k32.hLib);
-    if (helpers.av32.hLib) FreeLibrary(helpers.av32.hLib);
-    if (helpers.psapi.hLib) FreeLibrary(helpers.psapi.hLib);
+    if (cw_helpers.k32.hLib) FreeLibrary(cw_helpers.k32.hLib);
+    if (cw_helpers.av32.hLib) FreeLibrary(cw_helpers.av32.hLib);
+    if (cw_helpers.psapi.hLib) FreeLibrary(cw_helpers.psapi.hLib);
     jit_uninit();
 }
 
@@ -155,12 +160,12 @@ static void cwi_processattach(void)
     ULONG HeapFragValue = 2;
     WSADATA wsaData;
 
-    platform = GetWindowsVersion();
+    cw_platform = GetWindowsVersion();
     dynLoad();
 
-    if (helpers.k32.HeapSetInformation && !IsDebuggerPresent())
+    if (cw_helpers.k32.HeapSetInformation && !IsDebuggerPresent())
     {
-        if (!helpers.k32.HeapSetInformation(GetProcessHeap(), HeapCompatibilityInformation, &HeapFragValue, sizeof(HeapFragValue))
+        if (!cw_helpers.k32.HeapSetInformation(GetProcessHeap(), HeapCompatibilityInformation, &HeapFragValue, sizeof(HeapFragValue))
             && (GetLastError() != ERROR_NOT_SUPPORTED))
             fprintf(stderr, "[DllMain] Error setting up low-fragmentation heap: %d\n", GetLastError());
     }
@@ -196,12 +201,10 @@ BOOL cw_iswow64(void)
 {
     BOOL bIsWow64 = FALSE;
 
-    if (!(helpers.k32.IsWow64Process &&
-        helpers.k32.Wow64DisableWow64FsRedirection &&
-        helpers.k32.Wow64RevertWow64FsRedirection))
+    if (!cw_helpers.k32.wow64)
         return FALSE;
 
-    if (helpers.k32.IsWow64Process(GetCurrentProcess(), &bIsWow64))
+    if (cw_helpers.k32.IsWow64Process(GetCurrentProcess(), &bIsWow64))
         return bIsWow64;
 
     fprintf(stderr, "[dllmain] IsWow64Process() failed %d\n", GetLastError());
@@ -216,9 +219,9 @@ BOOL cw_fsredirection(BOOL value)
     if (!cw_iswow64()) return TRUE;
 
     if (value)
-        result = helpers.k32.Wow64RevertWow64FsRedirection(&oldValue);
+        result = cw_helpers.k32.Wow64RevertWow64FsRedirection(&oldValue);
     else
-        result = helpers.k32.Wow64DisableWow64FsRedirection(&oldValue);
+        result = cw_helpers.k32.Wow64DisableWow64FsRedirection(&oldValue);
 
     if (!result)
         fprintf(stderr, "[dllmain] Unable to enabe/disable fs redirection %d\n", GetLastError());

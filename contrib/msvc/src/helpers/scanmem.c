@@ -132,25 +132,24 @@ int EnablePrivilege(LPCSTR PrivilegeName, DWORD yesno)
     HANDLE hToken;
     TOKEN_PRIVILEGES tp;
     LUID luid;
-    helpers_t *h = cw_gethelpers();
 
-    if (!h->av32.ok)
+    if (!cw_helpers.av32.ok)
     {
         logg("^EnablePrivilege functions are missing\n");
         return 0;
     }
 
-    if(!h->av32.OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY | TOKEN_READ, &hToken))
+    if(!cw_helpers.av32.OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY | TOKEN_READ, &hToken))
         return 0;
 
-    if(!h->av32.LookupPrivilegeValueA(NULL, PrivilegeName, &luid))
+    if(!cw_helpers.av32.LookupPrivilegeValueA(NULL, PrivilegeName, &luid))
         return 0;
 
     tp.PrivilegeCount = 1;
     tp.Privileges[0].Luid = luid;
     tp.Privileges[0].Attributes = yesno;
 
-    h->av32.AdjustTokenPrivileges(hToken, FALSE, &tp, 0, NULL, NULL);
+    cw_helpers.av32.AdjustTokenPrivileges(hToken, FALSE, &tp, 0, NULL, NULL);
 
     CloseHandle(hToken);
     return (GetLastError() == ERROR_SUCCESS) ? 1 : 0;
@@ -215,9 +214,8 @@ int walkmodules_th(proc_callback callback, void *data)
     HANDLE hSnap = INVALID_HANDLE_VALUE, hModuleSnap = INVALID_HANDLE_VALUE;
     PROCESSENTRY32 ps;
     MODULEENTRY32 me32;
-    helpers_t *h = cw_gethelpers();
 
-    if (!h->k32.ok)
+    if (!cw_helpers.k32.ok)
     {
         logg("^ToolHelp not available\n");
         return -1;
@@ -225,12 +223,12 @@ int walkmodules_th(proc_callback callback, void *data)
 
     logg(" *** Memory Scan: using ToolHelp ***\n\n");
 
-    hSnap = h->k32.CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+    hSnap = cw_helpers.k32.CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
     if (hSnap == INVALID_HANDLE_VALUE) return -1;
 
     ps.dwSize = sizeof(PROCESSENTRY32);
 
-    if (!h->k32.Process32First(hSnap, &ps))
+    if (!cw_helpers.k32.Process32First(hSnap, &ps))
     {
         CloseHandle(hSnap);
         return -1;
@@ -242,18 +240,18 @@ int walkmodules_th(proc_callback callback, void *data)
         if (!ps.th32ProcessID) continue;
         /* if (ps.szExeFile[0] != 'c') continue; */
         /* if (!strstr(ps.szExeFile, "clam.exe")) continue; */
-        hModuleSnap = h->k32.CreateToolhelp32Snapshot(TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32, ps.th32ProcessID);
+        hModuleSnap = cw_helpers.k32.CreateToolhelp32Snapshot(TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32, ps.th32ProcessID);
         if (hModuleSnap == INVALID_HANDLE_VALUE) continue;
 
         me32.dwSize = sizeof(MODULEENTRY32);
-        if(!h->k32.Module32First(hModuleSnap, &me32))
+        if(!cw_helpers.k32.Module32First(hModuleSnap, &me32))
         {
             CloseHandle(hModuleSnap);
             continue;
         }
 
         /* Check and transform non ANSI filenames to ANSI using altnames */
-        if (!isWin9x() && h->psapi.GetModuleFileNameExW)
+        if (!isWin9x() && cw_helpers.psapi.GetModuleFileNameExW)
         {
             HANDLE hFile = CreateFileA(me32.szExePath,
                 GENERIC_READ,
@@ -284,7 +282,7 @@ int walkmodules_th(proc_callback callback, void *data)
                 }
 
                 p = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, ps.th32ProcessID);
-                if (!h->psapi.GetModuleFileNameExW(p, NULL, name, MAX_PATH))
+                if (!cw_helpers.psapi.GetModuleFileNameExW(p, NULL, name, MAX_PATH))
                 {
                     logg("^GetModuleFileNameExW() failed %d\n", GetLastError());
                     CloseHandle(p);
@@ -305,11 +303,11 @@ int walkmodules_th(proc_callback callback, void *data)
         }
 
         do if (callback(ps, me32, data)) break;
-        while (h->k32.Module32Next(hModuleSnap, &me32));
+        while (cw_helpers.k32.Module32Next(hModuleSnap, &me32));
 
         CloseHandle(hModuleSnap);
     }
-    while (h->k32.Process32Next(hSnap, &ps));
+    while (cw_helpers.k32.Process32Next(hSnap, &ps));
     CloseHandle(hSnap);
     return 0;
 }
@@ -323,9 +321,8 @@ int walkmodules_psapi(proc_callback callback, void *data)
     MODULEENTRY32 me32;
     MODULEINFO mi;
     int i, j;
-    helpers_t *h = cw_gethelpers();
 
-    if (!h->psapi.ok)
+    if (!cw_helpers.psapi.ok)
     {
         logg("^PsApi not available\n");
         return -1;
@@ -333,7 +330,7 @@ int walkmodules_psapi(proc_callback callback, void *data)
 
     logg(" *** Memory Scan: using PsApi ***\n\n");
 
-    if (!h->psapi.EnumProcesses(procs, sizeof(procs), &needed))
+    if (!cw_helpers.psapi.EnumProcesses(procs, sizeof(procs), &needed))
         return -1;
 
     nprocs = needed / sizeof(DWORD);
@@ -351,13 +348,13 @@ int walkmodules_psapi(proc_callback callback, void *data)
 
         if (!hProc) continue;
 
-        if (!h->psapi.EnumProcessModules(hProc, mods, sizeof(mods), &mneeded))
+        if (!cw_helpers.psapi.EnumProcessModules(hProc, mods, sizeof(mods), &mneeded))
         {
             CloseHandle(hProc);
             continue;
         }
 
-        if (!h->psapi.GetModuleBaseNameA(hProc, mods[0], ps.szExeFile, MAX_PATH - 1))
+        if (!cw_helpers.psapi.GetModuleBaseNameA(hProc, mods[0], ps.szExeFile, MAX_PATH - 1))
         {
             CloseHandle(hProc);
             continue;
@@ -367,13 +364,13 @@ int walkmodules_psapi(proc_callback callback, void *data)
 
         for (j = 0; j < (mneeded / sizeof(HMODULE)); j++)
         {
-            if (!h->psapi.GetModuleBaseName(hProc, mods[j], me32.szModule, MAX_PATH - 1))
+            if (!cw_helpers.psapi.GetModuleBaseName(hProc, mods[j], me32.szModule, MAX_PATH - 1))
                 continue;
 
-            if (!h->psapi.GetModuleFileNameExA(hProc, mods[j], me32.szExePath, MAX_PATH - 1))
+            if (!cw_helpers.psapi.GetModuleFileNameExA(hProc, mods[j], me32.szExePath, MAX_PATH - 1))
                 continue;
 
-            if (!h->psapi.GetModuleInformation(hProc, mods[j], &mi, sizeof(mi)))
+            if (!cw_helpers.psapi.GetModuleInformation(hProc, mods[j], &mi, sizeof(mi)))
                 continue;
 
             me32.hModule = mods[j];
@@ -413,7 +410,6 @@ int unload_module(DWORD pid, HANDLE hModule)
 {
     DWORD rc = 1;
     HANDLE ht;
-    helpers_t *h = cw_gethelpers();
     HANDLE hProc;
 
     if (GetCurrentProcessId() == pid)
@@ -431,7 +427,7 @@ int unload_module(DWORD pid, HANDLE hModule)
         return 1; /* Skip to next process */
     }
 
-    if ((ht = h->k32.CreateRemoteThread(hProc, 0, 0, (LPTHREAD_START_ROUTINE) FreeLibrary, hModule, 0, &rc)))
+    if ((ht = cw_helpers.k32.CreateRemoteThread(hProc, 0, 0, (LPTHREAD_START_ROUTINE) FreeLibrary, hModule, 0, &rc)))
     {
         if(WaitForSingleObject(ht, TIMEOUT_MODULE) == WAIT_TIMEOUT)
         {
@@ -726,7 +722,6 @@ int scanmem_cb(PROCESSENTRY32 ProcStruct, MODULEENTRY32 me32, void *data)
 
 int scanmem(struct cl_engine *engine, const struct optstruct *opts, int options)
 {
-    helpers_t *h = cw_gethelpers();
     scanmem_data data;
     data.files = NULL;
     data.printclean = 1;
@@ -738,7 +733,7 @@ int scanmem(struct cl_engine *engine, const struct optstruct *opts, int options)
     data.processes = 0;
     data.modules = 0;
 
-    if (!(h->k32.ok || h->psapi.ok))
+    if (!(cw_helpers.k32.ok || cw_helpers.psapi.ok))
     {
         logg(" *** Memory Scanning is not supported on this OS ***\n\n");
         return -1;
@@ -768,7 +763,7 @@ int scanmem(struct cl_engine *engine, const struct optstruct *opts, int options)
         logg("---Please login as an Administrator to scan System processes loaded in computer memory---\n");
 
     cw_fsredirection(TRUE);
-    if (h->k32.ok)
+    if (cw_helpers.k32.ok)
         walkmodules_th(scanmem_cb, (void *) &data);
     else
         walkmodules_psapi(scanmem_cb, (void *) &data);

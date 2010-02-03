@@ -255,15 +255,14 @@ int cw_movefile(const char *source, const char *dest, int reboot)
 #undef gethostbyname
 int cw_getaddrinfo(const char *node, const char *service, const struct addrinfo *hints, struct addrinfo **res)
 {
-    helpers_t *h = cw_gethelpers();
     struct hostent *he;
     struct addrinfo *ai;
     u_short port = 0;
     char *p = NULL;
     int i;
 
-    if (h->ws2.ok)
-        return h->ws2.getaddrinfo(node, service, hints, res);
+    if (cw_helpers.ws2.ok)
+        return cw_helpers.ws2.getaddrinfo(node, service, hints, res);
 
     if (!node && !service)
         return EAI_NONAME;
@@ -298,11 +297,10 @@ int cw_getaddrinfo(const char *node, const char *service, const struct addrinfo 
 void cw_freeaddrinfo(struct addrinfo *res)
 {
     struct addrinfo *prev;
-    helpers_t *h = cw_gethelpers();
 
-    if (h->ws2.ok)
+    if (cw_helpers.ws2.ok)
     {
-        h->ws2.freeaddrinfo(res);
+        cw_helpers.ws2.freeaddrinfo(res);
         return;
     }
 

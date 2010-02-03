@@ -30,6 +30,9 @@
 
 #define DATADIRBASEKEY  "Software\\ClamAV"
 
+LIBCLAMAV_API uint32_t cw_platform;
+LIBCLAMAV_API helpers_t cw_helpers;
+
 /* Process execution */
 #define WIFSIGNALED(x) (x)
 #define WIFEXITED(x) (1)
@@ -37,15 +40,13 @@
 
 void clamscan_ctrl_handler(DWORD ctrl_type);
 
-extern uint32_t cw_getplatform(void);
-extern helpers_t *cw_gethelpers(void);
 extern int cw_movefile(const char *source, const char *dest, int reboot);
 extern int cw_movefileex(const char *source, const char *dest, DWORD flags);
 
-#define PlatformId          ((cw_getplatform() >> 16) & 0x000000ff)
-#define PlatformMajor       ((cw_getplatform() >> 8 ) & 0x000000ff)
-#define PlatformMinor       (cw_getplatform() & 0x000000ff)
-#define PlatformVersion     (cw_getplatform() & 0x0000ffff)
+#define PlatformId          ((cw_platform >> 16) & 0x000000ff)
+#define PlatformMajor       ((cw_platform >> 8 ) & 0x000000ff)
+#define PlatformMinor       (cw_platform & 0x000000ff)
+#define PlatformVersion     (cw_platform & 0x0000ffff)
 #define isWin9x()           (PlatformId == VER_PLATFORM_WIN32_WINDOWS)
 #define isOldOS()           (PlatformVersion <= 0x400)
 

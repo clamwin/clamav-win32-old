@@ -41,7 +41,6 @@ cl_debug
 cl_strerror
 
 ; ClamWin specific
-cw_getplatform
 cw_normalizepath
 cw_stat
 cw_rmdirs
@@ -56,10 +55,12 @@ cw_getaddrinfo
 cw_freeaddrinfo
 
 ; clamwin internals @ 50
-cw_gethelpers               @50 NONAME
-cw_async_noalert            @51 NONAME
-cw_leerrno                  @52 NONAME
-cw_wseterrno                @53 NONAME
+cw_async_noalert            @50 NONAME
+cw_leerrno                  @51 NONAME
+cw_wseterrno                @52 NONAME
+
+cw_platform                 @60 NONAME DATA
+cw_helpers                  @61 NONAME DATA
 
 ; win32 portability layer @ 70
 opendir                     @70 NONAME

@@ -59,6 +59,9 @@ typedef BOOL (WINAPI *imp_IsWow64Process) (HANDLE, PBOOL);
 typedef BOOL (WINAPI *imp_Wow64DisableWow64FsRedirection)(LPVOID *OldValue);
 typedef BOOL (WINAPI *imp_Wow64RevertWow64FsRedirection)(LPVOID *OldValue);
 
+typedef BOOL (WINAPI *imp_RegisterWaitForSingleObject)(PHANDLE, HANDLE, WAITORTIMERCALLBACK, PVOID, ULONG, ULONG);
+typedef BOOL (WINAPI *imp_UnregisterWaitEx)(HANDLE, HANDLE);
+
 /* ws2_32 ipv6 */
 typedef int (WINAPI *imp_getaddrinfo)(const char*, const char*, const struct addrinfo*, struct addrinfo**);
 typedef void (WINAPI *imp_freeaddrinfo)(struct addrinfo*);
@@ -92,6 +95,11 @@ typedef struct _kernel32_t
     imp_Wow64DisableWow64FsRedirection Wow64DisableWow64FsRedirection;
     imp_Wow64RevertWow64FsRedirection Wow64RevertWow64FsRedirection;
     imp_IsWow64Process IsWow64Process;
+    BOOL wow64;
+
+    imp_RegisterWaitForSingleObject RegisterWaitForSingleObject;
+    imp_UnregisterWaitEx UnregisterWaitEx;
+    BOOL tpool;
 } kernel32_t;
 
 typedef struct _advapi32_t

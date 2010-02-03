@@ -21,6 +21,11 @@
 #ifndef _PLATFORM_H
 #define _PLATFORM_H
 
+/* IsDebuggerPresent */
+/* RegisterWaitForSingleObject */
+/* UnregisterWaitEx */
+#define _WIN32_WINNT 0x0500
+
 #include <cwdefs.h>
 #include <winsock2.h>
 #include <windows.h>
