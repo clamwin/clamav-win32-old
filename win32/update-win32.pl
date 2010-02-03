@@ -104,7 +104,7 @@ my %CONF = (
     'HAVE_MMAP' => -1,
     'HAVE_NDIR_H' => -1,
     'HAVE_OPENDIR' => '1',
-    'HAVE_POLL' => -1,
+    'HAVE_POLL' => '1',
     'HAVE_POLL_H' => -1,
     'HAVE_PRAGMA_PACK' => '1',
     'HAVE_PRAGMA_PACK_HPPA' => -1,
@@ -216,6 +216,9 @@ my @PROJECTS = (
 
     # CLAMSCAN #
     {makefile => 'clamscan', sections => ['clamscan'], output => 'win32/clamscan.vcproj', makefile_only => '(optparser\\.c|getopt\\.c)$', vcproj_only => 'compat\\\\'},
+
+    # CLAMDSCAN #
+    {makefile => 'clamdscan', sections => ['clamdscan'], output => 'win32/clamdscan.vcproj', makefile_only => '(optparser\\.c|getopt\\.c)$', vcproj_only => 'compat\\\\'},
 
     # CLAMD #
     {makefile => 'clamd', sections => ['clamd'], output => 'win32/clamd.vcproj', makefile_only => '(optparser\\.c|getopt\\.c|(daz|clam)uko.*)$', vcproj_only => 'compat\\\\'},

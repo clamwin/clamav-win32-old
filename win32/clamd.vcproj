@@ -43,7 +43,7 @@
 				BasicRuntimeChecks="3"
 				CompileAs="1"
 				DebugInformationFormat="3"
-				DisableSpecificWarnings="4996;4244"
+				DisableSpecificWarnings="4996;4244;4090;4018"
 				MinimalRebuild="true"
 				Name="VCCLCompilerTool"
 				Optimization="0"
@@ -117,7 +117,7 @@
 				AdditionalIncludeDirectories="&quot;$(SolutionDir)&quot;;&quot;$(SolutionDir)..\libclamav&quot;;&quot;$(SolutionDir)compat&quot;;&quot;$(SolutionDir)3rdparty\zlib&quot;;&quot;$(SolutionDir)3rdparty\pthreads&quot;;&quot;$(SolutionDir)3rdparty\bzip2&quot;;&quot;$(SolutionDir)..&quot;"
 				CompileAs="1"
 				DebugInformationFormat="3"
-				DisableSpecificWarnings="4996;4244"
+				DisableSpecificWarnings="4996;4244;4090;4018"
 				EnableFunctionLevelLinking="true"
 				EnableIntrinsicFunctions="true"
 				Name="VCCLCompilerTool"
@@ -244,6 +244,10 @@
 			Name="Resource Files"
 			UniqueIdentifier="{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}"
 			>
+			<File
+				RelativePath=".\res\clamd.rc"
+				>
+			</File>
 		</Filter>
 	</Files>
 	<Globals>

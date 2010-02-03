@@ -41,7 +41,7 @@ struct fd_buf {
     unsigned char *buffer;
     size_t bufsize;
     size_t off;
-    long long fd;
+    int fd;
     char term;
     int got_newdata; /* 0: no, 1: yes, -1: error */
     int recvfd;
@@ -55,42 +55,31 @@ struct fd_buf {
     char *dumpname;
     time_t timeout_at; /* 0 - no timeout */
     jobgroup_t *group;
-#ifdef _WIN32
-    HANDLE event;
-#endif
 };
 
 struct fd_data {
     pthread_mutex_t *buf_mutex; /* protects buf and nfds */
     struct fd_buf *buf;
     size_t nfds;
-#ifdef _WIN32
-    HANDLE events[WAIT_TIMEOUT];
-#else
 #ifdef HAVE_POLL
     struct pollfd *poll_data;
     size_t poll_data_nfds;
 #endif
-#endif
 };
 
-#ifdef _WIN32
-#define FDS_INIT(mutex) { (mutex), NULL, 0, { NULL } }
-#else
 #ifdef HAVE_POLL
 #define FDS_INIT(mutex) { (mutex), NULL, 0, NULL, 0}
 #else
 #define FDS_INIT(mutex) { (mutex), NULL, 0}
 #endif
-#endif
 
 int poll_fd(int fd, int timeout_sec, int check_signals);
 void virusaction(const char *filename, const char *virname, const struct optstruct *opts);
 int writen(int fd, void *buff, unsigned int count);
-int fds_add(struct fd_data *data, long long fd, int listen_only, int timeout);
-void fds_remove(struct fd_data *data, long long fd);
+int fds_add(struct fd_data *data, int fd, int listen_only, int timeout);
+void fds_remove(struct fd_data *data, int fd);
 void fds_cleanup(struct fd_data *data);
-int fds_poll_recv(struct fd_data *data, int timeout, int check_signals);
+int fds_poll_recv(struct fd_data *data, int timeout, int check_signals, void *event);
 void fds_free(struct fd_data *data);
 
 #endif

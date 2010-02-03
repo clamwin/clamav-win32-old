@@ -1,3 +1,23 @@
+Wed Feb  3 01:38:50 CET 2010 (acab)
+-----------------------------------
+ * win32: workaround HUP reset in poll, set stdin to binary mode
+
+Tue Feb  2 14:23:18 CET 2010 (tk)
+---------------------------------
+ * freshclam: new option Bytecode
+
+Mon Feb  1 19:25:45 CET 2010 (tk)
+---------------------------------
+ * sigtool: add support for bytecode.cvd
+
+Sun Jan 31 17:12:48 CET 2010 (acab)
+-----------------------------------
+ * win32: clamdscan added
+
+Sat Jan 30 04:19:29 CET 2010 (acab)
+-----------------------------------
+ * win32: clamd (sort of) works
+
 Thu Jan 28 12:53:45 CET 2010 (tk)
 ---------------------------------
  * libclamav: provide information about lsig matches to bytecode (bb#1799)

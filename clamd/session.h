@@ -84,9 +84,6 @@ typedef struct client_conn_tag {
     long quota;
     jobgroup_t *group;
     enum mode mode;
-#ifdef _WIN32
-    HANDLE event;
-#endif
 } client_conn_t;
 
 int command(client_conn_t *conn, int *virus);

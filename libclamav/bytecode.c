@@ -1,7 +1,7 @@
 /*
  *  Load, and verify ClamAV bytecode.
  *
- *  Copyright (C) 2009 Sourcefire, Inc.
+ *  Copyright (C) 2009-2010 Sourcefire, Inc.
  *
  *  Authors: Török Edvin
  *
@@ -470,7 +470,7 @@ static int parseHeader(struct cli_bc *bc, unsigned char *buffer, unsigned *linel
     }
     offset++;
     *linelength = strtol(buffer+offset, &pos, 10);
-    if (*pos != '\n') {
+    if (*pos != '\0') {
 	cli_errmsg("Invalid number: %s\n", buffer+offset);
 	return CL_EMALFDB;
     }
@@ -1241,6 +1241,7 @@ int cli_bytecode_load(struct cli_bc *bc, FILE *f, struct cli_dbio *dbio, int tru
 	cli_errmsg("Unable to load bytecode (empty file)\n");
 	return CL_EMALFDB;
     }
+    cli_chomp(firstbuf);
     rc = parseHeader(bc, (unsigned char*)firstbuf, &linelength);
     if (rc == CL_BREAK) {
 	bc->state = bc_skip;
@@ -1407,43 +1408,54 @@ void cli_bytecode_destroy(struct cli_bc *bc)
     free(bc->metadata.compiler);
     free(bc->metadata.sigmaker);
 
-    for (i=0;i<bc->num_func;i++) {
-	struct cli_bc_func *f = &bc->funcs[i];
-	free(f->types);
+    if (bc->funcs) {
+	for (i=0;i<bc->num_func;i++) {
+	    struct cli_bc_func *f = &bc->funcs[i];
+	    if (!f)
+		continue;
+	    free(f->types);
 
-	for (j=0;j<f->numBB;j++) {
-	    struct cli_bc_bb *BB = &f->BB[j];
-	    for(k=0;k<BB->numInsts;k++) {
-		struct cli_bc_inst *ii = &BB->insts[k];
-		if (operand_counts[ii->opcode] > 3 ||
-		    ii->opcode == OP_BC_CALL_DIRECT || ii->opcode == OP_BC_CALL_API) {
-		    free(ii->u.ops.ops);
-		    free(ii->u.ops.opsizes);
+	    for (j=0;j<f->numBB;j++) {
+		struct cli_bc_bb *BB = &f->BB[j];
+		for(k=0;k<BB->numInsts;k++) {
+		    struct cli_bc_inst *ii = &BB->insts[k];
+		    if (operand_counts[ii->opcode] > 3 ||
+			ii->opcode == OP_BC_CALL_DIRECT || ii->opcode == OP_BC_CALL_API) {
+			free(ii->u.ops.ops);
+			free(ii->u.ops.opsizes);
+		    }
 		}
 	    }
+	    free(f->BB);
+	    free(f->allinsts);
+	    free(f->constants);
 	}
-	free(f->BB);
-	free(f->allinsts);
-	free(f->constants);
+	free(bc->funcs);
     }
-    free(bc->funcs);
-    for (i=NUM_STATIC_TYPES;i<bc->num_types;i++) {
-	if (bc->types[i].containedTypes)
-	    free(bc->types[i].containedTypes);
-    }
-    free(bc->types);
-    for (i=0;i<bc->num_globals;i++) {
-	free(bc->globals[i]);
-    }
-    for (i=0;i<bc->dbgnode_cnt;i++) {
-	for (j=0;j<bc->dbgnodes[i].numelements;j++) {
-	    struct cli_bc_dbgnode_element *el =  &bc->dbgnodes[i].elements[j];
-	    if (el && el->string)
-		free(el->string);
+    if (bc->types) {
+	for (i=NUM_STATIC_TYPES;i<bc->num_types;i++) {
+	    if (bc->types[i].containedTypes)
+		free(bc->types[i].containedTypes);
 	}
+	free(bc->types);
     }
-    free(bc->dbgnodes);
-    free(bc->globals);
+
+    if (bc->globals) {
+	for (i=0;i<bc->num_globals;i++) {
+	    free(bc->globals[i]);
+	}
+	free(bc->globals);
+    }
+    if (bc->dbgnodes) {
+	for (i=0;i<bc->dbgnode_cnt;i++) {
+	    for (j=0;j<bc->dbgnodes[i].numelements;j++) {
+		struct cli_bc_dbgnode_element *el =  &bc->dbgnodes[i].elements[j];
+		if (el && el->string)
+		    free(el->string);
+	    }
+	}
+	free(bc->dbgnodes);
+    }
     free(bc->globaltys);
     if (bc->uses_apis)
 	cli_bitset_free(bc->uses_apis);
@@ -1624,12 +1636,14 @@ int cli_bytecode_context_setfile(struct cli_bc_ctx *ctx, fmap_t *map)
     return 0;
 }
 
-int cli_bytecode_runlsig(cli_ctx *cctx, const struct cli_all_bc *bcs, const struct cli_bc *bc, const char **virname, const uint32_t* lsigcnt, const uint32_t *lsigsuboff, fmap_t *map)
+int cli_bytecode_runlsig(cli_ctx *cctx, const struct cli_all_bc *bcs, unsigned bc_idx, const char **virname, const uint32_t* lsigcnt, const uint32_t *lsigsuboff, fmap_t *map)
 {
     int ret;
     struct cli_bc_ctx ctx;
+    const struct cli_bc *bc = &bcs->all_bcs[bc_idx-1];
 
     if (bc->hook_lsig_id) {
+	cli_dbgmsg("hook lsig id %d matched (bc %d)\n", bc->hook_lsig_id, bc->id);
 	/* this is a bytecode for a hook, defer running it until hook is
 	 * executed, so that it has all the info for the hook */
 	if (cctx->hook_lsig_matches)
@@ -1675,7 +1689,7 @@ int cli_bytecode_runhook(cli_ctx *cctx, const struct cl_engine *engine, struct c
 	    if (!cctx->hook_lsig_matches ||
 		!cli_bitset_test(cctx->hook_lsig_matches, bc->hook_lsig_id-1))
 		continue;
-	    cli_dbgmsg("Bytecode: executing bytecode %u (lsig matched)" , bc->id);
+	    cli_dbgmsg("Bytecode: executing bytecode %u (lsig matched)\n" , bc->id);
 	}
 	cli_bytecode_context_setfuncid(ctx, bc, 0);
 	ret = cli_bytecode_run(&engine->bcs, bc, ctx);

@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2007-2009 Sourcefire, Inc.
+ *  Copyright (C) 2007-2010 Sourcefire, Inc.
  *
  *  Authors: Tomasz Kojm, Trog
  *
@@ -259,6 +259,14 @@ int cl_init(unsigned int initoptions)
 	struct timeval tv;
 	unsigned int pid = (unsigned int) getpid();
 
+    {
+	unrar_main_header_t x;
+	if (((char*)&x.flags - (char*)&x) != 3) {
+	    cli_errmsg("Structure packing not working, got %u offset, expected %u\n",
+		       (unsigned)((char*)&x.flags - (char*)&x), 3);
+	    return CL_EARG;
+	}
+    }
     /* put dlopen() stuff here, etc. */
     if (lt_init() == 0) {
 	cli_rarload();

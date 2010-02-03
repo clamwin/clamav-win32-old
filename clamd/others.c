@@ -59,7 +59,6 @@
 #if HAVE_POLL_H
 #include <poll.h>
 #else /* HAVE_POLL_H */
-#undef HAVE_POLL
 #if HAVE_SYS_SELECT_H
 #include <sys/select.h>
 #endif /* HAVE_SYS_SELECT_H */
@@ -199,7 +198,7 @@ static int realloc_polldata(struct fd_data *data)
 #endif
     return 0;
 }
-#ifndef _WIN32
+
 int poll_fd(int fd, int timeout_sec, int check_signals)
 {
     int ret;
@@ -208,12 +207,12 @@ int poll_fd(int fd, int timeout_sec, int check_signals)
     if (fds_add(&fds, fd, 1, timeout_sec) == -1)
 	return -1;
     do {
-	ret = fds_poll_recv(&fds, timeout_sec, check_signals);
+	ret = fds_poll_recv(&fds, timeout_sec, check_signals, NULL);
     } while (ret == -1 && errno == EINTR);
     fds_free(&fds);
     return ret;
 }
-#endif
+
 void fds_cleanup(struct fd_data *data)
 {
     struct fd_buf *newbuf;
@@ -237,11 +236,13 @@ void fds_cleanup(struct fd_data *data)
     logg("$Number of file descriptors polled: %u fds\n", (unsigned) data->nfds);
     /* Shrink buffer */
     newbuf = realloc(data->buf, j*sizeof(*newbuf));
-    if (newbuf)
+    if(!j)
+	data->buf = NULL;
+    else if (newbuf)
 	data->buf = newbuf;/* non-fatal if shrink fails */
 }
 
-int read_fd_data(struct fd_buf *buf)
+static int read_fd_data(struct fd_buf *buf)
 {
     ssize_t n;
 
@@ -362,7 +363,7 @@ static int buf_init(struct fd_buf *buf, int listen_only, int timeout)
     return 0;
 }
 
-int fds_add(struct fd_data *data, long long fd, int listen_only, int timeout)
+int fds_add(struct fd_data *data, int fd, int listen_only, int timeout)
 {
     struct fd_buf *buf;
     unsigned n;
@@ -392,23 +393,6 @@ int fds_add(struct fd_data *data, long long fd, int listen_only, int timeout)
     if (buf_init(&data->buf[n-1], listen_only, timeout) < 0)
 	return -1;
     data->buf[n-1].fd = fd;
-#ifdef _WIN32
-    if (listen_only == 2)
-    {
-        data->buf[n-1].event = (HANDLE) fd;
-        data->buf[n-1].fd = 0;
-    }
-    else
-    {
-        data->buf[n-1].event = WSACreateEvent();
-        if (WSAEventSelect((SOCKET) fd, data->buf[n-1].event, listen_only ? FD_ACCEPT : (FD_READ|FD_CLOSE)) == SOCKET_ERROR)
-        {
-            logg("!add_fd: wsaeventselect failed() %d\n", WSAGetLastError());
-            CloseHandle(data->buf[n-1].event);
-            return -1;
-        }
-    }
-#endif
     return 0;
 }
 
@@ -424,7 +408,7 @@ static inline void fds_unlock(struct fd_data *data)
 	pthread_mutex_unlock(data->buf_mutex);
 }
 
-void fds_remove(struct fd_data *data, long long fd)
+void fds_remove(struct fd_data *data, int fd)
 {
     size_t i;
     fds_lock(data);
@@ -449,10 +433,7 @@ void fds_remove(struct fd_data *data, long long fd)
  * Must be called with buf_mutex lock held.
  */
 /* TODO: handle ReadTimeout */
-#ifdef _WIN32
-extern int fds_poll_recv(struct fd_data *data, int timeout, int check_signals);
-#else
-int fds_poll_recv(struct fd_data *data, int timeout, int check_signals)
+int fds_poll_recv(struct fd_data *data, int timeout, int check_signals, void *event)
 {
     unsigned fdsok = data->nfds;
     size_t i;
@@ -461,9 +442,10 @@ int fds_poll_recv(struct fd_data *data, int timeout, int check_signals)
 
     /* we must have at least one fd, the control fd! */
     fds_cleanup(data);
+#ifndef _WIN32
     if (!data->nfds)
 	return 0;
-
+#endif
     for (i=0;i < data->nfds;i++) {
 	data->buf[i].got_newdata = 0;
     }
@@ -517,7 +499,11 @@ int fds_poll_recv(struct fd_data *data, int timeout, int check_signals)
 	int n = data->nfds;
 
 	fds_unlock(data);
+#ifdef _WIN32
+	retval = poll_with_event(data->poll_data, n, timeout, event);
+#else
 	retval = poll(data->poll_data, n, timeout);
+#endif
 	fds_lock(data);
 
 	if (retval > 0) {
@@ -663,7 +649,6 @@ int fds_poll_recv(struct fd_data *data, int timeout, int check_signals)
 
     return retval;
 }
-#endif /* _WIN32 */
 
 void fds_free(struct fd_data *data)
 {

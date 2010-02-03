@@ -6,7 +6,7 @@
 	ProjectType="Visual C++"
 	RootNamespace="libclamunrar"
 	TargetFrameworkVersion="196613"
-	Version="9,00"
+	Version="9.00"
 	>
 	<Platforms>
 		<Platform
@@ -39,7 +39,7 @@
 				Name="VCMIDLTool"
 			/>
 			<Tool
-				AdditionalIncludeDirectories="&quot;$(SolutionDir)&quot;;&quot;$(SolutionDir)compat&quot;;&quot;$(SolutionDir)..&quot;"
+				AdditionalIncludeDirectories="&quot;$(SolutionDir)&quot;;&quot;$(SolutionDir)compat&quot;;&quot;$(SolutionDir)..&quot;;&quot;$(SolutionDir)3rdparty\pthreads&quot;"
 				BasicRuntimeChecks="3"
 				CompileAs="1"
 				DebugInformationFormat="3"
@@ -115,7 +115,7 @@
 				Name="VCMIDLTool"
 			/>
 			<Tool
-				AdditionalIncludeDirectories="&quot;$(SolutionDir)&quot;;&quot;$(SolutionDir)compat&quot;;&quot;$(SolutionDir)..&quot;"
+				AdditionalIncludeDirectories="&quot;$(SolutionDir)&quot;;&quot;$(SolutionDir)compat&quot;;&quot;$(SolutionDir)..&quot;;&quot;$(SolutionDir)3rdparty\pthreads&quot;"
 				BufferSecurityCheck="false"
 				CompileAs="1"
 				DebugInformationFormat="3"
