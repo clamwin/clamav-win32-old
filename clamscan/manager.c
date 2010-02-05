@@ -110,10 +110,10 @@ int scancallback(int desc, int bytes)
     return cbdata.condition;
 }
 
-static int scanfile(const char *filename, struct cl_engine *engine, const struct optstruct *opts, unsigned int options)
+void scanfile(const char *filename, struct cl_engine *engine, const struct optstruct *opts, unsigned int options)
 {
-  int ret = 0, fd, included, printclean = 1;
-  unsigned int fsize;
+	int ret = 0, fd, included, printclean = 1;
+	unsigned int fsize;
 	const struct optstruct *opt;
 	const char *virname;
 #ifdef C_LINUX
@@ -125,7 +125,7 @@ static int scanfile(const char *filename, struct cl_engine *engine, const struct
 	    if(sb.st_dev == procdev) {
 		if(!printinfected)
 		    logg("~%s: Excluded (/proc)\n", filename);
-		return 0;
+		return;
 	    }
 #endif    
 
@@ -134,7 +134,7 @@ static int scanfile(const char *filename, struct cl_engine *engine, const struct
 	    if(match_regex(filename, opt->strarg) == 1) {
 		if(!printinfected)
 		    logg("~%s: Excluded\n", filename);
-		return 0;
+		return;
 	    }
 	    opt = opt->nextarg;
 	}
@@ -152,7 +152,7 @@ static int scanfile(const char *filename, struct cl_engine *engine, const struct
 	if(!included) {
 	    if(!printinfected)
 		logg("~%s: Excluded\n", filename);
-	    return 0;
+	    return;
 	}
     }
 
@@ -160,7 +160,7 @@ static int scanfile(const char *filename, struct cl_engine *engine, const struct
     if(fsize == 0) {
 	if(!printinfected)
 	    logg("~%s: Empty file\n", filename);
-	return 0;
+	return;
     }
     info.rblocks += fsize / CL_COUNT_PRECISION;
 #ifndef _WIN32
@@ -168,7 +168,8 @@ static int scanfile(const char *filename, struct cl_engine *engine, const struct
 	if(checkaccess(filename, NULL, R_OK) != 1) {
 	    if(!printinfected)
 		logg("~%s: Access denied\n", filename);
-	    return 0;
+	    info.errors++;
+	    return;
 	}
 #endif
 
@@ -179,7 +180,8 @@ static int scanfile(const char *filename, struct cl_engine *engine, const struct
 
     if((fd = safe_open(filename, O_RDONLY|O_BINARY)) == -1) {
 	logg("^Can't open file %s: %s\n", filename, strerror(errno));
-	return 54;
+	info.errors++;
+	return;
     }
 
     cbdata.count = 0;
@@ -193,6 +195,7 @@ static int scanfile(const char *filename, struct cl_engine *engine, const struct
 
     if((ret = cl_scandesc(fd, &virname, &info.blocks, engine, options)) == CL_VIRUS) {
 	logg("~%s: %s FOUND\n", filename, virname);
+	info.files++;
 	info.ifiles++;
 
 	if(bell)
@@ -201,9 +204,12 @@ static int scanfile(const char *filename, struct cl_engine *engine, const struct
     } else if(ret == CL_CLEAN) {
 	if(!printinfected && printclean)
 	    mprintf("~%s: OK    \n", filename);
-    } else
+	info.files++;
+    } else {
 	if(!printinfected)
 	    logg("~%s: %s ERROR\n", filename, cl_strerror(ret));
+	info.errors++;
+    }
 
     if(ret == CL_VIRUS && action) {
         fmap_t *maptype = fmap(fd, 0, 0);
@@ -213,18 +219,17 @@ static int scanfile(const char *filename, struct cl_engine *engine, const struct
         logg("~%s: no action performed on a mailbox\n", filename);
     else
 	action(filename);
-    }
-    close(fd);   
-    return ret;
+	}
+    close(fd);
 }
 
-static int scandirs(const char *dirname, struct cl_engine *engine, const struct optstruct *opts, unsigned int options, unsigned int depth, dev_t dev)
+void scandirs(const char *dirname, struct cl_engine *engine, const struct optstruct *opts, unsigned int options, unsigned int depth, dev_t dev)
 {
 	DIR *dd;
 	struct dirent *dent;
 	struct stat statbuf;
 	char *fname;
-	int scanret = 0, included;
+	int included;
 	const struct optstruct *opt;
 
 
@@ -233,7 +238,7 @@ static int scandirs(const char *dirname, struct cl_engine *engine, const struct 
 	    if(match_regex(dirname, opt->strarg) == 1) {
 		if(!printinfected)
 		    logg("~%s: Excluded\n", dirname);
-		return 0;
+		return;
 	    }
 	    opt = opt->nextarg;
 	}
@@ -251,17 +256,16 @@ static int scandirs(const char *dirname, struct cl_engine *engine, const struct 
 	if(!included) {
 	    if(!printinfected)
 		logg("~%s: Excluded\n", dirname);
-	    return 0;
+	    return;
 	}
     }
 
     if(depth > (unsigned int) optget(opts, "max-dir-recursion")->numarg)
-	return 0;
-
-    info.dirs++;
-    depth++;
+	return;
 
     if((dd = opendir(dirname)) != NULL) {
+	info.dirs++;
+	depth++;
 	while((dent = readdir(dd))) {
 	    if(dent->d_ino)
 	    {
@@ -285,13 +289,10 @@ static int scandirs(const char *dirname, struct cl_engine *engine, const struct 
 				continue;
 			    }
 			}
-			if(S_ISDIR(statbuf.st_mode) && !S_ISLNK(statbuf.st_mode) && recursion) {
-			    if(scandirs(fname, engine, opts, options, depth, dev) == 1)
-				scanret++;
-			} else {
-			    if(S_ISREG(statbuf.st_mode))
-				scanret += scanfile(fname, engine, opts, options);
-			}
+			if(S_ISDIR(statbuf.st_mode) && !S_ISLNK(statbuf.st_mode) && recursion)
+			    scandirs(fname, engine, opts, options, depth, dev);
+			else if(S_ISREG(statbuf.st_mode))
+			    scanfile(fname, engine, opts, options);
 		    }
 		    free(fname);
 		}
@@ -300,16 +301,10 @@ static int scandirs(const char *dirname, struct cl_engine *engine, const struct 
     } else {
 	if(!printinfected)
 	    logg("~%s: Can't open directory.\n", dirname);
-	return 53;
+	info.errors++;
     }
 
     closedir(dd);
-
-    if(scanret)
-	return 1;
-    else
-	return 0;
-
 }
 
 static int scanstdin(const struct cl_engine *engine, const struct optstruct *opts, int options)
@@ -335,7 +330,7 @@ static int scanstdin(const struct cl_engine *engine, const struct optstruct *opt
 
     if(checkaccess(tmpdir, CLAMAVUSER, W_OK) != 1) {
 	logg("!Can't write to temporary directory\n");
-	return 64;
+	return 2;
     }
 
     file = cli_gentemp(tmpdir);
@@ -343,7 +338,7 @@ static int scanstdin(const struct cl_engine *engine, const struct optstruct *opt
     if(!(fs = fopen(file, "wb"))) {
 	logg("!Can't open %s for writing\n", file);
 	free(file);
-	return 63;
+	return 2;
     }
 
     while((bread = fread(buff, 1, FILEBUFF, stdin))) {
@@ -351,7 +346,7 @@ static int scanstdin(const struct cl_engine *engine, const struct optstruct *opt
 	if(fwrite(buff, 1, bread, fs) < bread) {
 	    logg("!Can't write to %s\n", file);
 	    free(file);
-	    return 58;
+	    return 2;
 	}
     }
     fclose(fs);
@@ -369,7 +364,7 @@ static int scanstdin(const struct cl_engine *engine, const struct optstruct *opt
 
     } else if(ret == CL_CLEAN) {
 	if(!printinfected)
-	    mprintf("stdin: OK   \n");
+	    mprintf("stdin: OK\n");
     } else
 	if(!printinfected)
 	    logg("stdin: %s ERROR\n", cl_strerror(ret));
@@ -407,12 +402,12 @@ int scanmanager(const struct optstruct *opts)
 
     if((ret = cl_init(CL_INIT_DEFAULT))) {
 	logg("!Can't initialize libclamav: %s\n", cl_strerror(ret));
-	return 50;
+	return 2;
     }
 
     if(!(engine = cl_engine_new())) {
 	logg("!Can't initialize antivirus engine\n");
-	return 50;
+	return 2;
     }
 
     if(optget(opts, "detect-pua")->enabled) {
@@ -424,7 +419,7 @@ int scanmanager(const struct optstruct *opts)
 		if(!(pua_cats = realloc(pua_cats, i + strlen(opt->strarg) + 3))) {
 		    logg("!Can't allocate memory for pua_cats\n");
 		    cl_engine_free(engine);
-		    return 70;
+		    return 2;
 		}
 		sprintf(pua_cats + i, ".%s", opt->strarg);
 		i += strlen(opt->strarg) + 1;
@@ -440,14 +435,14 @@ int scanmanager(const struct optstruct *opts)
 		logg("!--exclude-pua and --include-pua cannot be used at the same time\n");
 		cl_engine_free(engine);
 		free(pua_cats);
-		return 40;
+		return 2;
 	    }
 	    dboptions |= CL_DB_PUA_INCLUDE;
 	    i = 0;
 	    while(opt) {
 		if(!(pua_cats = realloc(pua_cats, i + strlen(opt->strarg) + 3))) {
 		    logg("!Can't allocate memory for pua_cats\n");
-		    return 70;
+		    return 2;
 		}
 		sprintf(pua_cats + i, ".%s", opt->strarg);
 		i += strlen(opt->strarg) + 1;
@@ -463,7 +458,7 @@ int scanmanager(const struct optstruct *opts)
 		logg("!cli_engine_set_str(CL_ENGINE_PUA_CATEGORIES) failed: %s\n", cl_strerror(ret));
 		free(pua_cats);
 		cl_engine_free(engine);
-		return 50;
+		return 2;
 	    }
 	    free(pua_cats);
 	}
@@ -482,7 +477,7 @@ int scanmanager(const struct optstruct *opts)
 	if((ret = cl_engine_set_str(engine, CL_ENGINE_TMPDIR, opt->strarg))) {
 	    logg("!cli_engine_set_str(CL_ENGINE_TMPDIR) failed: %s\n", cl_strerror(ret));
 	    cl_engine_free(engine);
-	    return 50;
+	    return 2;
 	}
     }
 
@@ -490,7 +485,7 @@ int scanmanager(const struct optstruct *opts)
 	if((ret = cl_load(opt->strarg, engine, &info.sigs, dboptions))) {
 	    logg("!%s\n", cl_strerror(ret));
 	    cl_engine_free(engine);
-	    return 50;
+	    return 2;
 	}
 
     } else {
@@ -500,7 +495,7 @@ int scanmanager(const struct optstruct *opts)
 	    logg("!%s\n", cl_strerror(ret));
 	    free(dbdir);
 	    cl_engine_free(engine);
-	    return 50;
+	    return 2;
 	}
 	free(dbdir);
     }
@@ -508,7 +503,7 @@ int scanmanager(const struct optstruct *opts)
     if((ret = cl_engine_compile(engine)) != 0) {
 	logg("!Database initialization error: %s\n", cl_strerror(ret));;
 	cl_engine_free(engine);
-	return 50;
+	return 2;
     }
 
     /* setup callback */
@@ -524,7 +519,7 @@ int scanmanager(const struct optstruct *opts)
 	if((ret = cl_engine_set_num(engine, CL_ENGINE_MAX_SCANSIZE, opt->numarg))) {
 	    logg("!cli_engine_set_num(CL_ENGINE_MAX_SCANSIZE) failed: %s\n", cl_strerror(ret));
 	    cl_engine_free(engine);
-	    return 50;
+	    return 2;
 	}
     }
 
@@ -532,7 +527,7 @@ int scanmanager(const struct optstruct *opts)
 	if((ret = cl_engine_set_num(engine, CL_ENGINE_MAX_FILESIZE, opt->numarg))) {
 	    logg("!cli_engine_set_num(CL_ENGINE_MAX_FILESIZE) failed: %s\n", cl_strerror(ret));
 	    cl_engine_free(engine);
-	    return 50;
+	    return 2;
 	}
     }
 
@@ -551,7 +546,7 @@ int scanmanager(const struct optstruct *opts)
 	if((ret = cl_engine_set_num(engine, CL_ENGINE_MAX_FILES, opt->numarg))) {
 	    logg("!cli_engine_set_num(CL_ENGINE_MAX_FILES) failed: %s\n", cl_strerror(ret));
 	    cl_engine_free(engine);
-	    return 50;
+	    return 2;
 	}
     }
 
@@ -559,7 +554,7 @@ int scanmanager(const struct optstruct *opts)
 	if((ret = cl_engine_set_num(engine, CL_ENGINE_MAX_RECURSION, opt->numarg))) {
 	    logg("!cli_engine_set_num(CL_ENGINE_MAX_RECURSION) failed: %s\n", cl_strerror(ret));
 	    cl_engine_free(engine);
-	    return 50;
+	    return 2;
 	}
     }
 
@@ -619,7 +614,7 @@ int scanmanager(const struct optstruct *opts)
 		    break;
 		default:
 		    logg("!Invalid argument for --structured-ssn-format\n");
-		    return 40;
+		    return 2;
 	    }
 	} else {
 	    options |= CL_SCAN_STRUCTURED_SSN_NORMAL;
@@ -629,7 +624,7 @@ int scanmanager(const struct optstruct *opts)
 	    if((ret = cl_engine_set_num(engine, CL_ENGINE_MIN_SSN_COUNT, opt->numarg))) {
 		logg("!cli_engine_set_num(CL_ENGINE_MIN_SSN_COUNT) failed: %s\n", cl_strerror(ret));
 		cl_engine_free(engine);
-		return 50;
+		return 2;
 	    }
 	}
 
@@ -637,7 +632,7 @@ int scanmanager(const struct optstruct *opts)
 	    if((ret = cl_engine_set_num(engine, CL_ENGINE_MIN_CC_COUNT, opt->numarg))) {
 		logg("!cli_engine_set_num(CL_ENGINE_MIN_CC_COUNT) failed: %s\n", cl_strerror(ret));
 		cl_engine_free(engine);
-		return 50;
+		return 2;
 	    }
 	}
 
@@ -662,10 +657,10 @@ int scanmanager(const struct optstruct *opts)
 	/* we need full path for some reasons (eg. archive handling) */
 	if(!getcwd(cwd, sizeof(cwd))) {
 	    logg("!Can't get absolute pathname of current working directory\n");
-	    ret = 57;
+	    ret = 2;
 	} else {
 	    stat(cwd, &sb);
-	    ret = scandirs(cwd, engine, opts, options, 1, sb.st_dev);
+	    scandirs(cwd, engine, opts, options, 1, sb.st_dev);
 	}
 
     } else if(opts->filename && !optget(opts, "file-list")->enabled && !strcmp(opts->filename[0], "-")) { /* read data from stdin */
@@ -686,7 +681,7 @@ int scanmanager(const struct optstruct *opts)
 	    if((fmodeint = fileinfo(file, 2)) == -1) {
 		logg("^Can't access file %s\n", file);
 		perror(file);
-		ret = 56;
+		ret = 2;
 	    } else {
 		for(i = strlen(file) - 1; i > 0; i--) {
 		    if(file[i] == *PATHSEP)
@@ -699,17 +694,17 @@ int scanmanager(const struct optstruct *opts)
 
 		switch(fmode & S_IFMT) {
 		    case S_IFREG:
-			ret = scanfile(file, engine, opts, options);
+			scanfile(file, engine, opts, options);
 			break;
 
 		    case S_IFDIR:
 			stat(file, &sb);
-			ret = scandirs(file, engine, opts, options, 1, sb.st_dev);
+			scandirs(file, engine, opts, options, 1, sb.st_dev);
 			break;
 
 		    default:
 			logg("!Not supported file type (%s)\n", file);
-			ret = 52;
+			ret = 2;
 		}
 	    }
 	    free(file);
@@ -719,11 +714,11 @@ int scanmanager(const struct optstruct *opts)
     /* free the engine */
     cl_engine_free(engine);
 
-    /* overwrite return code */
+    /* overwrite return code - infection takes priority */
     if(info.ifiles)
 	ret = 1;
-    else if(ret < 50) /* hopefully no error detected */ 
-	ret = 0; /* just make sure it's 0 */
+    else if(info.errors)
+	ret = 2;
 
     return ret;
 }

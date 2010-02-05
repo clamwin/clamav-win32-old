@@ -189,7 +189,6 @@ int main(int argc, char **argv)
         return 0;
     }
 #endif
-    umask(0);
 
     /* drop privileges */
 #ifndef _WIN32
@@ -488,10 +487,48 @@ int main(int argc, char **argv)
     }
 #ifndef _WIN32
     if(localsock) {
+	mode_t sock_mode, umsk = umask(0777); /* socket is created with 000 to avoid races */
 	if ((lsockets[nlsockets] = localserver(opts)) == -1) {
+	    ret = 1;
+	    umask(umsk);
+	    break;
+	}
+	umask(umsk); /* restore umask */
+	if(optget(opts, "LocalSocketGroup")->enabled) {
+	    char *gname = optget(opts, "LocalSocketGroup")->strarg, *end;
+	    gid_t sock_gid = strtol(gname, &end, 10);
+	    if(*end) {
+		struct group *pgrp = getgrnam(gname);
+		if(!pgrp) {
+		    logg("!Unknown group %s\n", gname);
+		    ret = 1;
+		    break;
+		}
+		sock_gid = pgrp->gr_gid;
+	    }
+	    if(chown(optget(opts, "LocalSocket")->strarg, -1, sock_gid)) {
+		logg("!Failed to change socket ownership to group %s\n", gname);
+		ret = 1;
+		break;
+	    }
+	}
+	if(optget(opts, "LocalSocketMode")->enabled) {
+	    char *end;
+	    sock_mode = strtol(optget(opts, "LocalSocketMode")->strarg, &end, 8);
+	    if(*end) {
+		logg("!Invalid LocalSocketMode %s\n", optget(opts, "LocalSocketMode")->strarg);
+		ret = 1;
+		break;
+	    }
+	} else
+	    sock_mode = 0777 /* & ~umsk*/; /* conservative default: umask was 0 in clamd < 0.96 */
+
+	if(chmod(optget(opts, "LocalSocket")->strarg, sock_mode & 0666)) {
+	    logg("!Cannot set socket permission to %s\n", optget(opts, "LocalSocketMode")->strarg);
 	    ret = 1;
 	    break;
 	}
+
 	nlsockets++;
     }
 

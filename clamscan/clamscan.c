@@ -50,6 +50,10 @@
 #include "libclamav/str.h"
 #include "libclamav/clamav.h"
 
+#ifdef _WIN32
+void clamscan_ctrl_handler(DWORD ctrl_type);
+#endif
+
 void help(void);
 
 struct s_info info;
@@ -75,7 +79,7 @@ int main(int argc, char **argv)
 
     if((opts = optparse(NULL, argc, argv, 1, OPT_CLAMSCAN, 0, NULL)) == NULL) {
 	mprintf("!Can't parse command line options\n");
-	return 40;
+	return 2;
     }
 
     if(optget(opts, "verbose")->enabled) {
@@ -129,7 +133,7 @@ int main(int argc, char **argv)
 	if(logg("#\n-------------------------------------------------------------------------------\n\n")) {
 	    mprintf("!Problem with internal logger.\n");
 	    optfree(opts);
-	    return 62;
+	    return 2;
 	}
     } else 
 	logg_file = NULL;
@@ -141,6 +145,11 @@ int main(int argc, char **argv)
     }
 
     memset(&info, 0, sizeof(struct s_info));
+
+#ifdef _WIN32
+    if(!optget(opts, "no-summary")->enabled)
+        SetConsoleCtrlHandler((PHANDLER_ROUTINE) clamscan_ctrl_handler, TRUE);
+#endif
 
     gettimeofday(&t1, NULL);
 
@@ -159,6 +168,8 @@ int main(int argc, char **argv)
 	logg("Scanned directories: %u\n", info.dirs);
 	logg("Scanned files: %u\n", info.files);
 	logg("Infected files: %u\n", info.ifiles);
+	if(info.errors)
+	    logg("Total errors: %u\n", info.errors);
 	if(notremoved) {
 	    logg("Not removed: %u\n", notremoved);
 	}
@@ -255,3 +266,27 @@ void help(void)
     mprintf("(**) Certain files (e.g. documents, archives, etc.) may in turn contain other\n");
     mprintf("   files inside. The above options ensure safe processing of this kind of data.\n\n");
 }
+
+#ifdef _WIN32
+/* Display summary on Ctrl+C, --no-summary is not honored here :( */
+void clamscan_ctrl_handler(DWORD ctrl_type)
+{
+    double mb;
+    logg("\nScanning aborted...\n");
+    logg("\n----------- SCAN SUMMARY -----------\n");
+    logg("Known viruses: %u\n", info.sigs);
+    logg("Engine version: %s\n", cl_retver());
+    logg("Scanned directories: %u\n", info.dirs);
+	logg("Scanned files: %u\n", info.files);
+    logg("Infected files: %u\n", info.ifiles);
+	if(info.errors)
+	    logg("Total errors: %u\n", info.errors);
+	if(notremoved)
+	    logg("Not removed: %u\n", notremoved);
+	if(notmoved)
+	    logg("Not moved: %u\n", notmoved);
+    mb = info.blocks * (CL_COUNT_PRECISION / 1024) / 1024.0;
+    logg("Data scanned: %2.2lf MB\n", mb);
+    exit(1);
+}
+#endif

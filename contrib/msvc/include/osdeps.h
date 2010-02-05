@@ -38,8 +38,6 @@ LIBCLAMAV_API helpers_t cw_helpers;
 #define WIFEXITED(x) (1)
 #define WTERMSIG(x) (x)
 
-void clamscan_ctrl_handler(DWORD ctrl_type);
-
 extern int cw_movefile(const char *source, const char *dest, int reboot);
 extern int cw_movefileex(const char *source, const char *dest, DWORD flags);
 
