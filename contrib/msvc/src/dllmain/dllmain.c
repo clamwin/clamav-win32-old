@@ -27,6 +27,79 @@ helpers_t cw_helpers;
 extern void jit_init(void);
 extern void jit_uninit(void);
 
+typedef struct _cbdata_t
+{
+    HANDLE hObject;
+    WAITORTIMERCALLBACK Callback;
+    PVOID Context;
+    ULONG dwMilliseconds;
+    ULONG dwFlags;
+    HANDLE hStop;
+} cbdata_t;
+
+typedef struct _tdata_t
+{
+    HANDLE hThread;
+    DWORD  dwTid;
+    cbdata_t *cbdata;
+} tdata_t;
+
+DWORD WINAPI WaitThread(LPVOID lpParam)
+{
+    cbdata_t *cbdata = (cbdata_t *) lpParam;
+    DWORD result;
+    HANDLE wEvents[2] = { cbdata->hObject, cbdata->hStop };
+
+    result = WaitForMultipleObjects(2, wEvents, FALSE, cbdata->dwMilliseconds);
+
+    if (result == WAIT_OBJECT_0)
+        cbdata->Callback(cbdata->Context, FALSE);
+    else if (result == WAIT_TIMEOUT)
+        cbdata->Callback(cbdata->Context, TRUE);
+
+    return 0;
+}
+
+BOOL WINAPI cRegisterWaitForSingleObject(PHANDLE phNewWaitObject,
+                                         HANDLE hObject,
+                                         WAITORTIMERCALLBACK Callback,
+                                         PVOID Context,
+                                         ULONG dwMilliseconds,
+                                         ULONG dwFlags)
+{
+    tdata_t *tdata = calloc(1, sizeof(tdata_t));
+    tdata->cbdata = calloc(1, sizeof(cbdata_t));
+    tdata->cbdata->hObject = hObject;
+    tdata->cbdata->Callback = Callback;
+    tdata->cbdata->Context = Context;
+    tdata->cbdata->dwMilliseconds = dwMilliseconds;
+    tdata->cbdata->dwFlags = dwFlags;
+    tdata->cbdata->hStop = CreateEvent(NULL, TRUE, FALSE, NULL);
+    tdata->hThread = CreateThread(NULL, 0, WaitThread, (LPVOID) tdata->cbdata, 0, &tdata->dwTid);
+    *phNewWaitObject = (HANDLE) tdata;
+    return TRUE;
+}
+
+BOOL WINAPI cUnregisterWaitEx(HANDLE WaitHandle, HANDLE CompletionEvent)
+{
+    tdata_t *tdata = (tdata_t *) WaitHandle;
+    SetEvent(tdata->cbdata->hStop);
+    if (WaitForSingleObject(tdata->hThread, 15000) != WAIT_OBJECT_0)
+    {
+        fprintf(stderr, "[tpool] Warning Thread %d still alive, killing it\n", tdata->dwTid);
+        TerminateThread(tdata->hThread, 0);
+    }
+    CloseHandle(tdata->cbdata->hStop);
+    CloseHandle(tdata->hThread);
+
+    if (CompletionEvent) SetEvent(CompletionEvent);
+
+    free(tdata->cbdata);
+    free(tdata);
+
+    return TRUE;
+}
+
 #define Q(string) # string
 
 #define IMPORT_FUNC(m, x) \
@@ -70,6 +143,13 @@ static void dynLoad(void)
         cw_helpers.k32.tpool = TRUE;
         IMPORT_FUNC_OR_DISABLE(k32, RegisterWaitForSingleObject, tpool);
         IMPORT_FUNC_OR_DISABLE(k32, UnregisterWaitEx, tpool);
+
+        if (!cw_helpers.k32.tpool)
+        {
+            cw_helpers.k32.RegisterWaitForSingleObject = cRegisterWaitForSingleObject;
+            cw_helpers.k32.UnregisterWaitEx = cUnregisterWaitEx;
+            cw_helpers.k32.tpool = TRUE;
+        }
 
         /* kernel32 */
         cw_helpers.k32.ok = TRUE;
