@@ -1,3 +1,27 @@
+Tue Feb  9 20:44:11 CET 2010 (acab)
+-----------------------------------
+ * clamav-milter: allow SkipAuthenticated to read names from a file
+		(bb#1684)
+
+Tue Feb  9 16:35:36 CET 2010 (acab)
+-----------------------------------
+ * libclamav/scanners.c: fix gzip handler
+
+Mon Feb  8 19:17:14 CET 2010 (tk)
+---------------------------------
+ * libclamav: prefix all engine detections with "Heuristics." (bb#1808)
+	      (also change Phishing.Heuristics.* -> Heuristics.Phishing.*)
+
+Mon Feb  8 13:40:06 CET 2010 (acab)
+----------------------------------
+ * libclamav: drop support for type 8 signatures. disasm matching is now
+		done via bytecode
+
+Mon Feb  8 10:30:03 CET 2010 (tk)
+---------------------------------
+ * freshclam, sigtool: use zlib's Z_FILTERED strategy
+		       Thanks to Edwin
+
 Sat Feb  6 16:02:28 CET 2010 (acab)
 -----------------------------------
  * clamd/server-th.c: reset the selfcheck timeout even if we reload

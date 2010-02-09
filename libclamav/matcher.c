@@ -49,6 +49,22 @@
 #include "pe_icons.h"
 #include "regex/regex.h"
 
+static inline int matcher_run(const struct cli_matcher *root,
+			      const unsigned char *buffer, uint32_t length,
+			      const char **virname, struct cli_ac_data *mdata,
+			      uint32_t offset,
+			      cli_file_t ftype,
+			      struct cli_matched_type **ftoffset,
+			      unsigned int acmode,
+			      fmap_t *map,
+			      struct cli_bm_off *offdata)
+{
+    int ret;
+    if (root->ac_only || (ret = cli_bm_scanbuff(buffer, length, virname, NULL, root, offset, map, offdata)) != CL_VIRUS)
+	ret = cli_ac_scanbuff(buffer, length, virname, NULL, NULL, root, mdata, offset, ftype, ftoffset, acmode, NULL);
+    return ret;
+}
+
 int cli_scanbuff(const unsigned char *buffer, uint32_t length, uint32_t offset, cli_ctx *ctx, cli_file_t ftype, struct cli_ac_data **acdata)
 {
 	int ret = CL_CLEAN;
@@ -79,8 +95,7 @@ int cli_scanbuff(const unsigned char *buffer, uint32_t length, uint32_t offset, 
 	if(!acdata && (ret = cli_ac_initdata(&mdata, troot->ac_partsigs, troot->ac_lsigs, troot->ac_reloff_num, CLI_DEFAULT_AC_TRACKLEN)))
 	    return ret;
 
-	if(troot->ac_only || (ret = cli_bm_scanbuff(buffer, length, virname, NULL, troot, offset, NULL, NULL)) != CL_VIRUS)
-	    ret = cli_ac_scanbuff(buffer, length, virname, NULL, NULL, troot, acdata ? (acdata[0]) : (&mdata), offset, ftype, NULL, AC_SCAN_VIR, NULL);
+	ret = matcher_run(troot, buffer, length, virname, acdata ? (acdata[0]): (&mdata), offset, ftype, NULL, AC_SCAN_VIR, NULL, NULL);
 
 	if(!acdata)
 	    cli_ac_freedata(&mdata);
@@ -92,8 +107,7 @@ int cli_scanbuff(const unsigned char *buffer, uint32_t length, uint32_t offset, 
     if(!acdata && (ret = cli_ac_initdata(&mdata, groot->ac_partsigs, groot->ac_lsigs, groot->ac_reloff_num, CLI_DEFAULT_AC_TRACKLEN)))
 	return ret;
 
-    if(groot->ac_only || (ret = cli_bm_scanbuff(buffer, length, virname, NULL, groot, offset, NULL, NULL)) != CL_VIRUS)
-	ret = cli_ac_scanbuff(buffer, length, virname, NULL, NULL, groot, acdata ? (acdata[1]) : (&mdata), offset, ftype, NULL, AC_SCAN_VIR, NULL);
+    ret = matcher_run(groot, buffer, length, virname, acdata ? (acdata[1]): (&mdata), offset, ftype, NULL, AC_SCAN_VIR, NULL, NULL);
 
     if(!acdata)
 	cli_ac_freedata(&mdata);
@@ -184,6 +198,17 @@ int cli_caloff(const char *offstr, struct cli_target_info *info, fmap_t *map, un
 	} else if(!strncmp(offcpy, "VI", 2)) {
 	    /* versioninfo */
 	    offdata[0] = CLI_OFF_VERSION;
+	} else if (strchr(offcpy, '$')) {
+	    if (sscanf(offcpy, "$%u$", &n) != 1) {
+		cli_errmsg("cli_caloff: Invalid macro($) in offset: %s\n", offcpy);
+		return CL_EMALFDB;
+	    }
+	    if (n >= 32) {
+		cli_errmsg("cli_caloff: at most 32 macro groups supported\n");
+		return CL_EMALFDB;
+	    }
+	    offdata[0] = CLI_OFF_MACRO;
+	    offdata[1] = n;
 	} else {
 	    offdata[0] = CLI_OFF_ABSOLUTE;
 	    if(!cli_isnumber(offcpy)) {
@@ -194,7 +219,8 @@ int cli_caloff(const char *offstr, struct cli_target_info *info, fmap_t *map, un
 	    *offset_max = *offset_min + offdata[2];
 	}
 
-	if(offdata[0] != CLI_OFF_ANY && offdata[0] != CLI_OFF_ABSOLUTE && offdata[0] != CLI_OFF_EOF_MINUS) {
+	if(offdata[0] != CLI_OFF_ANY && offdata[0] != CLI_OFF_ABSOLUTE &&
+	   offdata[0] != CLI_OFF_EOF_MINUS && offdata[0] != CLI_OFF_MACRO) {
 	    if(target != 1 && target != 6 && target != 9) {
 		cli_errmsg("cli_caloff: Invalid offset type for target %u\n", target);
 		return CL_EMALFDB;
@@ -433,8 +459,8 @@ int cli_fmap_scandesc(cli_ctx *ctx, cli_file_t ftype, uint8_t ftonly, struct cli
     if (ctx->engine->callback && !ctx->engine->callback(map->fd, bytes))
         return CL_EUSERABORT;
 	if(troot) {
-	    if(troot->ac_only || (ret = cli_bm_scanbuff(buff, bytes, ctx->virname, NULL, troot, offset, map, bm_offmode ? &toff : NULL)) != CL_VIRUS)
-		ret = cli_ac_scanbuff(buff, bytes, ctx->virname, NULL, NULL, troot, &tdata, offset, ftype, ftoffset, acmode, NULL);
+	    ret = matcher_run(troot, buff, bytes, ctx->virname, &tdata, offset, ftype, ftoffset, acmode, map, bm_offmode ? &toff : NULL);
+
 	    if(ret == CL_VIRUS) {
 		if(!ftonly)
 		    cli_ac_freedata(&gdata);
@@ -473,6 +499,7 @@ int cli_fmap_scandesc(cli_ctx *ctx, cli_file_t ftype, uint8_t ftonly, struct cli
     for(i = 0; i < xroot->ac_lsigs; i++) { \
 	evalcnt = 0; \
 	evalids = 0; \
+	cli_ac_chkmacro(xroot, &xdata, i);\
 	if(cli_ac_chklsig(xroot->ac_lsigtable[i]->logic, xroot->ac_lsigtable[i]->logic + strlen(xroot->ac_lsigtable[i]->logic), xdata.lsigcnt[i], &evalcnt, &evalids, 0) == 1) { \
 	    if(xroot->ac_lsigtable[i]->tdb.container && xroot->ac_lsigtable[i]->tdb.container[0] != ctx->container_type) \
 		continue; \

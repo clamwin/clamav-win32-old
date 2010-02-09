@@ -61,6 +61,8 @@ struct cli_lsig_tdb {
 		   *secturva, *sectuvsz, *secturaw, *sectursz;
     */
     const char *icongrp1, *icongrp2;
+    uint32_t *macro_ptids;
+    uint32_t subsigs;
 #ifdef USE_MPOOL
     mpool_t *mempool;
 #endif
@@ -136,7 +138,7 @@ static const struct cli_mtarget cli_mtargets[CLI_MTARGETS] =  {
     { CL_TYPE_GRAPHICS,	    "GRAPHICS",	    5,	1   },
     { CL_TYPE_ELF,	    "ELF",	    6,	1   },
     { CL_TYPE_TEXT_ASCII,   "ASCII",	    7,	1   },
-    { CL_TYPE_PE_DISASM,    "DISASM",	    8,	1   },
+    { CL_TYPE_ERROR,        "NOT USED",	    8,	1   },
     { CL_TYPE_MACHO,	    "MACH-O",	    9,	1   }
 };
 
@@ -155,6 +157,7 @@ struct cli_target_info {
 #define CLI_OFF_SL_PLUS     5
 #define CLI_OFF_SX_PLUS     6
 #define CLI_OFF_VERSION     7
+#define CLI_OFF_MACRO       8
 
 int cli_scanbuff(const unsigned char *buffer, uint32_t length, uint32_t offset, cli_ctx *ctx, cli_file_t ftype, struct cli_ac_data **acdata);
 
