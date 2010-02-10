@@ -66,7 +66,7 @@ void destroy_ctx(cli_ctx *ctx) {
     close((*(ctx->fmap))->fd);
     funmap(*(ctx->fmap));
     free(ctx->fmap);
-    cl_engine_free(ctx->engine);
+    cl_engine_free((struct cl_engine *)ctx->engine);
     free(ctx);
 }
 
@@ -1038,7 +1038,7 @@ static int sigtool_scandir (const char *dirname, int hex_output)
 				    free(dir);
 				    return 1;
 				}
-				if ((ret = cli_ole2_extract (dir, &ctx, &vba))) {
+				if ((ret = cli_ole2_extract (dir, ctx, &vba))) {
 				    printf ("ERROR %s\n", cl_strerror (ret));
 				    destroy_ctx(ctx);
 				    cli_rmdirs (dir);
