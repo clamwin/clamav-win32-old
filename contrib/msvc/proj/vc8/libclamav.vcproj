@@ -560,6 +560,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\..\libclamav\perflogging.c"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\..\libclamav\petite.c"
 				>
 			</File>
@@ -1131,6 +1135,10 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\libclamav\pe_icons.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\perflogging.h"
 				>
 			</File>
 			<File
