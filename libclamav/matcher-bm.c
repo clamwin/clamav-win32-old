@@ -31,6 +31,7 @@
 #include "matcher.h"
 #include "matcher-bm.h"
 #include "filetypes.h"
+#include "filtering.h"
 
 #include "mpool.h"
 
@@ -60,6 +61,17 @@ int cli_bm_addpatt(struct cli_matcher *root, struct cli_bm_patt *pattern, const 
 	    root->bm_absoff_num++;
 	else
 	    root->bm_reloff_num++;
+    }
+
+    if(root->filter) {
+	/* the bm_suffix load balancing below can shorten the sig,
+	 * we want to see the entire signature! */
+	if (filter_add_static(root->filter, pattern->pattern, pattern->length, pattern->virname) == -1) {
+	    cli_warnmsg("cli_bm_addpatt: cannot use filter for trie\n");
+	    mpool_free(root->mempool, root->filter);
+	    root->filter = NULL;
+	}
+	/* TODO: should this affect maxpatlen? */
     }
 
 #if BM_MIN_LENGTH == BM_BLOCK_SIZE

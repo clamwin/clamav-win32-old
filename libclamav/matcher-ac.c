@@ -42,6 +42,7 @@
 #include "str.h"
 #include "readdb.h"
 #include "default.h"
+#include "filtering.h"
 
 #include "mpool.h"
 
@@ -358,6 +359,8 @@ int cli_ac_buildtrie(struct cli_matcher *root)
 	return CL_SUCCESS;
     }
 
+    if (root->filter)
+	cli_warnmsg("Using filter for trie %d\n", root->type);
     return ac_maketrans(root);
 }
 
@@ -382,6 +385,18 @@ int cli_ac_init(struct cli_matcher *root, uint8_t mindepth, uint8_t maxdepth)
 
     root->ac_mindepth = mindepth;
     root->ac_maxdepth = maxdepth;
+
+    /* TODO: dconf here ?*/
+    if (cli_mtargets[root->type].enable_prefiltering && 0) {/* Disabled for now */
+	root->filter = mpool_malloc(root->mempool, sizeof(*root->filter));
+	if (!root->filter) {
+	    cli_errmsg("cli_ac_init: Can't allocate memory for ac_root->filter\n");
+	    mpool_free(root->mempool, root->ac_root->trans);
+	    mpool_free(root->mempool, root->ac_root);
+	    return CL_EMEM;
+	}
+	filter_init(root->filter);
+    }
 
     return CL_SUCCESS;
 }
@@ -446,6 +461,8 @@ void cli_ac_free(struct cli_matcher *root)
 	mpool_free(root->mempool, root->ac_root->trans);
 	mpool_free(root->mempool, root->ac_root);
     }
+    if (root->filter)
+	mpool_free(root->mempool, root->filter);
 }
 
 /*
@@ -1669,6 +1686,17 @@ int cli_ac_addsig(struct cli_matcher *root, const char *virname, const char *hex
 
     new->length = strlen(hex ? hex : hexsig) / 2;
     free(hex);
+
+    if (root->filter) {
+	/* so that we can show meaningful messages */
+	new->virname = (char*)virname;
+	if (filter_add_acpatt(root->filter, new) == -1) {
+	    cli_warnmsg("cli_ac_addpatt: cannot use filter for trie\n");
+	    mpool_free(root->mempool, root->filter);
+	    root->filter = NULL;
+	}
+	/* TODO: should this affect maxpatlen? */
+    }
 
     for(i = 0; i < root->ac_maxdepth && i < new->length; i++) {
 	if(new->pattern[i] & CLI_MATCH_WILDCARD) {
