@@ -1754,8 +1754,8 @@ int cli_ac_addsig(struct cli_matcher *root, const char *virname, const char *hex
 		new->special_pattern++;
     }
 
-    if(new->length > root->maxpatlen)
-	root->maxpatlen = new->length;
+    if(new->length + new->prefix_length > root->maxpatlen)
+	root->maxpatlen = new->length + new->prefix_length;
 
     new->virname = cli_mpool_virname(root->mempool, virname, options & CL_DB_OFFICIAL);
     if(!new->virname) {
