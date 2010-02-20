@@ -49,7 +49,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="../..;../../include;../../include/llvmbuild;../../../../libclamav;&quot;../../../../libclamav/c++&quot;;&quot;../../../../libclamav/c++/llvm/include&quot;;&quot;../../../../libclamav/c++/llvm/lib/Target/X86&quot;"
+				AdditionalIncludeDirectories="../..;../../include;../../include/llvmbuild;../../../../libclamav;&quot;../../../../libclamav/c++&quot;;&quot;../../../../libclamav/c++/llvm/include&quot;;&quot;../../../../libclamav/c++/llvm/lib/Target/X86&quot;;../../../../win32/3rdparty/zlib"
 				AdditionalUsingDirectories=""
 				PreprocessorDefinitions="WIN32;_DEBUG;WIN32_LEAN_AND_MEAN;HAVE_CONFIG_H;_BIND_TO_CURRENT_VCLIBS_VERSION=1;__STDC_LIMIT_MACROS;__STDC_CONSTANT_MACROS"
 				MinimalRebuild="true"
@@ -132,7 +132,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="../..;../../include;../../include/llvmbuild;../../../../libclamav;&quot;../../../../libclamav/c++&quot;;&quot;../../../../libclamav/c++/llvm/include&quot;;&quot;../../../../libclamav/c++/llvm/lib/Target/X86&quot;"
+				AdditionalIncludeDirectories="../..;../../include;../../include/llvmbuild;../../../../libclamav;&quot;../../../../libclamav/c++&quot;;&quot;../../../../libclamav/c++/llvm/include&quot;;&quot;../../../../libclamav/c++/llvm/lib/Target/X86&quot;;../../../../win32/3rdparty/zlib"
 				PreprocessorDefinitions="WIN32;_DEBUG;WIN32_LEAN_AND_MEAN;HAVE_CONFIG_H;_BIND_TO_CURRENT_VCLIBS_VERSION=1;__STDC_LIMIT_MACROS;__STDC_CONSTANT_MACROS"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -213,7 +213,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories="../..;../../include;../../include/llvmbuild;../../../../libclamav;&quot;../../../../libclamav/c++&quot;;&quot;../../../../libclamav/c++/llvm/include&quot;;&quot;../../../../libclamav/c++/llvm/lib/Target/X86&quot;"
+				AdditionalIncludeDirectories="../..;../../include;../../include/llvmbuild;../../../../libclamav;&quot;../../../../libclamav/c++&quot;;&quot;../../../../libclamav/c++/llvm/include&quot;;&quot;../../../../libclamav/c++/llvm/lib/Target/X86&quot;;../../../../win32/3rdparty/zlib"
 				PreprocessorDefinitions="WIN32;NDEBUG;WIN32_LEAN_AND_MEAN;HAVE_CONFIG_H;_BIND_TO_CURRENT_VCLIBS_VERSION=1;__STDC_LIMIT_MACROS;__STDC_CONSTANT_MACROS"
 				SmallerTypeCheck="false"
 				RuntimeLibrary="2"
@@ -295,7 +295,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				WholeProgramOptimization="false"
-				AdditionalIncludeDirectories="../..;../../include;../../include/llvmbuild;../../../../libclamav;&quot;../../../../libclamav/c++&quot;;&quot;../../../../libclamav/c++/llvm/include&quot;;&quot;../../../../libclamav/c++/llvm/lib/Target/X86&quot;"
+				AdditionalIncludeDirectories="../..;../../include;../../include/llvmbuild;../../../../libclamav;&quot;../../../../libclamav/c++&quot;;&quot;../../../../libclamav/c++/llvm/include&quot;;&quot;../../../../libclamav/c++/llvm/lib/Target/X86&quot;;../../../../win32/3rdparty/zlib"
 				PreprocessorDefinitions="WIN32;NDEBUG;WIN32_LEAN_AND_MEAN;HAVE_CONFIG_H;_BIND_TO_CURRENT_VCLIBS_VERSION=1;__STDC_LIMIT_MACROS;__STDC_CONSTANT_MACROS"
 				SmallerTypeCheck="false"
 				RuntimeLibrary="2"
@@ -454,6 +454,14 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Support\circular_raw_ostream.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\c++\ClamBCModule.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\c++\ClamBCRTChecks.cpp"
 				>
 			</File>
 			<File
@@ -618,6 +626,10 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Support\GraphWriter.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\VMCore\GVMaterializer.cpp"
 				>
 			</File>
 			<File
@@ -845,10 +857,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\CodeGen\MachOWriter.cpp"
-				>
-			</File>
-			<File
 				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Support\ManagedStatic.cpp"
 				>
 			</File>
@@ -894,6 +902,10 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\MC\MCMachOStreamer.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\MC\MCNullStreamer.cpp"
 				>
 			</File>
 			<File
@@ -945,10 +957,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\VMCore\ModuleProvider.cpp"
-				>
-			</File>
-			<File
 				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\System\Mutex.cpp"
 				>
 			</File>
@@ -962,6 +970,10 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\CodeGen\OptimizeExts.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\CodeGen\OptimizePHIs.cpp"
 				>
 			</File>
 			<File
@@ -986,6 +998,10 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Analysis\PHITransAddr.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Analysis\PointerTracking.cpp"
 				>
 			</File>
 			<File
@@ -1358,6 +1374,14 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Target\X86\X86MCAsmInfo.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Target\X86\X86MCCodeEmitter.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Target\X86\X86MCTargetExpr.cpp"
 				>
 			</File>
 			<File
