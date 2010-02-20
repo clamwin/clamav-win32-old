@@ -130,6 +130,7 @@ struct cli_bc_ctx {
     fmap_t *fmap;
     const char *virname;
     struct cli_bc_hooks hooks;
+    const struct cli_exe_section *sections;
     int outfd;
     char *tempfile;
     void *ctx;
@@ -156,7 +157,7 @@ extern "C" {
 
 int cli_vm_execute_jit(const struct cli_all_bc *bcs, struct cli_bc_ctx *ctx, const struct cli_bc_func *func);
 int cli_bytecode_prepare_jit(struct cli_all_bc *bc);
-int cli_bytecode_init_jit(struct cli_all_bc *bc);
+int cli_bytecode_init_jit(struct cli_all_bc *bc, unsigned dconfmask);
 int cli_bytecode_done_jit(struct cli_all_bc *bc);
 
 #ifdef __cplusplus

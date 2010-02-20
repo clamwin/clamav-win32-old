@@ -24,6 +24,7 @@
 #include "clamav-config.h"
 #endif
 
+#include "dconf.h"
 #include "clamav.h"
 #include "others.h"
 #include "pe.h"
@@ -434,7 +435,7 @@ static int parseHeader(struct cli_bc *bc, unsigned char *buffer, unsigned *linel
 	return CL_EMALFDB;
     }
     if (flevel != BC_FUNC_LEVEL) {
-	cli_dbgmsg("Skipping bytecode with functionality level: %u\n", flevel);
+	cli_dbgmsg("Skipping bytecode with functionality level: %u (current %u)\n", flevel, BC_FUNC_LEVEL);
 	return CL_BREAK;
     }
     /* Optimistic parsing, check for error only at the end.*/
@@ -1467,7 +1468,12 @@ void cli_bytecode_destroy(struct cli_bc *bc)
 }
 
 #define MAP(val) do { operand_t o = val; \
+    if (o & 0x80000000) {\
+	o &= 0x7fffffff;\
+	o = bcfunc->numValues + bcfunc->numConstants + o;\
+    }\
     if (o > totValues) {\
+	printf("%d\n", _FIRST_GLOBAL);\
 	cli_errmsg("bytecode: operand out of range: %u > %u, for instruction %u in function %u\n", o, totValues, j, i);\
 	return CL_EBYTECODE;\
     }\
@@ -1476,9 +1482,10 @@ void cli_bytecode_destroy(struct cli_bc *bc)
 static int cli_bytecode_prepare_interpreter(struct cli_bc *bc)
 {
     unsigned i, j, k;
+
     for (i=0;i<bc->num_func;i++) {
 	struct cli_bc_func *bcfunc = &bc->funcs[i];
-	unsigned totValues = bcfunc->numValues + bcfunc->numConstants;
+	unsigned totValues = bcfunc->numValues + bcfunc->numConstants + bc->num_globals;
 	unsigned *map = cli_malloc(sizeof(*map)*totValues);
 	for (j=0;j<bcfunc->numValues;j++) {
 	    uint16_t ty = bcfunc->types[j];
@@ -1492,6 +1499,13 @@ static int cli_bytecode_prepare_interpreter(struct cli_bc *bc)
 	for (j=0;j<bcfunc->numConstants;j++) {
 	    map[bcfunc->numValues+j] = bcfunc->numBytes;
 	    bcfunc->numBytes += 8;
+	}
+	for (j=0;j<bc->num_globals;j++) {
+	    uint16_t ty = bc->globaltys[j];
+	    unsigned align = typealign(bc, ty);
+	    bcfunc->numBytes  = (bcfunc->numBytes + align-1)&(~(align-1));
+	    map[bcfunc->numValues+bcfunc->numConstants+j] = bcfunc->numBytes;
+	    bcfunc->numBytes += typesize(bc, ty);
 	}
 	for (j=0;j<bcfunc->numInsts;j++) {
 	    struct cli_bc_inst *inst = &bcfunc->allinsts[j];
@@ -1558,8 +1572,8 @@ static int cli_bytecode_prepare_interpreter(struct cli_bc *bc)
 			    return CL_EBYTECODE;
 			}
 		    } else {
-			/* APIs have 2 parameters always */
-			if (inst->u.ops.numOps != 2) {
+			/* APIs have at most 2 parameters always */
+			if (inst->u.ops.numOps > 2) {
 			    cli_errmsg("bytecode: call operands don't match function prototype\n");
 			    return CL_EBYTECODE;
 			}
@@ -1593,6 +1607,30 @@ static int cli_bytecode_prepare_interpreter(struct cli_bc *bc)
 		case OP_BC_GEPN:
 		    /*TODO */
 		    break;
+		case OP_BC_MEMSET:
+		case OP_BC_MEMCPY:
+		case OP_BC_MEMMOVE:
+		case OP_BC_MEMCMP:
+		    /*TODO*/
+		    break;
+		case OP_BC_ISBIGENDIAN:
+		    /*TODO */
+		    break;
+		case OP_BC_ABORT:
+		    /* TODO */
+		    break;
+		case OP_BC_BSWAP16:
+		    /*TODO */
+		    break;
+		case OP_BC_BSWAP32:
+		    /*TODO */
+		    break;
+		case OP_BC_BSWAP64:
+		    /*TODO */
+		    break;
+		case OP_BC_PTRDIFF32:
+		    /*TODO */
+		    break;
 		default:
 		    cli_dbgmsg("Unhandled opcode: %d\n", inst->opcode);
 		    return CL_EBYTECODE;
@@ -1604,7 +1642,7 @@ static int cli_bytecode_prepare_interpreter(struct cli_bc *bc)
     return CL_SUCCESS;
 }
 
-int cli_bytecode_prepare(struct cli_all_bc *bcs)
+int cli_bytecode_prepare(struct cli_all_bc *bcs, unsigned dconfmask)
 {
     unsigned i;
     int rc;
@@ -1614,6 +1652,10 @@ int cli_bytecode_prepare(struct cli_all_bc *bcs)
 	struct cli_bc *bc = &bcs->all_bcs[i];
 	if (bc->state == bc_interp || bc->state == bc_jit)
 	    continue;
+	if (!(dconfmask & BYTECODE_INTERPRETER)) {
+	    cli_warnmsg("Bytecode needs interpreter, but interpreter is disabled\n");
+	    continue;
+	}
 	rc = cli_bytecode_prepare_interpreter(bc);
 	if (rc != CL_SUCCESS)
 	    return rc;
@@ -1621,10 +1663,10 @@ int cli_bytecode_prepare(struct cli_all_bc *bcs)
     return CL_SUCCESS;
 }
 
-int cli_bytecode_init(struct cli_all_bc *allbc)
+int cli_bytecode_init(struct cli_all_bc *allbc, unsigned dconfmask)
 {
     memset(allbc, 0, sizeof(*allbc));
-    return cli_bytecode_init_jit(allbc);
+    return cli_bytecode_init_jit(allbc, dconfmask);
 }
 
 int cli_bytecode_done(struct cli_all_bc *allbc)
@@ -1747,9 +1789,9 @@ int cli_bytecode_runhook(cli_ctx *cctx, const struct cl_engine *engine, struct c
     return CL_CLEAN;
 }
 
-int cli_bytecode_context_setpe(struct cli_bc_ctx *ctx, const struct cli_pe_hook_data *data)
+int cli_bytecode_context_setpe(struct cli_bc_ctx *ctx, const struct cli_pe_hook_data *data, const struct cli_exe_section *sections)
 {
-    ctx->hooks.exeinfo = &data->exe_info;
+    ctx->sections = sections;
     ctx->hooks.pedata = data;
     return 0;
 }

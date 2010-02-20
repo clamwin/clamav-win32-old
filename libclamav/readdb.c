@@ -121,7 +121,7 @@ int cli_parse_add(struct cli_matcher *root, const char *virname, const char *hex
     if (hexsig[0] == '$') {
 	/* macro */
 	unsigned smin, smax, tid;
-	struct cli_ac_patt *pt;
+	struct cli_ac_patt *patt;
 	if (hexsig[hexlen-1] != '$') {
 	    cli_errmsg("cli_parseadd(): missing terminator $\n");
 	    return CL_EMALFDB;
@@ -139,19 +139,24 @@ int cli_parse_add(struct cli_matcher *root, const char *virname, const char *hex
 	    cli_errmsg("cli_parseadd(): only 32 macro groups are supported\n");
 	    return CL_EMALFDB;
 	}
-	pt = mpool_calloc(root->mempool, 1, sizeof(*pt));
-	if (!pt)
+	patt = mpool_calloc(root->mempool, 1, sizeof(*patt));
+	if (!patt)
 	    return CL_EMEM;
 	/* this is not a pattern that will be matched by AC itself, rather it is a
 	 * pattern checked by the lsig code */
-	pt->ch_mindist[0] = smin;
-	pt->ch_maxdist[0] = smax;
-	pt->sigid = tid;
-	pt->length = root->ac_mindepth;
+	patt->ch_mindist[0] = smin;
+	patt->ch_maxdist[0] = smax;
+	patt->sigid = tid;
+	patt->length = root->ac_mindepth;
 	/* dummy */
-	pt->pattern = mpool_calloc(root->mempool, pt->length, sizeof(*pt->pattern));
-	if ((ret = cli_ac_addpatt(root, pt))) {
-	    free(pt);
+	patt->pattern = mpool_calloc(root->mempool, patt->length, sizeof(*patt->pattern));
+	if (patt->pattern) {
+	    free(patt);
+	    return CL_EMEM;
+	}
+	if ((ret = cli_ac_addpatt(root, patt))) {
+	    mpool_free(root->mempool, patt->pattern);
+	    free(patt);
 	    return ret;
 	}
 	return CL_SUCCESS;
@@ -339,7 +344,7 @@ int cli_initroots(struct cl_engine *engine, unsigned int options)
 		root->ac_only = 1;
 
 	    cli_dbgmsg("Initialising AC pattern matcher of root[%d]\n", i);
-	    if((ret = cli_ac_init(root, engine->ac_mindepth, engine->ac_maxdepth))) {
+	    if((ret = cli_ac_init(root, engine->ac_mindepth, engine->ac_maxdepth, engine->dconf->other&OTHER_CONF_PREFILTERING))) {
 		/* no need to free previously allocated memory here */
 		cli_errmsg("cli_initroots: Can't initialise AC pattern matcher\n");
 		return ret;
@@ -812,7 +817,7 @@ static int cli_loadwdb(FILE *fs, struct cl_engine *engine, unsigned int options,
 	}
     }
 
-    if((ret = load_regex_matcher(engine->whitelist_matcher, fs, NULL, options, 1, dbio))) {
+    if((ret = load_regex_matcher(engine->whitelist_matcher, fs, NULL, options, 1, dbio, engine->dconf->other&OTHER_CONF_PREFILTERING))) {
 	return ret;
     }
 
@@ -833,7 +838,7 @@ static int cli_loadpdb(FILE *fs, struct cl_engine *engine, unsigned int *signo, 
 	}
     }
 
-    if((ret = load_regex_matcher(engine->domainlist_matcher, fs, signo, options, 0, dbio))) {
+    if((ret = load_regex_matcher(engine->domainlist_matcher, fs, signo, options, 0, dbio, engine->dconf->other&OTHER_CONF_PREFILTERING))) {
 	return ret;
     }
 
@@ -862,9 +867,6 @@ static int cli_loadndb(FILE *fs, struct cl_engine *engine, unsigned int *signo, 
     while(cli_dbgets(buffer, FILEBUFF, fs, dbio)) {
 	line++;
 
-	if(!strncmp(buffer, "Exploit.JPEG.Comment", 20)) /* temporary */
-	    continue;
-
 	if(!phish)
 	    if(!strncmp(buffer, "HTML.Phishing", 13) || !strncmp(buffer, "Email.Phishing", 14))
 		continue;
@@ -874,8 +876,7 @@ static int cli_loadndb(FILE *fs, struct cl_engine *engine, unsigned int *signo, 
 	    strcpy(buffer_cpy, buffer);
 
 	tokens_count = cli_strtokenize(buffer, ':', NDB_TOKENS + 1, tokens);
-	/* FIXME: re-enable after fixing invalid sig @ main.ndb:53467 */
-	if(tokens_count < 4 /*|| tokens_count > 6*/) {
+	if(tokens_count < 4 || tokens_count > 6) {
 	    ret = CL_EMALFDB;
 	    break;
 	}
@@ -1403,6 +1404,11 @@ static int cli_loadcbc(FILE *fs, struct cl_engine *engine, unsigned int *signo, 
     if (rc != CL_SUCCESS) {
 	cli_errmsg("Unable to load %s bytecode: %s\n", dbname, cl_strerror(rc));
 	return rc;
+    }
+    if (bc->state == bc_skip) {
+	cli_bytecode_destroy(bc);
+	bcs->count--;
+	return CL_SUCCESS;
     }
     bc->id = bcs->count;/* must set after _load, since load zeroes */
     sigs++;
@@ -2449,8 +2455,7 @@ static int cli_loaddbdir(const char *dirname, struct cl_engine *engine, unsigned
 	    if(!daily_cvd) {
 		cli_errmsg("cli_loaddbdir(): error parsing header of %s\n", dbfile);
 		free(dbfile);
-		if(have_cld)
-		    cl_cvdfree(daily_cld);
+		cl_cvdfree(daily_cld);
 		closedir(dd);
 		return CL_EMALFDB;
 	    }
@@ -2554,7 +2559,7 @@ int cl_load(const char *path, struct cl_engine *engine, unsigned int *signo, uns
 	    return ret;
 
     if((dboptions & CL_DB_BYTECODE) && !engine->bcs.engine && (engine->dconf->bytecode & BYTECODE_ENGINE_MASK)) {
-	if((ret = cli_bytecode_init(&engine->bcs)))
+	if((ret = cli_bytecode_init(&engine->bcs, engine->dconf->bytecode)))
 	    return ret;
     } else {
 	cli_dbgmsg("Bytecode engine disabled\n");
@@ -2989,7 +2994,7 @@ int cl_engine_compile(struct cl_engine *engine)
     mpool_flush(engine->mempool);
 
     /* Compile bytecode */
-    if((ret = cli_bytecode_prepare(&engine->bcs))) {
+    if((ret = cli_bytecode_prepare(&engine->bcs, engine->dconf->bytecode))) {
 	cli_errmsg("Unable to compile/load bytecode: %s\n", cl_strerror(ret));
 	return ret;
     }

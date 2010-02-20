@@ -1,3 +1,15 @@
+Tue Feb 16 16:41:30 CET 2010 (tk)
+---------------------------------
+ * libclamav/cvd.c: enable new dsig check for main db
+
+Tue Feb 16 16:27:13 CET 2010 (tk)
+---------------------------------
+ * freshclam/manager.c: handle empty cdiffs more gently
+
+Sun Feb 14 12:28:52 CET 2010 (acab)
+-----------------------------------
+ * libclamav: refactor checkfp logic
+
 Sat Feb 13 02:55:55 CET 2010 (acab)
 -----------------------------------
  * libclamav: refactor binhex processor with one pass decoder (bb#1236)

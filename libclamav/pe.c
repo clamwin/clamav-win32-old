@@ -209,7 +209,7 @@ int versioninfo_cb(void *opaque, uint32_t type, uint32_t name, uint32_t lang, ui
 }
 
 
-uint32_t cli_rawaddr(uint32_t rva, struct cli_exe_section *shp, uint16_t nos, unsigned int *err, size_t fsize, uint32_t hdr_size)
+uint32_t cli_rawaddr(uint32_t rva, const struct cli_exe_section *shp, uint16_t nos, unsigned int *err, size_t fsize, uint32_t hdr_size)
 {
     int i, found = 0;
     uint32_t ret;
@@ -2236,19 +2236,18 @@ int cli_scanpe(cli_ctx *ctx, icon_groupset *iconset)
 	cli_errmsg("cli_scanpe: can't allocate memory for bc_ctx\n");
 	return CL_EMEM;
     }
-    pedata.exe_info.section = exe_sections;
-    pedata.exe_info.nsections = nsections;
-    pedata.exe_info.ep = ep;
-    pedata.exe_info.offset = 0;
-    pedata.file_hdr = &file_hdr;
-    pedata.opt32 = &pe_opt.opt32;
-    pedata.opt64 = &pe_opt.opt64;
-    pedata.dirs = dirs;
+    pedata.nsections = nsections;
+    pedata.ep = ep;
+    pedata.offset = 0;
+    memcpy(&pedata.file_hdr, &file_hdr, sizeof(file_hdr));
+    memcpy(&pedata.opt32, &pe_opt.opt32, sizeof(pe_opt.opt32));
+    memcpy(&pedata.opt64, &pe_opt.opt64, sizeof(pe_opt.opt64));
+    memcpy(&pedata.dirs, dirs, sizeof(pedata.dirs));
     pedata.e_lfanew = e_lfanew;
     pedata.overlays = overlays;
     pedata.overlays_sz = fsize - overlays;
     pedata.hdr_size = hdr_size;
-    cli_bytecode_context_setpe(bc_ctx, &pedata);
+    cli_bytecode_context_setpe(bc_ctx, &pedata, exe_sections);
     cli_bytecode_context_setctx(bc_ctx, ctx);
     ret = cli_bytecode_runhook(ctx, ctx->engine, bc_ctx, BC_PE_UNPACKER, map, ctx->virname);
     switch (ret) {
