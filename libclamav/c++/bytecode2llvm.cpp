@@ -1480,7 +1480,7 @@ int bytecode_init(void)
     return 0;
 }
 
-extern "C" uint8_t cli_debug_flag;
+extern "C" BCAPI uint8_t cli_debug_flag;
 // Called once when loading a new set of BC files
 int cli_bytecode_init_jit(struct cli_all_bc *bcs, unsigned dconfmask)
 {

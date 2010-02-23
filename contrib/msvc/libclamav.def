@@ -181,6 +181,7 @@ gzwrite                     @254 NONAME
 cli_md5_final               @300 NONAME
 cli_md5_init                @301 NONAME
 cli_md5_update              @302 NONAME
+cli_debug_flag              @303 NONAME DATA
 
 cli_apicall_maxapi          @310 NONAME DATA
 cli_apicall_maxglobal       @311 NONAME DATA
