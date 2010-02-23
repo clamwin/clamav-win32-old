@@ -87,6 +87,9 @@ static inline int matcher_run(const struct cli_matcher *root,
     int ret;
     int32_t pos = 0;
     struct filter_match_info info;
+    uint32_t orig_length, orig_offset;
+    const unsigned char* orig_buffer;
+
     if (root->filter) {
 	if(filter_search_ext(root->filter, buffer, length, &info) == -1) {
 	    /*  for safety always scan last maxpatlen bytes */
@@ -103,13 +106,28 @@ static inline int matcher_run(const struct cli_matcher *root,
     } else {
 	PERF_LOG_FILTER(0, length, root->type);
     }
+
+    orig_length = length;
+    orig_buffer = buffer;
+    orig_offset = offset;
     length -= pos;
     buffer += pos;
     offset += pos;
-    if (root->ac_only || PERF_LOG_TRIES(0,1, length) || (ret = cli_bm_scanbuff(buffer, length, virname, NULL, root, offset, map, offdata)) != CL_VIRUS) {
-	PERF_LOG_TRIES(acmode, 0, length);
-	ret = cli_ac_scanbuff(buffer, length, virname, NULL, NULL, root, mdata, offset, ftype, ftoffset, acmode, NULL);
+    if (!root->ac_only) {
+	PERF_LOG_TRIES(0, 1, length);
+	if (root->bm_offmode) {
+	    /* Don't use prefiltering for BM offset mode, since BM keeps tracks
+	     * of offsets itself, and doesn't work if we skip chunks of input
+	     * data */
+	    ret = cli_bm_scanbuff(orig_buffer, orig_length, virname, NULL, root, orig_offset, map, offdata);
+	} else {
+	    ret = cli_bm_scanbuff(buffer, length, virname, NULL, root, offset, map, offdata);
+	}
+	if (ret == CL_VIRUS)
+	    return ret;
     }
+    PERF_LOG_TRIES(acmode, 0, length);
+    ret = cli_ac_scanbuff(buffer, length, virname, NULL, NULL, root, mdata, offset, ftype, ftoffset, acmode, NULL);
     return ret;
 }
 
@@ -143,7 +161,7 @@ int cli_scanbuff(const unsigned char *buffer, uint32_t length, uint32_t offset, 
 	if(!acdata && (ret = cli_ac_initdata(&mdata, troot->ac_partsigs, troot->ac_lsigs, troot->ac_reloff_num, CLI_DEFAULT_AC_TRACKLEN)))
 	    return ret;
 
-	ret = matcher_run(troot, buffer, length, virname, acdata ? (acdata[0]): (&mdata), offset, ftype, NULL, AC_SCAN_VIR, NULL, NULL);
+	ret = matcher_run(troot, buffer, length, virname, acdata ? (acdata[0]): (&mdata), offset, ftype, NULL, AC_SCAN_VIR, *ctx->fmap, NULL);
 
 	if(!acdata)
 	    cli_ac_freedata(&mdata);
@@ -155,7 +173,7 @@ int cli_scanbuff(const unsigned char *buffer, uint32_t length, uint32_t offset, 
     if(!acdata && (ret = cli_ac_initdata(&mdata, groot->ac_partsigs, groot->ac_lsigs, groot->ac_reloff_num, CLI_DEFAULT_AC_TRACKLEN)))
 	return ret;
 
-    ret = matcher_run(groot, buffer, length, virname, acdata ? (acdata[1]): (&mdata), offset, ftype, NULL, AC_SCAN_VIR, NULL, NULL);
+    ret = matcher_run(groot, buffer, length, virname, acdata ? (acdata[1]): (&mdata), offset, ftype, NULL, AC_SCAN_VIR, *ctx->fmap, NULL);
 
     if(!acdata)
 	cli_ac_freedata(&mdata);
@@ -489,8 +507,7 @@ int cli_fmap_scandesc(cli_ctx *ctx, cli_file_t ftype, uint8_t ftonly, struct cli
 	}
 
 	if(!ftonly) {
-	    if(groot->ac_only || (ret = cli_bm_scanbuff(buff, bytes, ctx->virname, NULL, groot, offset, map, NULL)) != CL_VIRUS)
-		ret = cli_ac_scanbuff(buff, bytes, ctx->virname, NULL, NULL, groot, &gdata, offset, ftype, ftoffset, acmode, NULL);
+	    ret = matcher_run(groot, buff, bytes, ctx->virname, &gdata, offset, ftype, ftoffset, acmode, map, NULL);
 	    if(ret == CL_VIRUS) {
 		cli_ac_freedata(&gdata);
 		if(troot) {
