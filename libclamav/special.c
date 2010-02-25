@@ -358,12 +358,12 @@ static inline int swizz_j48(const uint16_t n[])
 {
 	cli_dbgmsg("swizz_j48: %u, %u, %u\n",n[0],n[1],n[2]);
 	/* rules based on J48 tree */
-	if (n[0] <= 945 || !n[1])
+	if (n[0] <= 961 || !n[1])
 		return 0;
 	if (n[0] <= 1006)
 		return (n[2] > 0 && n[2] <= 6);
 	else
-		return n[1] <= 10;
+		return n[1] <= 10 && n[2];
 }
 
 void cli_detect_swizz_str(const unsigned char *str, uint32_t len, struct swizz_stats *stats, int blob)
@@ -429,7 +429,7 @@ void cli_detect_swizz_str(const unsigned char *str, uint32_t len, struct swizz_s
 		ngram_cnts[i] = (v<<10)/all;
 	}
 	ret = swizz_j48(ngram_cnts) ? CL_VIRUS : CL_CLEAN;
-	if (!words) ret = CL_CLEAN;
+	if (words < 3) ret = CL_CLEAN;
 	cli_dbgmsg("cli_detect_swizz_str: %s, %u words\n", ret == CL_VIRUS ? "suspicious" : "ok", words);
 	if (ret == CL_VIRUS) {
 		stats->suspicious += j;
@@ -488,10 +488,13 @@ int cli_detect_swizz(struct swizz_stats *stats)
 			uint32_t v = gn[i];
 			gn[i] = (v<<15)/all;
 			if (cli_debug_flag)
-			cli_dbgmsg("%lu, ", (unsigned long)gn[i]);
+			    fprintf(stderr, "%lu, ", (unsigned long)gn[i]);
 		}
 		global_swizz = swizz_j48_global(gn) ? CL_VIRUS : CL_CLEAN;
-		cli_dbgmsg("\ncli_detect_swizz: global: %s\n", global_swizz ? "suspicious" : "clean");
+		if (cli_debug_flag) {
+		    fprintf(stderr, "\n");
+		    cli_dbgmsg("cli_detect_swizz: global: %s\n", global_swizz ? "suspicious" : "clean");
+		}
 	}
 
 	if (stats->errors > stats->entries || stats->errors >= SWIZZ_MAXERRORS) {
