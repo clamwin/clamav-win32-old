@@ -1,3 +1,36 @@
+Sat Mar  6 03:58:16 CET 2010 (acab)
+-----------------------------------
+ * clamd/scanner.c: fix logg output, patch from Mark Pizzolato
+
+Fri Mar  5 22:16:45 CET 2010 (acab)
+-----------------------------------
+ * libclamav: don't cache clean results due to EMAX - final fix for bb#1856
+
+Fri Mar  5 22:01:20 CET 2010 (tk)
+---------------------------------
+ * libclamav: fix scanning of utf16 data (bb#1853)
+
+Fri Mar  5 21:14:12 CET 2010 (tk)
+---------------------------------
+ * libclamav/matcher-bm.c: properly handle scan boundaries in
+			   offset mode (bb#1840)
+
+Fri Mar  5 19:11:25 CET 2010 (tk)
+---------------------------------
+ * libclamav: fix cl_cvdparse() leak (bb#1859)
+
+Thu Mar  4 17:33:18 CET 2010 (tk)
+---------------------------------
+ * libclamav/matcher-bm.c: fix array check (bb#1840)
+
+Thu Mar  4 15:32:40 CET 2010 (tk)
+---------------------------------
+ * libclamav/scanners.c: set container type in cli_scanraw() (bb#1842)
+
+Thu Mar  4 14:41:39 CET 2010 (tk)
+---------------------------------
+ * libclamav/matcher-bm.c: only sort correct offsets (bb#1840)
+
 Thu Feb 25 17:20:27 CET 2010 (tk)
 ---------------------------------
  * docs: update signatures.pdf

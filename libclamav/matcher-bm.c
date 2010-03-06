@@ -184,6 +184,8 @@ int cli_bm_initoff(const struct cli_matcher *root, struct cli_bm_off *data, fmap
 	patt = root->bm_pattab[i];
 	if(patt->offdata[0] == CLI_OFF_ABSOLUTE) {
 	    data->offtab[data->cnt] = patt->offset_min + patt->prefix_length;
+	    if(data->offtab[data->cnt] >= map->len)
+		continue;
 	    data->cnt++;
 	} else if((ret = cli_caloff(NULL, &info, map, root->type, patt->offdata, &data->offset[patt->offset_min], NULL))) {
 	    cli_errmsg("cli_bm_initoff: Can't calculate relative offset in signature for %s\n", patt->virname);
@@ -193,8 +195,10 @@ int cli_bm_initoff(const struct cli_matcher *root, struct cli_bm_off *data, fmap
 	    free(data->offset);
 	    return ret;
 	} else if((data->offset[patt->offset_min] != CLI_OFF_NONE) && (data->offset[patt->offset_min] + patt->length <= info.fsize)) {
-	    if(!data->cnt || (data->offset[patt->offset_min] != data->offtab[data->cnt - 1])) {
+	    if(!data->cnt || (data->offset[patt->offset_min] + patt->prefix_length != data->offtab[data->cnt - 1])) {
 		data->offtab[data->cnt] = data->offset[patt->offset_min] + patt->prefix_length;
+		if(data->offtab[data->cnt] >= map->len)
+		    continue;
 		data->cnt++;
 	    }
 	}
@@ -265,7 +269,12 @@ int cli_bm_scanbuff(const unsigned char *buffer, uint32_t length, const char **v
     memset(&info, 0, sizeof(info));
     i = BM_MIN_LENGTH - BM_BLOCK_SIZE;
     if(offdata) {
-	if(offdata->pos == offdata->cnt)
+	if(!offdata->cnt)
+	    return CL_CLEAN;
+	for(; offdata->pos && offdata->offtab[offdata->pos] > offset; offdata->pos--);
+	if(offdata->offtab[offdata->pos] < offset)
+	    offdata->pos++;
+	if(offdata->pos >= offdata->cnt)
 	    return CL_CLEAN;
 	i += offdata->offtab[offdata->pos] - offset;
     }

@@ -92,7 +92,8 @@ pthread_mutex_t fmap_mutex = PTHREAD_MUTEX_INITIALIZER;
 ssize_t pread(int fd, void *buf, size_t count, off_t offset);
 
 fmap_t *fmap(int fd, off_t offset, size_t len) {
-    unsigned int pages, mapsz, hdrsz, dumb = 1;
+    unsigned int pages, mapsz, hdrsz;
+    unsigned short dumb = 1;
     int pgsz = cli_getpagesize();
     struct stat st;
     fmap_t *m;
@@ -148,6 +149,7 @@ fmap_t *fmap(int fd, off_t offset, size_t len) {
     m->hdrsz = hdrsz;
     m->pgsz = pgsz;
     m->paged = 0;
+    m->dont_cache_flag = 0;
     return m;
 }
 
@@ -184,7 +186,7 @@ static void fmap_aging(fmap_t *m) {
 	}
 	if(avail) { /* at least one page is paged and not locked */
 	    for(i=0; i<avail; i++) {
-		char *pptr = (char *)m + i * m->pgsz + m->hdrsz;
+		char *pptr = (char *)m + freeme[i] * m->pgsz + m->hdrsz;
 		/* we mark the page as seen */
 		fmap_bitmap[freeme[i]] = FM_MASK_SEEN;
 		/* and we mmap the page over so the kernel knows there's nothing good in there */
@@ -494,7 +496,8 @@ void *fmap_gets(fmap_t *m, char *dst, size_t *at, size_t max_len) {
 /* vvvvv WIN32 STUFF BELOW vvvvv */
 
 fmap_t *fmap(int fd, off_t offset, size_t len) { /* WIN32 */
-    unsigned int pages, mapsz, hdrsz, dumb = 1;
+    unsigned int pages, mapsz, hdrsz;
+    unsigned short dumb = 1;
     int pgsz = cli_getpagesize();
     struct stat st;
     fmap_t *m;
@@ -549,6 +552,7 @@ fmap_t *fmap(int fd, off_t offset, size_t len) { /* WIN32 */
     m->hdrsz = hdrsz;
     m->pgsz = pgsz;
     m->paged = 0;
+    m->dont_cache_flag = 0;
     return m;
 }
 
