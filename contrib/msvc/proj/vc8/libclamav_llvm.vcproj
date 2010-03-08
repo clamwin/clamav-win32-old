@@ -801,6 +801,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\CodeGen\MachineCSE.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\CodeGen\MachineDominators.cpp"
 				>
 			</File>
@@ -1209,6 +1213,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\MC\TargetAsmBackend.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Target\TargetData.cpp"
 				>
 			</File>
@@ -1234,6 +1242,10 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Target\TargetLoweringObjectFile.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\CodeGen\TargetLoweringObjectFileImpl.cpp"
 				>
 			</File>
 			<File
@@ -1330,6 +1342,10 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\CodeGen\VirtRegRewriter.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Target\X86\X86AsmBackend.cpp"
 				>
 			</File>
 			<File
