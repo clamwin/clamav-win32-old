@@ -256,24 +256,29 @@ static always_inline struct stack_entry *pop_stack(struct stack *stack,
     TRACE_W(x, p, PSIZE*8);\
     *(void**)&values[p] = x
 
-#define READ1(x, p) CHECK_GT(func->numBytes, p);\
-    x = (*(uint8_t*)&values[p])&1;\
+#define uint_type(n) uint##n##_t
+#define READNfrom(maxBytes, from, x, n, p)\
+    CHECK_GT((maxBytes), (p)+(n/8)-1);\
+    x = *(uint_type(n)*)&(from)[(p)];\
     TRACE_R(x)
-#define READ8(x, p) CHECK_GT(func->numBytes, p);\
-    x = *(uint8_t*)&values[p];\
-    TRACE_R(x)
-#define READ16(x, p) CHECK_GT(func->numBytes, p+1);\
-    CHECK_EQ((p)&1, 0);\
-    x = *(uint16_t*)&values[p];\
-    TRACE_R(x)
-#define READ32(x, p) CHECK_GT(func->numBytes, p+3);\
-    CHECK_EQ((p)&3, 0);\
-    x = *(uint32_t*)&values[p];\
-    TRACE_R(x)
-#define READ64(x, p) CHECK_GT(func->numBytes, p+7);\
-    CHECK_EQ((p)&7, 0);\
-    x = *(uint64_t*)&values[p];\
-    TRACE_R(x)
+
+#define READN(x, n, p)\
+ do {\
+     if (p&0x80000000) {\
+	 uint32_t pg = p&0x7fffffff;\
+	 READNfrom(ctx->numGlobals, ctx->globals, x, n, p);\
+     } else {\
+	 READNfrom(func->numBytes, values, x, n, p);\
+     }\
+ } while (0)
+
+#define READ1(x, p) READN(x, 8, p);\
+    x = x&1
+#define READ8(x, p) READN(x, 8, p)
+#define READ16(x, p) READN(x, 16, p)
+#define READ32(x, p) READN(x, 32, p)
+#define READ64(x, p) READN(x, 64, p)
+
 #define PSIZE sizeof(void*)
 #define READP(x, p) CHECK_GT(func->numBytes, p+PSIZE-1);\
     CHECK_EQ((p)&(PSIZE-1), 0);\
@@ -786,6 +791,10 @@ int cli_vm_execute(const struct cli_bc *bc, struct cli_bc_ctx *ctx, const struct
 		READP(ptr, BINOP(0));
 		READ64(v, BINOP(1));
 		ptr->una_u64 = v;
+		break;
+	    }
+	    DEFINE_OP(OP_BC_ISBIGENDIAN) {
+		WRITE8(inst->dest, WORDS_BIGENDIAN);
 		break;
 	    }
 	    /* TODO: implement OP_BC_GEP1, OP_BC_GEP2, OP_BC_GEPN */

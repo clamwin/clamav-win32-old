@@ -77,7 +77,7 @@ TBLGENFILES=llvm/include/llvm/Intrinsics.gen X86GenRegisterInfo.h.inc X86GenRegi
     ARMGenAsmWriter.inc ARMGenDAGISel.inc ARMGenCallingConv.inc ARMGenSubtarget.inc
 
 BUILT_SOURCES=
-EXTRA_DIST=$(top_srcdir)/llvm llvmdejagnu.sh $(TBLGENFILES)
+EXTRA_DIST=$(top_srcdir)/llvm llvmcheck.sh $(TBLGENFILES)
 
 libllvmsystem_la_LDFLAGS=@THREAD_LIBS@
 libllvmsystem_la_LIBADD=
@@ -169,6 +169,7 @@ tblgen_SOURCES=\
   llvm/utils/TableGen/DAGISelMatcher.cpp\
   llvm/utils/TableGen/DAGISelMatcherEmitter.cpp\
   llvm/utils/TableGen/DAGISelMatcherGen.cpp\
+  llvm/utils/TableGen/DAGISelMatcherOpt.cpp\
   llvm/utils/TableGen/DisassemblerEmitter.cpp\
   llvm/utils/TableGen/EDEmitter.cpp\
   llvm/utils/TableGen/FastISelEmitter.cpp\
@@ -251,7 +252,7 @@ tblgen_SOURCES=\
 
 TBLGEN=$(top_builddir)/tblgen
 TBLGEN_V=$(AM_V_GEN)$(TBLGEN)
-TBLGEN_FLAGS=-I$(top_srcdir)/llvm/include -I$(top_srcdir)/llvm/lib/Target
+TBLGEN_FLAGS=-I$(top_srcdir)/llvm/include -I$(top_srcdir)/llvm/lib/Target -omit-comments
 
 llvm/include/llvm/Intrinsics.gen: llvm/include/llvm/Intrinsics.td $(TBLGEN)
 	$(TBLGEN_V) $(TBLGEN_FLAGS) -gen-intrinsic -o $@ $<
@@ -365,11 +366,12 @@ endif
 if BUILD_X86
 libllvmx86codegen_la_CPPFLAGS=$(LLVM_INCLUDES) $(LLVM_DEFS) -I$(top_builddir) -I$(top_srcdir)/llvm/lib/Target/X86
 libllvmx86codegen_la_SOURCES=\
-	llvm/lib/CodeGen/MachineModuleInfoImpls.cpp\
 	llvm/lib/MC/MCAsmInfoCOFF.cpp\
 	llvm/lib/MC/MCCodeEmitter.cpp\
+	llvm/lib/MC/TargetAsmBackend.cpp\
 	llvm/lib/Target/TargetELFWriterInfo.cpp\
 	llvm/lib/Target/X86/TargetInfo/X86TargetInfo.cpp\
+	llvm/lib/Target/X86/X86AsmBackend.cpp\
 	llvm/lib/Target/X86/X86COFFMachineModuleInfo.cpp\
 	llvm/lib/Target/X86/X86CodeEmitter.cpp\
 	llvm/lib/Target/X86/X86ELFWriterInfo.cpp\
@@ -474,7 +476,6 @@ libllvmjit_la_SOURCES=\
 	llvm/lib/MC/MCExpr.cpp\
 	llvm/lib/MC/MCSection.cpp\
 	llvm/lib/MC/MCSectionELF.cpp\
-	llvm/lib/MC/MCSectionMachO.cpp\
 	llvm/lib/MC/MCSymbol.cpp\
 	llvm/lib/Support/APFloat.cpp\
 	llvm/lib/Support/APInt.cpp\
@@ -578,9 +579,11 @@ libllvmcodegen_la_SOURCES=\
 	llvm/lib/CodeGen/LiveStackAnalysis.cpp\
 	llvm/lib/CodeGen/LiveVariables.cpp\
 	llvm/lib/CodeGen/LowerSubregs.cpp\
+	llvm/lib/CodeGen/MachineCSE.cpp\
 	llvm/lib/CodeGen/MachineDominators.cpp\
 	llvm/lib/CodeGen/MachineLICM.cpp\
 	llvm/lib/CodeGen/MachineLoopInfo.cpp\
+	llvm/lib/CodeGen/MachineModuleInfoImpls.cpp\
 	llvm/lib/CodeGen/MachinePassRegistry.cpp\
 	llvm/lib/CodeGen/MachineSSAUpdater.cpp\
 	llvm/lib/CodeGen/MachineSink.cpp\
@@ -630,6 +633,7 @@ libllvmcodegen_la_SOURCES=\
 	llvm/lib/CodeGen/StackSlotColoring.cpp\
 	llvm/lib/CodeGen/StrongPHIElimination.cpp\
 	llvm/lib/CodeGen/TailDuplication.cpp\
+	llvm/lib/CodeGen/TargetLoweringObjectFileImpl.cpp\
 	llvm/lib/CodeGen/TwoAddressInstructionPass.cpp\
 	llvm/lib/CodeGen/UnreachableBlockElim.cpp\
 	llvm/lib/CodeGen/VirtRegMap.cpp\
@@ -640,6 +644,7 @@ libllvmcodegen_la_SOURCES=\
 	llvm/lib/MC/MCInst.cpp\
 	llvm/lib/MC/MCMachOStreamer.cpp\
 	llvm/lib/MC/MCNullStreamer.cpp\
+	llvm/lib/MC/MCSectionMachO.cpp\
 	llvm/lib/MC/MCStreamer.cpp\
 	llvm/lib/Target/TargetFrameInfo.cpp\
 	llvm/lib/Target/TargetSubtarget.cpp\
@@ -767,14 +772,14 @@ FileCheck_SOURCES=llvm/utils/FileCheck/FileCheck.cpp
 
 check_LTLIBRARIES=libllvmbitreader.la libllvmsupport.la libllvmfullcodegen.la libllvmasmprinter.la libllvmbitwriter.la libllvmasmparser.la libgoogletest.la libllvminterpreter.la
 check_PROGRAMS=count not lli llc llvm-as llvm-dis llvmunittest_ADT llvmunittest_Support llvmunittest_VMCore llvmunittest_ExecutionEngine llvmunittest_JIT FileCheck
-check_SCRIPTS=llvmdejagnu.sh
+check_SCRIPTS=llvmcheck.sh
 TESTS_ENVIRONMENT=export GMAKE=@GMAKE@;
 TESTS=llvmunittest_ADT llvmunittest_Support llvmunittest_VMCore llvmunittest_ExecutionEngine llvmunittest_JIT
 # Disable LLVM make check for now, there are some things to fix first:
 #   - check python version (2.4 doesn't work, needs 2.5+)
 #   - run llvm's make check after clamav's was run
 #   - have a way to run only clamav's make check and not llvm's
-#@ifGNUmake@ TESTS+=llvmdejagnu.sh
+@ifGNUmake@ TESTS+=llvmcheck.sh
 
 libllvmasmprinter_la_CPPFLAGS=$(LLVM_INCLUDES) $(LLVM_DEFS) -I$(top_srcdir)/llvm/lib/Target/X86 \
 			      -I$(top_srcdir)/llvm/lib/Target/PowerPC -I$(top_srcdir)/llvm/lib/Target/ARM
@@ -806,7 +811,6 @@ libllvmfullcodegen_la_SOURCES=\
 	llvm/lib/CodeGen/GCMetadataPrinter.cpp\
 	llvm/lib/CodeGen/IfConversion.cpp\
 	llvm/lib/CodeGen/IntrinsicLowering.cpp\
-	llvm/lib/CodeGen/MachineModuleInfoImpls.cpp\
 	llvm/lib/CodeGen/OcamlGC.cpp\
 	llvm/lib/CodeGen/RegAllocLocal.cpp\
 	llvm/lib/CodeGen/RegAllocPBQP.cpp\
