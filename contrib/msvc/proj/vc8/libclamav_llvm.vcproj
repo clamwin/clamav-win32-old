@@ -457,10 +457,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\..\libclamav\c++\ClamBCModule.h"
-				>
-			</File>
-			<File
 				RelativePath="..\..\..\..\libclamav\c++\ClamBCRTChecks.cpp"
 				>
 			</File>

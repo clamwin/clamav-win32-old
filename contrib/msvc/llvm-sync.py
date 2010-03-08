@@ -51,6 +51,7 @@ def parse_makefile_am(path):
         if skip_lib(key): continue
         values = value.split()
         for source in values:
+            if source.endswith('.h'): continue
             sources.add(source)
     sources.remove('llvm/config.status')
     return sorted(sources)
