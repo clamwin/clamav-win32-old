@@ -3,19 +3,19 @@ include common.mak
 all: libclamav.dll $(CLAMAV_LIBS) $(CLAMAV_PROGRAMS) $(CLAMAV_TOOLS)
 
 libclamav.dll $(CLAMAV_LIBS):
-	make -f libs.mak $@
+	$(MAKE) -f libs.mak $@
 
 $(CLAMAV_PROGRAMS) $(CLAMAV_TOOLS):
-	make -f tools.mak $@
+	$(MAKE) -f tools.mak $@
 
 llvm:
-	make -f libs.mak llvm
+	$(MAKE) -f libs.mak llvm
 
 llvm-clean:
-	make -f libs.mak llvm-clean
+	$(MAKE) -f libs.mak llvm-clean
 
 clean:
-	make -f libs.mak clean
-	make -f tools.mak clean
+	$(MAKE) -f libs.mak clean
+	$(MAKE) -f tools.mak clean
 
 .PHONY: clean
