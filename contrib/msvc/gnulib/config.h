@@ -36,6 +36,24 @@
 /* Define to 1 if using `alloca.c'. */
 /* #undef C_ALLOCA */
 
+/* Define to 1 when using the gnulib module ftruncate. */
+#define GNULIB_FTRUNCATE 1
+
+/* Define to 1 when using the gnulib module memchr. */
+#define GNULIB_MEMCHR 1
+
+/* Define to 1 when using the gnulib module snprintf. */
+#define GNULIB_SNPRINTF 1
+
+/* Define to 1 when using the gnulib module strptime. */
+#define GNULIB_STRPTIME 1
+
+/* Define to 1 when using the gnulib module strtok_r. */
+#define GNULIB_STRTOK_R 1
+
+/* Define to 1 when using the gnulib module vsnprintf. */
+#define GNULIB_VSNPRINTF 1
+
 /* Define to 1 if you have 'alloca' after including <alloca.h>, a header that
    may be supplied by this distribution. */
 #define HAVE_ALLOCA 1
@@ -185,6 +203,9 @@
 
 /* Define to 1 if getpagesize is declared even after undefining macros. */
 /* #undef HAVE_RAW_DECL_GETPAGESIZE */
+
+/* Define to 1 if gettimeofday is declared even after undefining macros. */
+/* #undef HAVE_RAW_DECL_GETTIMEOFDAY */
 
 /* Define to 1 if getusershell is declared even after undefining macros. */
 /* #undef HAVE_RAW_DECL_GETUSERSHELL */
@@ -355,11 +376,11 @@
 #define HAVE_STDDEF_H 1
 
 /* Define to 1 if you have the <stdint.h> header file. */
-#undef HAVE_STDINT_H
+/* #undef HAVE_STDINT_H */
 
 /* Define if <stdint.h> exists, doesn't clash with <sys/types.h>, and declares
    uintmax_t. */
-#undef HAVE_STDINT_H_WITH_UINTMAX
+/* #undef HAVE_STDINT_H_WITH_UINTMAX */
 
 /* Define to 1 if you have the <stdio.h> header file. */
 #define HAVE_STDIO_H 1
@@ -581,7 +602,7 @@
 /* Define to the equivalent of the C99 'restrict' keyword, or to
    nothing if this is not supported.  Do not define if restrict is
    supported directly.  */
-#define restrict 
+#define restrict /**/
 /* Work around a bug in Sun C++: it does not support _Restrict, even
    though the corresponding Sun C compiler does, which causes
    "#define restrict _Restrict" in the previous line.  Perhaps some future
