@@ -456,6 +456,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\..\libclamav\filtering.c"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\..\libclamav\fmap.c"
 				>
 			</File>
@@ -1018,6 +1022,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\..\libclamav\filtering.h"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\..\libclamav\fmap.h"
 				>
 			</File>
@@ -1319,10 +1327,6 @@
 					>
 				</File>
 				<File
-					RelativePath="..\..\..\..\libclamav\filtering.h"
-					>
-				</File>
-				<File
 					RelativePath="..\..\include\inttypes.h"
 					>
 				</File>
@@ -1380,10 +1384,6 @@
 				</File>
 				<File
 					RelativePath="..\..\src\dllmain\dllmain.c"
-					>
-				</File>
-				<File
-					RelativePath="..\..\..\..\libclamav\filtering.c"
 					>
 				</File>
 				<File
