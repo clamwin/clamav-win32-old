@@ -3475,9 +3475,9 @@ cat >>confdefs.h <<_ACEOF
 _ACEOF
 
 
-LC_CURRENT=6
-LC_REVISION=5
-LC_AGE=0
+LC_CURRENT=7
+LC_REVISION=0
+LC_AGE=1
 LIBCLAMAV_VERSION="$LC_CURRENT":"$LC_REVISION":"$LC_AGE"
 
 
@@ -16444,6 +16444,7 @@ fi
 
 
 if test "$enable_debug" = "yes"; then
+  VERSION_SUFFIX="$VERSION_SUFFIX-debug"
 
 $as_echo "#define CL_DEBUG 1" >>confdefs.h
 

@@ -1871,6 +1871,8 @@ static int cli_scanraw(cli_ctx *ctx, cli_file_t type, uint8_t typercg, cli_file_
 
 static void emax_reached(cli_ctx *ctx) {
     fmap_t **ctx_fmap = ctx->fmap;
+    if (!ctx_fmap)
+	return;
     while(*ctx_fmap) {
 	fmap_t *map = *ctx_fmap;
 	map->dont_cache_flag = 1;
@@ -2364,6 +2366,7 @@ int cli_found_possibly_unwanted(cli_ctx* ctx)
 	} else {
 		cli_warnmsg("cli_found_possibly_unwanted called, but virname is not set\n");
 	}
+	emax_reached(ctx);
 	return CL_CLEAN;
 }
 
