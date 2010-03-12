@@ -6,3 +6,5 @@
 Output directories for vc8/9:
 $(SolutionDir)$(ConfigurationName)\$(PlatformName)
 $(SolutionDir)$(ConfigurationName)\$(PlatformName)\$(ProjectName)
+
+keep-mbox: use ctx container
