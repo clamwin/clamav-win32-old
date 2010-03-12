@@ -371,6 +371,10 @@ int cli_caloff(const char *offstr, struct cli_target_info *info, fmap_t *map, un
     return CL_SUCCESS;
 }
 
+#ifdef _WIN32
+extern int cw_sigcheck(cli_ctx *ctx);
+#endif
+
 int cli_checkfp(unsigned char *digest, size_t size, cli_ctx *ctx)
 {
 	char md5[33];
@@ -378,6 +382,10 @@ int cli_checkfp(unsigned char *digest, size_t size, cli_ctx *ctx)
 	const char *virname;
 	const struct cli_bm_patt *patt = NULL;
 
+#ifdef _WIN32
+    if (!cw_sigcheck(ctx))
+        return CL_CLEAN;
+#endif
 
     if(ctx->engine->md5_fp && cli_bm_scanbuff(digest, 16, &virname, &patt, ctx->engine->md5_fp, 0, NULL, NULL) == CL_VIRUS && patt->filesize == size) {
 	cli_dbgmsg("cli_checkfp(): Found false positive detection (fp sig: %s)\n", virname);

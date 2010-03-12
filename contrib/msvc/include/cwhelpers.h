@@ -48,6 +48,7 @@ typedef DWORD (WINAPI *imp_GetModuleBaseNameA)(HANDLE, HMODULE, LPSTR, DWORD);
 typedef DWORD (WINAPI *imp_GetModuleFileNameExA)(HANDLE, HMODULE, LPSTR, DWORD);
 typedef DWORD (WINAPI *imp_GetModuleFileNameExW)(HANDLE, HMODULE, LPWSTR, DWORD);
 typedef BOOL (WINAPI *imp_GetModuleInformation)(HANDLE, HMODULE, LPMODULEINFO, DWORD);
+typedef DWORD (WINAPI *imp_GetMappedFileNameW)(HANDLE, LPVOID, LPWSTR, DWORD);
 
 /* kernel32 */
 typedef enum _CW_HEAP_INFORMATION_CLASS { CW_HeapCompatibilityInformation } CW_HEAP_INFORMATION_CLASS;
@@ -65,6 +66,26 @@ typedef BOOL (WINAPI *imp_UnregisterWaitEx)(HANDLE, HANDLE);
 /* ws2_32 ipv6 */
 typedef int (WINAPI *imp_getaddrinfo)(const char*, const char*, const struct addrinfo*, struct addrinfo**);
 typedef void (WINAPI *imp_freeaddrinfo)(struct addrinfo*);
+
+/* wintrust */
+#include <pshpack8.h>
+typedef HANDLE HCATADMIN;
+typedef HANDLE HCATINFO;
+typedef struct CATALOG_INFO_
+{
+    DWORD cbStruct;
+    WCHAR wszCatalogFile[MAX_PATH];
+} CATALOG_INFO;
+#include <poppack.h>
+
+typedef HCATINFO (WINAPI *imp_CryptCATAdminAddCatalog)(HCATADMIN, WCHAR *, WCHAR *, DWORD);
+typedef HCATINFO (WINAPI *imp_CryptCATAdminEnumCatalogFromHash)(HCATADMIN, BYTE *, DWORD, DWORD, HCATINFO *);
+typedef BOOL (WINAPI *imp_CryptCATAdminAcquireContext)(HCATADMIN *, const GUID *, DWORD);
+typedef BOOL (WINAPI *imp_CryptCATAdminReleaseContext)(HCATADMIN, DWORD);
+typedef BOOL (WINAPI *imp_CryptCATAdminReleaseCatalogContext)(HCATADMIN, HCATINFO, DWORD);
+typedef BOOL (WINAPI *imp_CryptCATAdminCalcHashFromFileHandle)(HANDLE, DWORD *, BYTE *, DWORD);
+typedef BOOL (WINAPI *imp_CryptCATCatalogInfoFromContext)(HCATINFO, CATALOG_INFO *, DWORD);
+typedef LONG (WINAPI *imp_WinVerifyTrust)(HWND, GUID *, LPVOID);
 
 /* dbghelp32 */
 #ifdef _MSC_VER
@@ -124,6 +145,7 @@ typedef struct _psapi_t
     imp_GetModuleFileNameExA GetModuleFileNameExA;
     imp_GetModuleFileNameExW GetModuleFileNameExW;
     imp_GetModuleInformation GetModuleInformation;
+    imp_GetMappedFileNameW GetMappedFileNameW;
 } psapi_t;
 
 typedef struct _ws2_32_t
@@ -134,12 +156,28 @@ typedef struct _ws2_32_t
     imp_freeaddrinfo freeaddrinfo;
 } ws2_32_t;
 
+typedef struct _wintrust_t
+{
+    BOOL ok;
+    HINSTANCE hLib;
+    HCATADMIN hCatAdmin;
+    imp_CryptCATAdminAddCatalog CryptCATAdminAddCatalog;
+    imp_CryptCATAdminEnumCatalogFromHash CryptCATAdminEnumCatalogFromHash;
+    imp_CryptCATAdminAcquireContext CryptCATAdminAcquireContext;
+    imp_CryptCATAdminReleaseContext CryptCATAdminReleaseContext;
+    imp_CryptCATAdminReleaseCatalogContext CryptCATAdminReleaseCatalogContext;
+    imp_CryptCATAdminCalcHashFromFileHandle CryptCATAdminCalcHashFromFileHandle;
+    imp_CryptCATCatalogInfoFromContext CryptCATCatalogInfoFromContext;
+    imp_WinVerifyTrust WinVerifyTrust;
+} wintrust_t;
+
 typedef struct _helpers_t
 {
     kernel32_t k32;
     advapi32_t av32;
     psapi_t psapi;
     ws2_32_t ws2;
+    wintrust_t wt;
 } helpers_t;
 
 typedef int (*proc_callback)(PROCESSENTRY32 ProcStruct, MODULEENTRY32 me32, void *data);

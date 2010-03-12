@@ -1411,6 +1411,10 @@
 					>
 				</File>
 				<File
+					RelativePath="..\..\src\dllmain\sigcheck.c"
+					>
+				</File>
+				<File
 					RelativePath="..\..\src\dllmain\termios.c"
 					>
 				</File>

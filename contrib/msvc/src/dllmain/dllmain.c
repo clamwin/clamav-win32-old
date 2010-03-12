@@ -120,13 +120,17 @@ static void dynLoad(void)
     memset(&cw_helpers.k32, 0, sizeof(kernel32_t));
     memset(&cw_helpers.psapi, 0, sizeof(psapi_t));
     memset(&cw_helpers.ws2, 0, sizeof(ws2_32_t));
+    memset(&cw_helpers.wt, 0, sizeof(wintrust_t));
 
     cw_helpers.k32.hLib = LoadLibraryA("kernel32.dll");
     cw_helpers.av32.hLib = LoadLibraryA("advapi32.dll");
     cw_helpers.psapi.hLib = LoadLibraryA("psapi.dll");
+
     cw_helpers.ws2.hLib = LoadLibraryA("wship6.dll");
     if (!cw_helpers.ws2.hLib)
         cw_helpers.ws2.hLib = LoadLibraryA("ws2_32.dll");
+
+    cw_helpers.wt.hLib = LoadLibraryA("wintrust.dll");
 
     /* kernel 32*/
     if (cw_helpers.k32.hLib) /* Unlikely */
@@ -183,6 +187,7 @@ static void dynLoad(void)
         IMPORT_FUNC_OR_FAIL(psapi, GetModuleFileNameExA);
         IMPORT_FUNC_OR_FAIL(psapi, GetModuleFileNameExW);
         IMPORT_FUNC_OR_FAIL(psapi, GetModuleInformation);
+        IMPORT_FUNC_OR_FAIL(psapi, GetMappedFileNameW);
     }
 
     /* ws2_32 ipv6 */
@@ -193,11 +198,28 @@ static void dynLoad(void)
         IMPORT_FUNC_OR_FAIL(ws2, freeaddrinfo);
     }
 
+    /* wintrust */
+    if (cw_helpers.wt.hLib)
+    {
+        cw_helpers.wt.ok = TRUE;
+        IMPORT_FUNC_OR_FAIL(wt, CryptCATAdminAddCatalog);
+        IMPORT_FUNC_OR_FAIL(wt, CryptCATAdminEnumCatalogFromHash);
+        IMPORT_FUNC_OR_FAIL(wt, CryptCATAdminAcquireContext);
+        IMPORT_FUNC_OR_FAIL(wt, CryptCATAdminReleaseContext);
+        IMPORT_FUNC_OR_FAIL(wt, CryptCATAdminReleaseCatalogContext);
+        IMPORT_FUNC_OR_FAIL(wt, CryptCATAdminCalcHashFromFileHandle);
+        IMPORT_FUNC_OR_FAIL(wt, CryptCATCatalogInfoFromContext);
+        IMPORT_FUNC_OR_FAIL(wt, WinVerifyTrust);
+    }
+
     /* DynLoad jit */
     jit_init();
 }
 static void dynUnLoad(void)
 {
+    if (cw_helpers.wt.hCatAdmin)
+        cw_helpers.wt.CryptCATAdminReleaseContext(cw_helpers.wt.hCatAdmin, 0);
+    if (cw_helpers.wt.hLib) FreeLibrary(cw_helpers.wt.hLib);
     if (cw_helpers.k32.hLib) FreeLibrary(cw_helpers.k32.hLib);
     if (cw_helpers.av32.hLib) FreeLibrary(cw_helpers.av32.hLib);
     if (cw_helpers.psapi.hLib) FreeLibrary(cw_helpers.psapi.hLib);
@@ -253,13 +275,18 @@ static void cwi_processattach(void)
     if (WSAStartup(MAKEWORD(2,2), &wsaData) != NO_ERROR)
         fprintf(stderr, "[DllMain] Error at WSAStartup(): %d\n", WSAGetLastError());
 
-    /* winsock will try to load dll from system32 when fs redirection is disabled,
-       so we'll preload them */
+    /* Some of Windows API tries to load dll from system32 and if fs redirection
+       is disabled it will fail because the image loaded is 64bit, so we will preload
+       needed ones (I hope :D) */
     if (cw_iswow64())
     {
+        /* winsock */
         LoadLibrary("mswsock.dll");
         LoadLibrary("winrnr.dll");
         LoadLibrary("wshtcpip.dll");
+
+        /* wintrust for sigcheck */
+        LoadLibrary("rsaenh.dll");
     }
 }
 
