@@ -501,6 +501,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Transforms\Scalar\DCE.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\CodeGen\DeadMachineInstructionElim.cpp"
 				>
 			</File>
