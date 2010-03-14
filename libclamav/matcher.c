@@ -372,7 +372,7 @@ int cli_caloff(const char *offstr, struct cli_target_info *info, fmap_t *map, un
 }
 
 #ifdef _WIN32
-extern int cw_sigcheck(cli_ctx *ctx);
+extern int cw_sigcheck(cli_ctx *ctx, int checkfp);
 #endif
 
 int cli_checkfp(unsigned char *digest, size_t size, cli_ctx *ctx)
@@ -383,7 +383,7 @@ int cli_checkfp(unsigned char *digest, size_t size, cli_ctx *ctx)
 	const struct cli_bm_patt *patt = NULL;
 
 #ifdef _WIN32
-    if (!cw_sigcheck(ctx))
+    if (!cw_sigcheck(ctx, 1))
         return CL_CLEAN;
 #endif
 

@@ -68,6 +68,7 @@ typedef struct _WINTRUST_DATA
 #define WTD_UI_ALL 1
 #define WTD_UI_NONE 2
 #define WTD_STATEACTION_VERIFY 1
+#define WTD_STATEACTION_CLOSE 2
 #define WTD_CHOICE_CATALOG 2
 
 static int cw_getfnfromhandle(void *mem, wchar_t *filename)
@@ -113,24 +114,25 @@ static int cw_sig_init(void)
     return 0;
 }
 
-int cw_sigcheck(cli_ctx *ctx)
+int cw_sigcheck(cli_ctx *ctx, int checkfp)
 {
     fmap_t *map = *ctx->fmap;
-    int i;
-    LONG lstatus = 1;
+    /* int i; */
+    LONG lstatus;
+    LONG lsigned = TRUST_E_NOSIGNATURE;
     HCATINFO *phCatInfo = NULL;
     CATALOG_INFO sCatInfo;
     WINTRUST_CATALOG_INFO wtci;
     WINTRUST_DATA wtd;
     BYTE bHash[20];
-    wchar_t mTag[41];
+    /* wchar_t mTag[41]; */
     wchar_t filename[MAX_PATH + 1];
     GUID pgActionID = WINTRUST_ACTION_GENERIC_VERIFY_V2;
     DWORD cbHash = sizeof(bHash);
 
     /* CryptCATAdminAcquireContext() in dllmain hangs */
     if (!cw_helpers.wt.hCatAdmin && cw_sig_init())
-        return lstatus;
+        return TRUST_E_NOSIGNATURE;
 
     while (cw_helpers.wt.hCatAdmin)
     {
@@ -146,9 +148,11 @@ int cw_sigcheck(cli_ctx *ctx)
             break;
         }
 
+        /*
         for (i = 0; i < sizeof(bHash); i++)
             _snwprintf(&mTag[i * 2], 2, L"%02X", bHash[i]);
         mTag[i * 2] = 0;
+        */
 
         memset(&sCatInfo, 0, sizeof(sCatInfo));
         sCatInfo.cbStruct = sizeof(sCatInfo);
@@ -156,7 +160,9 @@ int cw_sigcheck(cli_ctx *ctx)
         if (!(phCatInfo = cw_helpers.wt.CryptCATAdminEnumCatalogFromHash(cw_helpers.wt.hCatAdmin, bHash, cbHash, 0, NULL)))
             break;
 
-        if (!cw_helpers.wt.CryptCATCatalogInfoFromContext(phCatInfo, &sCatInfo, 0))
+        lstatus = cw_helpers.wt.CryptCATCatalogInfoFromContext(phCatInfo, &sCatInfo, 0);
+        cw_helpers.wt.CryptCATAdminReleaseCatalogContext(cw_helpers.wt.hCatAdmin, phCatInfo, 0);
+        if (!lstatus)
         {
             cli_errmsg("sigcheck: CryptCATCatalogInfoFromContext() failed\n");
             break;
@@ -166,7 +172,7 @@ int cw_sigcheck(cli_ctx *ctx)
         wtci.cbStruct = sizeof(wtci);
         wtci.cbCalculatedFileHash = sizeof(bHash);
         wtci.pbCalculatedFileHash = bHash;
-        wtci.pcwszMemberTag = mTag;
+        /* wtci.pcwszMemberTag = mTag; */
         wtci.pcwszCatalogFilePath = sCatInfo.wszCatalogFile;
         wtci.pcwszMemberFilePath = filename;
 
@@ -177,17 +183,20 @@ int cw_sigcheck(cli_ctx *ctx)
         wtd.dwUnionChoice = WTD_CHOICE_CATALOG;
         wtd.pCatalog = &wtci;
 
-        lstatus = cw_helpers.wt.WinVerifyTrust(NULL, &pgActionID, (LPVOID) &wtd);
+        lsigned = cw_helpers.wt.WinVerifyTrust(0, &pgActionID, (LPVOID) &wtd);
 
+        if (SUCCEEDED(lsigned))
+        {
+            wtd.dwStateAction = WTD_STATEACTION_CLOSE;
+            lstatus = cw_helpers.wt.WinVerifyTrust(0, &pgActionID, (LPVOID) &wtd);
+        }
         break;
     }
 
-    if (phCatInfo)
-        cw_helpers.wt.CryptCATAdminReleaseCatalogContext(cw_helpers.wt.hCatAdmin, phCatInfo, 0);
-
-    if (!lstatus)
+    if (checkfp && (lsigned == ERROR_SUCCESS))
         fwprintf(stderr, L"Microsoft Signed File detected as virus, "
         L"please submit \"%s\" "
         L"as false positive to http://www.clamav.net/sendvirus/\n", filename);
-    return lstatus;
+
+    return lsigned;
 }

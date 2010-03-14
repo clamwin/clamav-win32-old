@@ -1889,6 +1889,10 @@ static void emax_reached(cli_ctx *ctx) {
     return retcode;							\
     } while(0)
 
+#ifdef _WIN32
+extern int cw_sigcheck(cli_ctx *ctx, int checkfp);
+#endif
+
 int cli_magic_scandesc(int desc, cli_ctx *ctx)
 {
 	int ret = CL_CLEAN, ret2 = CL_CLEAN;
@@ -2250,7 +2254,19 @@ int cli_magic_scandesc(int desc, cli_ctx *ctx)
 	    typercg = 0;
 	}
     }
-
+#ifdef _WIN32
+#if 0
+    if (!cw_sigcheck(ctx, 0)) {
+        ctx->recursion--;
+        funmap(*ctx->fmap);
+        ctx->fmap--;
+        cli_bitset_free(ctx->hook_lsig_matches);
+        ctx->hook_lsig_matches = old_hook_lsig_matches;
+        cache_add(hash, hashed_size, ctx);
+        ret_from_magicscan(CL_CLEAN);
+    }
+#endif
+#endif
     /* CL_TYPE_HTML: raw HTML files are not scanned, unless safety measure activated via DCONF */
     if(type != CL_TYPE_IGNORED && (type != CL_TYPE_HTML || !(DCONF_DOC & DOC_CONF_HTML_SKIPRAW)) && !ctx->engine->sdb) {
 	if((ret2 = cli_scanraw(ctx, type, typercg, &dettype, hash)) == CL_VIRUS) {
