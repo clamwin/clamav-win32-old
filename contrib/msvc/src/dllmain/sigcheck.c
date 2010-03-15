@@ -103,7 +103,6 @@ static int cw_getfnfromhandle(void *mem, wchar_t *filename)
 static int sigcheck(cli_ctx *ctx, int checkfp)
 {
     fmap_t *map = *ctx->fmap;
-    /* int i; */
     LONG lstatus;
     LONG lsigned = TRUST_E_NOSIGNATURE;
     HCATINFO *phCatInfo = NULL;
@@ -111,7 +110,10 @@ static int sigcheck(cli_ctx *ctx, int checkfp)
     WINTRUST_CATALOG_INFO wtci;
     WINTRUST_DATA wtd;
     BYTE bHash[20];
-    /* wchar_t mTag[41]; */
+    /*
+    int i;
+    wchar_t mTag[41];
+    */
     wchar_t filename[MAX_PATH + 1];
     GUID pgActionID = WINTRUST_ACTION_GENERIC_VERIFY_V2;
     DWORD cbHash = sizeof(bHash);
