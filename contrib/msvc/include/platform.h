@@ -91,12 +91,6 @@ extern int cw_getaddrinfo(const char *node, const char *service,
                           const struct addrinfo *hints, struct addrinfo **res);
 extern void cw_freeaddrinfo(struct addrinfo *res);
 
-#ifdef _MSC_VER
-extern void cw_scanning(const char *filename);
-#else
-#define cw_scanning(x)
-#endif
-
 #define S_IROTH S_IREAD
 #define S_ISLNK(x) (0)
 #define S_IRWXO S_IEXEC

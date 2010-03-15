@@ -602,7 +602,6 @@ int cw_scanfile(const char *filename, scanmem_data *scan_data)
     int ret = CL_CLEAN;
     const char *virname = NULL;
 
-    cw_scanning(filename);
     logg("*Scanning %s\n", filename);
 
     if ((fd = open(filename, O_RDONLY|O_BINARY)) == -1)

@@ -173,9 +173,6 @@ void scanfile(const char *filename, struct cl_engine *engine, const struct optst
 	}
 #endif
 
-#ifdef _WIN32
-    cw_scanning(filename);
-#endif
     logg("*Scanning %s\n", filename);
 
     if((fd = safe_open(filename, O_RDONLY|O_BINARY)) == -1) {

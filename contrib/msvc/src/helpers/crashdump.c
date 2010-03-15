@@ -21,14 +21,6 @@
 #include <platform.h>
 #include <osdeps.h>
 
-static char filescanned[MAX_PATH] = "N/A";
-
-void cw_scanning(const char *filename)
-{
-    strncpy(filescanned, filename, MAX_PATH - 1);
-    filescanned[MAX_PATH] = 0;
-}
-
 #ifdef _MSC_VER
 DWORD WINAPI CrashMiniDumpWriteDumpProc(LPVOID lpParam)
 {
@@ -58,12 +50,10 @@ DWORD WINAPI CrashMiniDumpWriteDumpProc(LPVOID lpParam)
     name[MAX_PATH - 1] = 0;
 
     fprintf(stderr, "*** ClamWinDumper ***\n"
-                    "*** %s Crashed while scanning:\n"
-                    " [ %s ]\n"
+                    "*** %s Crashed\n"
                     "    ExpCode   : 0x%8.8x\n"
                     "    ExpAddress: 0x%p\n",
                     name,
-                    filescanned,
                     pExPtrs->ExceptionRecord->ExceptionCode,
                     pExPtrs->ExceptionRecord->ExceptionAddress);
 
