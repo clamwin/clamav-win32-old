@@ -59,6 +59,7 @@ extern BOOL cw_fsredirection(BOOL value);
 extern void cw_registerservice(const char *name);
 extern int cw_installservice(const char *name, const char *dname, const char *desc);
 extern int cw_uninstallservice(const char *name, int verbose);
+extern int cw_init(void);
 
 /* gnulib entries */
 extern char *strtok_r(char *s, const char *delim, char **save_ptr);

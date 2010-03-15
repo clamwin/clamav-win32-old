@@ -271,6 +271,9 @@ int cl_init(unsigned int initoptions)
     if (lt_init() == 0) {
 	cli_rarload();
     }
+#ifdef _WIN32
+    cw_init();
+#endif
     gettimeofday(&tv, (struct timezone *) 0);
     srand(pid + tv.tv_usec*(pid+1) + clock());
     rc = bytecode_init();

@@ -100,21 +100,7 @@ static int cw_getfnfromhandle(void *mem, wchar_t *filename)
     return 0;
 }
 
-static int cw_sig_init(void)
-{
-    if (!(cw_helpers.wt.ok && cw_helpers.psapi.ok))
-        return 1;
-
-    if (!cw_helpers.wt.CryptCATAdminAcquireContext(&cw_helpers.wt.hCatAdmin, NULL, 0))
-    {
-        cli_errmsg("sigcheck: CryptCATAdminAcquireContext() failed\n");
-        return 1;
-    }
-
-    return 0;
-}
-
-int cw_sigcheck(cli_ctx *ctx, int checkfp)
+static int sigcheck(cli_ctx *ctx, int checkfp)
 {
     fmap_t *map = *ctx->fmap;
     /* int i; */
@@ -130,11 +116,7 @@ int cw_sigcheck(cli_ctx *ctx, int checkfp)
     GUID pgActionID = WINTRUST_ACTION_GENERIC_VERIFY_V2;
     DWORD cbHash = sizeof(bHash);
 
-    /* CryptCATAdminAcquireContext() in dllmain hangs */
-    if (!cw_helpers.wt.hCatAdmin && cw_sig_init())
-        return TRUST_E_NOSIGNATURE;
-
-    while (cw_helpers.wt.hCatAdmin)
+    while (ctx->container_type == CL_TYPE_ANY)
     {
         if (!cw_getfnfromhandle(map->data, filename))
         {
@@ -190,6 +172,7 @@ int cw_sigcheck(cli_ctx *ctx, int checkfp)
             wtd.dwStateAction = WTD_STATEACTION_CLOSE;
             lstatus = cw_helpers.wt.WinVerifyTrust(0, &pgActionID, (LPVOID) &wtd);
         }
+
         break;
     }
 
@@ -199,4 +182,32 @@ int cw_sigcheck(cli_ctx *ctx, int checkfp)
         L"as false positive to http://www.clamav.net/sendvirus/\n", filename);
 
     return lsigned;
+}
+
+static int sigcheck_dummy(cli_ctx *ctx, int checkfp)
+{
+    return TRUST_E_NOSIGNATURE;
+}
+
+typedef int (__cdecl *pfn_sigcheck)(cli_ctx *ctx, int checkfp);
+static pfn_sigcheck pf_sigcheck = sigcheck_dummy;
+
+int cw_sigcheck(cli_ctx *ctx, int checkfp)
+{
+    return pf_sigcheck(ctx, checkfp);
+}
+
+int cw_sig_init(void)
+{
+    if (!(cw_helpers.wt.ok && cw_helpers.psapi.ok))
+        return 1;
+
+    if (!cw_helpers.wt.CryptCATAdminAcquireContext(&cw_helpers.wt.hCatAdmin, NULL, 0))
+    {
+        cli_errmsg("sigcheck: CryptCATAdminAcquireContext() failed\n");
+        return 1;
+    }
+
+    pf_sigcheck = sigcheck;
+    return 0;
 }

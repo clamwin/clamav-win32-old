@@ -347,6 +347,12 @@ size_t cw_heapcompact(void)
     return lcommit;
 }
 
+extern int cw_sig_init(void);
+int cw_init(void)
+{
+    return cw_sig_init();
+}
+
 void fix_paths();
 
 BOOL APIENTRY DllMain(HANDLE hModule, DWORD reason, LPVOID lpReserved)

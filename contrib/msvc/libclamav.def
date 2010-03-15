@@ -41,6 +41,8 @@ cl_debug
 cl_strerror
 
 ; ClamWin specific
+cw_init
+cw_sigcheck
 cw_normalizepath
 cw_stat
 cw_rmdirs
