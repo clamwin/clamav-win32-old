@@ -44,7 +44,7 @@ typedef int (JITCALL *imp_bytecode_init)(void);
 typedef void (JITCALL *imp_cli_bytecode_debug)(int, char **);
 typedef void (JITCALL *imp_cli_bytecode_debug_printsrc)(const struct cli_bc_ctx *);
 typedef int (JITCALL *imp_cli_bytecode_done_jit)(struct cli_all_bc *);
-typedef int (JITCALL *imp_cli_bytecode_init_jit)(struct cli_all_bc *);
+typedef int (JITCALL *imp_cli_bytecode_init_jit)(struct cli_all_bc *, unsigned dconfmask);
 typedef int (JITCALL *imp_cli_bytecode_prepare_jit)(struct cli_all_bc *);
 typedef void (JITCALL *imp_cli_bytecode_printversion)(void);
 typedef int (JITCALL *imp_cli_vm_execute_jit)(const struct cli_all_bc *, struct cli_bc_ctx *, const struct cli_bc_func *);
@@ -86,9 +86,9 @@ int cli_bytecode_done_jit(struct cli_all_bc *allbc)
     return pf_cli_bytecode_done_jit(allbc);
 }
 
-int cli_bytecode_init_jit(struct cli_all_bc *allbc)
+int cli_bytecode_init_jit(struct cli_all_bc *allbc, unsigned dconfmask)
 {
-    return pf_cli_bytecode_init_jit(allbc);
+    return pf_cli_bytecode_init_jit(allbc, dconfmask);
 }
 
 int cli_bytecode_prepare_jit(struct cli_all_bc *bcs)
@@ -134,14 +134,14 @@ void jit_init(void)
     {
         if (llvm) FreeLibrary(llvm);
         llvm = NULL;
-        pf_bytecode_init = (imp_bytecode_init) nojit_bytecode_init;
-        pf_cli_bytecode_debug = (imp_cli_bytecode_debug) nojit_cli_bytecode_debug;
-        pf_cli_bytecode_debug_printsrc = (imp_cli_bytecode_debug_printsrc) nojit_cli_bytecode_debug_printsrc;
-        pf_cli_bytecode_done_jit = (imp_cli_bytecode_done_jit) nojit_cli_bytecode_done_jit;
-        pf_cli_bytecode_init_jit = (imp_cli_bytecode_init_jit) nojit_cli_bytecode_init_jit;
-        pf_cli_bytecode_prepare_jit = (imp_cli_bytecode_prepare_jit) nojit_cli_bytecode_prepare_jit;
-        pf_cli_bytecode_printversion = (imp_cli_bytecode_printversion) nojit_cli_bytecode_printversion;
-        pf_cli_vm_execute_jit = (imp_cli_vm_execute_jit) nojit_cli_vm_execute_jit;
+        pf_bytecode_init = nojit_bytecode_init;
+        pf_cli_bytecode_debug = nojit_cli_bytecode_debug;
+        pf_cli_bytecode_debug_printsrc = nojit_cli_bytecode_debug_printsrc;
+        pf_cli_bytecode_done_jit = nojit_cli_bytecode_done_jit;
+        pf_cli_bytecode_init_jit = nojit_cli_bytecode_init_jit;
+        pf_cli_bytecode_prepare_jit = nojit_cli_bytecode_prepare_jit;
+        pf_cli_bytecode_printversion = nojit_cli_bytecode_printversion;
+        pf_cli_vm_execute_jit = nojit_cli_vm_execute_jit;
     }
 }
 
