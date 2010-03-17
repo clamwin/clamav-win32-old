@@ -71,6 +71,10 @@ typedef struct _WINTRUST_DATA
 #define WTD_STATEACTION_CLOSE 2
 #define WTD_CHOICE_CATALOG 2
 
+#ifndef TRUST_E_NOSIGNATURE
+#define TRUST_E_NOSIGNATURE 0x800B0100L
+#endif
+
 static int cw_getfnfromhandle(void *mem, wchar_t *filename)
 {
     wchar_t szTemp[512] = L"";
