@@ -27,7 +27,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef HAVE_UNISTD_H
 #include <unistd.h>
+#endif
 #include <zlib.h>
 #include <time.h>
 #include <locale.h>
@@ -65,6 +67,7 @@
 #include "libclamav/default.h"
 #include "libclamav/fmap.h"
 #include "libclamav/readdb.h"
+#include "libclamav/others.h"
 
 #define MAX_DEL_LOOKAHEAD   200
 
@@ -674,7 +677,7 @@ static int build(const struct optstruct *opts)
 	return 50;
     }
 
-    if((ret = cl_load(".", engine, &sigs, CL_DB_STDOPT | CL_DB_PUA))) {
+    if((ret = cl_load(".", engine, &sigs, CL_DB_STDOPT | CL_DB_PUA | CL_DB_SIGNED))) {
 	mprintf("!build: Can't load database: %s\n", cl_strerror(ret));
 	cl_engine_free(engine);
 	return -1;
@@ -793,7 +796,7 @@ static int build(const struct optstruct *opts)
 	    return -1;
 	}
     } else {
-	fl = cl_retflevel();
+	fl = CL_FLEVEL_SIGTOOL;
     }
     sprintf(header + strlen(header), "%u:", fl);
 
