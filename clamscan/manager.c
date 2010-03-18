@@ -212,12 +212,15 @@ void scanfile(const char *filename, struct cl_engine *engine, const struct optst
         fmap_t *maptype = fmap(fd, 0, 0);
         cli_file_t type = cli_filetype2(maptype, engine);
         funmap(maptype);
-    if (optget(opts, "keep-mbox")->enabled && (type == CL_TYPE_MAIL))
-        logg("~%s: no action performed on a mailbox\n", filename);
-    else
-	action(filename);
+        close(fd);
+        if (optget(opts, "keep-mbox")->enabled && (type == CL_TYPE_MAIL))
+            logg("~%s: no action performed on a mailbox\n", filename);
+        else
+	        action(filename);
 	}
-    close(fd);
+    else
+        close(fd);
+
 }
 
 void scandirs(const char *dirname, struct cl_engine *engine, const struct optstruct *opts, unsigned int options, unsigned int depth, dev_t dev)
