@@ -122,7 +122,7 @@ const struct clam_option __clam_options[] = {
 
     { NULL, "force-interpreter", 'f', TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_CLAMBC, "Force using the interpreter instead of the JIT", "" },
     { NULL, "trust-bytecode", 't', TYPE_BOOL, MATCH_BOOL, 1, NULL, 0, OPT_CLAMBC, "Trust loaded bytecode (default yes)", ""},
-    { NULL, "trust-loaded-bytecode", 't', TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_CLAMSCAN, "Trust loaded bytecode (default: only if signed)", ""},
+    { NULL, "bytecode-trust-all", 't', TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_CLAMSCAN, "Trust loaded bytecode (default: only if signed)", ""},
     { NULL, "info", 'i', TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_CLAMBC, "Load and print bytecode information without executing", ""},
     { NULL, "printsrc", 'p', TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_CLAMBC, "Print source code of bytecode", ""},
     { NULL, "input", 'i', TYPE_STRING, NULL, -1, NULL, 0, OPT_CLAMBC, "Input file to run the bytecode n", ""},
@@ -358,6 +358,8 @@ const struct clam_option __clam_options[] = {
     { "ScriptedUpdates", NULL, 0, TYPE_BOOL, MATCH_BOOL, 1, NULL, 0, OPT_FRESHCLAM, "With this option you can control scripted updates. It's highly recommended to keep them enabled.", "yes" },
 
     { "CompressLocalDatabase", NULL, 0, TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_FRESHCLAM, "By default freshclam will keep the local databases (.cld) uncompressed to\nmake their handling faster. With this option you can enable the compression.\nThe change will take effect with the next database update.", "" },
+
+    { "ExtraDatabase", NULL, 0, TYPE_STRING, NULL, -1, NULL, FLAG_MULTIPLE, OPT_FRESHCLAM, "Download additional database. This option can be used multiple times.", "dbname1\ndbname2" },
 
     { "HTTPProxyServer", NULL, 0, TYPE_STRING, NULL, -1, NULL, 0, OPT_FRESHCLAM, "If you're behind a proxy, please enter its address here.", "your-proxy" },
 

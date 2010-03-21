@@ -232,6 +232,8 @@ void help(void)
     mprintf("    --unload              -u             Unload infected modules from processes\n");
 #endif
     mprintf("\n");
+    mprintf("    --bytecode[=yes(*)/no]               Load bytecode from the database\n");
+    mprintf("    --bytecode-trust-all[=yes/no(*)]     Trust all loaded bytecode\n");
     mprintf("    --detect-pua[=yes/no(*)]             Detect Possibly Unwanted Applications\n");
     mprintf("    --exclude-pua=CAT                    Skip PUA sigs of category CAT\n");
     mprintf("    --include-pua=CAT                    Load PUA sigs of category CAT\n");
