@@ -124,15 +124,16 @@ static int sigcheck(cli_ctx *ctx, int checkfp)
 
     while (ctx->container_type == CL_TYPE_ANY)
     {
-        if (!cw_getfnfromhandle(map->data, filename))
-        {
-            cli_errmsg("sigcheck: get file name from handle() failed: %d\n", GetLastError());
-            break;
-        }
 
         if (!cw_helpers.wt.CryptCATAdminCalcHashFromFileHandle(map->fh, &cbHash, bHash, 0))
         {
-            cli_errmsg("sigcheck: CryptCATAdminCalcHashFromFileHandle() failed: %d\n", GetLastError());
+            /* cli_errmsg("sigcheck: CryptCATAdminCalcHashFromFileHandle() failed: %d\n", GetLastError()); */
+            break;
+        }
+
+        if (!cw_getfnfromhandle(map->data, filename))
+        {
+            cli_errmsg("sigcheck: get file name from handle() failed: %d\n", GetLastError());
             break;
         }
 
@@ -173,11 +174,8 @@ static int sigcheck(cli_ctx *ctx, int checkfp)
 
         lsigned = cw_helpers.wt.WinVerifyTrust(0, &pgActionID, (LPVOID) &wtd);
 
-        if (SUCCEEDED(lsigned))
-        {
-            wtd.dwStateAction = WTD_STATEACTION_CLOSE;
-            lstatus = cw_helpers.wt.WinVerifyTrust(0, &pgActionID, (LPVOID) &wtd);
-        }
+        wtd.dwStateAction = WTD_STATEACTION_CLOSE;
+        lstatus = cw_helpers.wt.WinVerifyTrust(0, &pgActionID, (LPVOID) &wtd);
 
         break;
     }
