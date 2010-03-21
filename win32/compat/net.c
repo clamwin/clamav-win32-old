@@ -351,8 +351,6 @@ int w32_shutdown(int sockfd, int how) {
     return 0;
 }
 
-#endif /* NOCLAMWIN */
-
 int sock_set_nonblock(int sockfd) {
     u_long arg = 1;
     if(ioctlsocket((SOCKET)sockfd, FIONBIO, &arg)) {
@@ -361,6 +359,7 @@ int sock_set_nonblock(int sockfd) {
     }
     return 0;
 }
+#endif /* NOCLAMWIN */
 
 struct w32polldata {
     HANDLE setme;

@@ -60,15 +60,22 @@ static inline int fcntl(int fd, int cmd, long arg)
 
     switch (cmd)
     {
-        case F_GETFL: return 0;
+        case F_GETFL:
+            return 0;
         case F_SETFL:
-            if (!ioctlsocket(fd, FIONBIO, &mode))
-                return 0;
+            if (ioctlsocket(fd, FIONBIO, &mode))
+            {
+                cw_wseterrno();
+                return -1;
+            }
+            return 0;
     }
 
     errno = EBADF;
     return -1;
 }
+
+#define sock_set_nonblock(sockfd) fcntl(sockfd, F_SETFL, O_NONBLOCK)
 
 static inline SOCKET inl_accept(SOCKET sockfd, struct sockaddr *addr, socklen_t *addrlen)
 {
