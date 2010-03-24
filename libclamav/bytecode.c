@@ -68,7 +68,7 @@ static void context_safe(struct cli_bc_ctx *ctx)
 struct cli_bc_ctx *cli_bytecode_context_alloc(void)
 {
     struct cli_bc_ctx *ctx = cli_calloc(1, sizeof(*ctx));
-    ctx->bytecode_timeout = 5000;
+    ctx->bytecode_timeout = 60000;
     return ctx;
 }
 
@@ -821,8 +821,8 @@ static void readConstant(struct cli_bc *bc, unsigned i, unsigned comp,
 	bc->globals[i][j++] = readNumber(buffer, offset, len, ok);
     }
     if (*ok && j != comp) {
-	cli_errmsg("bytecode: constant has too few subcomponents: %u < %u\n", j, comp);
-//	*ok = 0;
+	cli_dbgmsg("bytecode: constant has too few subcomponents: %u < %u\n", j, comp);
+/*	*ok = 0; */
     }
     (*offset)++;
 }
@@ -1629,7 +1629,7 @@ static int cli_bytecode_prepare_interpreter(struct cli_bc *bc)
 	    assert(align);
 	    bcfunc->numBytes  = (bcfunc->numBytes + align-1)&(~(align-1));
 	    map[j] = bcfunc->numBytes;
-	    //printf("%d -> %d, %u\n", j, map[j], typesize(bc, ty));
+	    /* printf("%d -> %d, %u\n", j, map[j], typesize(bc, ty)); */
 	    bcfunc->numBytes += typesize(bc, ty);
 	}
 	bcfunc->numBytes = (bcfunc->numBytes + 7)&~7;
