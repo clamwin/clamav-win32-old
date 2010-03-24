@@ -29,6 +29,9 @@
 #include "type_desc.h"
 #include "readdb.h"
 #include <string.h>
+#ifndef _WIN32
+#include <sys/time.h>
+#endif
 
 /* Enable this to catch more bugs in the RC phase */
 #define CL_BYTECODE_DEBUG
@@ -36,7 +39,7 @@
 /* These checks will also be done by the bytecode verifier, but for
  * debugging purposes we have explicit checks, these should never fail! */
 #ifdef CL_BYTECODE_DEBUG
-static int bcfail(const char *msg, long a, long b,
+static int never_inline bcfail(const char *msg, long a, long b,
 		  const char *file, unsigned line)
 {
     cli_errmsg("bytecode: check failed %s (%lx and %lx) at %s:%u\n", msg, a, b, file, line);
@@ -53,9 +56,11 @@ static int bcfail(const char *msg, long a, long b,
 #define CHECK_GT(a, b) do {if ((a) <= (b)) return \
     bcfail("Condition failed "#a" > "#b,(a),(b), __FILE__, __LINE__); } while(0)
 #define TRACE_R(x) cli_dbgmsg("bytecode trace: %u, read %llx\n", pc, (long long)x);
-#define TRACE_W(x, w, p) cli_dbgmsg("bytecode trace: %u, write%d @%u %llx\n", pc, p, w, (long long)x);
+#define TRACE_W(x, w, p) cli_dbgmsg("bytecode trace: %u, write%d @%u %llx\n", pc, p, w, (long long)(x));
 #define TRACE_EXEC(id, dest, ty, stack) cli_dbgmsg("bytecode trace: executing %d, -> %u (%u); %u\n", id, dest, ty, stack)
 #else
+static inline int bcfail(const char *msg, long a, long b,
+			 const char *file, unsigned line) {}
 #define TRACE_R(x)
 #define TRACE_W(x, w, p)
 #define TRACE_EXEC(id, dest, ty, stack)
@@ -262,6 +267,7 @@ static always_inline struct stack_entry *pop_stack(struct stack *stack,
 #define uint_type(n) uint##n##_t
 #define READNfrom(maxBytes, from, x, n, p)\
     CHECK_GT((maxBytes), (p)+(n/8)-1);\
+    CHECK_EQ((p)&(n/8-1), 0);\
     x = *(uint_type(n)*)&(from)[(p)];\
     TRACE_R(x)
 
@@ -269,7 +275,7 @@ static always_inline struct stack_entry *pop_stack(struct stack *stack,
  do {\
      if (p&0x80000000) {\
 	 uint32_t pg = p&0x7fffffff;\
-	 READNfrom(ctx->numGlobals, ctx->globals, x, n, p);\
+	 READNfrom(bc->numGlobalBytes, bc->globalBytes, x, n, pg);\
      } else {\
 	 READNfrom(func->numBytes, values, x, n, p);\
      }\
@@ -282,11 +288,16 @@ static always_inline struct stack_entry *pop_stack(struct stack *stack,
 #define READ32(x, p) READN(x, 32, p)
 #define READ64(x, p) READN(x, 64, p)
 
-#define PSIZE sizeof(void*)
-#define READP(x, p) CHECK_GT(func->numBytes, p+PSIZE-1);\
-    CHECK_EQ((p)&(PSIZE-1), 0);\
-    x = *(void**)&values[p];\
-    TRACE_R(x)
+#define PSIZE sizeof(int64_t)
+#define READP(x, p, asize) { int64_t iptr__;\
+    READN(iptr__, 64, p);\
+    x = ptr_torealptr(&ptrinfos, iptr__, (asize));\
+    if (!x) {\
+	stop = CL_EBYTECODE;\
+	break;\
+    }\
+    TRACE_R(x)\
+}
 
 #define READOLD8(x, p) CHECK_GT(func->numBytes, p);\
     x = *(uint8_t*)&old_values[p];\
@@ -436,9 +447,138 @@ static always_inline struct stack_entry *pop_stack(struct stack *stack,
 		break;\
 	    }
 
+struct ptr_info {
+    uint8_t *base;
+    uint32_t size;
+};
+
+struct ptr_infos {
+    struct ptr_info *stack_infos;
+    struct ptr_info *glob_infos;
+    unsigned nstacks, nglobs;
+};
+
+static inline int64_t ptr_compose(int32_t id, uint32_t offset)
+{
+    uint64_t i = id;
+    return (i << 32) | offset;
+}
+
+static inline int64_t ptr_register_stack(struct ptr_infos *infos,
+					 unsigned char *values,
+					 uint32_t off, uint32_t size)
+{
+    int16_t id;
+    unsigned n = infos->nstacks + 1;
+    struct ptr_info *sinfos = cli_realloc(infos->stack_infos,
+					  sizeof(*sinfos)*n);
+    if (!sinfos)
+	return 0;
+    infos->stack_infos = sinfos;
+    infos->nstacks = n;
+    sinfos = &sinfos[n-1];
+    sinfos->base = values + off;
+    sinfos->size = size;
+    return ptr_compose(-n, 0);
+}
+
+static inline int64_t ptr_register_glob_fixedid(struct ptr_infos *infos,
+						void *values, uint32_t size, unsigned n)
+{
+    struct ptr_info *sinfos;
+    if (n > infos->nglobs) {
+	sinfos = cli_realloc(infos->glob_infos, sizeof(*sinfos)*n);
+	if (!sinfos)
+	    return 0;
+	infos->glob_infos = sinfos;
+	infos->nglobs = n;
+    }
+    sinfos = &infos->glob_infos[n-1];
+    if (!values)
+	size = 0;
+    sinfos->base = values;
+    sinfos->size = size;
+    cli_dbgmsg("bytecode: registered ctx variable at %p (+%u) id %u\n", values,
+	       size, n);
+    return ptr_compose(n, 0);
+}
+
+static inline int64_t ptr_register_glob(struct ptr_infos *infos,
+					void *values, uint32_t size)
+{
+    return ptr_register_glob_fixedid(infos, values, size, infos->nglobs+1);
+}
+
+static inline int64_t ptr_index(int64_t ptr, uint32_t off)
+{
+    int32_t ptrid = ptr >> 32;
+    uint32_t ptroff = (uint32_t)ptr;
+    return ptr_compose(ptrid, ptroff+off);
+}
+
+static inline void* ptr_torealptr(const struct ptr_infos *infos, int64_t ptr,
+				  uint32_t read_size)
+{
+    struct ptr_info *info;
+    int32_t ptrid = ptr >> 32;
+    uint32_t ptroff = (uint32_t)ptr;
+    if (UNLIKELY(!ptrid)) {
+	bcfail("nullptr", ptrid, 0, __FILE__, __LINE__);
+	return NULL;
+    }
+    if (ptrid < 0) {
+	ptrid = -ptrid-1;
+	if (UNLIKELY(ptrid >= infos->nstacks)) {
+	    bcfail("ptr", ptrid, infos->nstacks, __FILE__, __LINE__);
+	    return NULL;
+	}
+	info = &infos->stack_infos[ptrid];
+    } else {
+	ptrid--;
+	if (UNLIKELY(ptrid >= infos->nglobs)) {
+	    bcfail("ptr", ptrid, infos->nglobs, __FILE__, __LINE__);
+	    return NULL;
+	}
+	info = &infos->glob_infos[ptrid];
+    }
+    if (LIKELY(ptroff < info->size &&
+	read_size < info->size &&
+	ptroff + read_size <= info->size)) {
+	return info->base+ptroff;
+    }
+
+    bcfail("ptr1", ptroff, info->size, __FILE__, __LINE__);
+    bcfail("ptr2", read_size, info->size, __FILE__, __LINE__);
+    bcfail("ptr3", ptroff+read_size, info->size, __FILE__, __LINE__);
+    return NULL;
+}
+
 static always_inline int check_sdivops(int64_t op0, int64_t op1)
 {
     return op1 == 0 || (op0 == -1 && op1 ==  (-9223372036854775807LL-1LL));
+}
+
+static unsigned globaltypesize(uint16_t id)
+{
+    const struct cli_bc_type *ty;
+    if (id <= 64)
+	return (id + 7)/8;
+    if (id < 69)
+	return 8; /* ptr */
+    ty = &cli_apicall_types[id - 69];
+    switch (ty->kind) {
+	case DArrayType:
+	    return ty->numElements*globaltypesize(ty->containedTypes[0]);
+	case DStructType:
+	case DPackedStructType:
+	    {
+		unsigned i, s = 0;
+		for (i=0;i<ty->numElements;i++)
+		    s += globaltypesize(ty->containedTypes[i]);
+		return s;
+	    }
+    }
+    return 0;
 }
 
 int cli_vm_execute(const struct cli_bc *bc, struct cli_bc_ctx *ctx, const struct cli_bc_func *func, const struct cli_bc_inst *inst)
@@ -450,10 +590,43 @@ int cli_vm_execute(const struct cli_bc *bc, struct cli_bc_ctx *ctx, const struct
     struct cli_bc_bb *bb = NULL;
     char *values = ctx->values;
     char *old_values;
+    struct ptr_infos ptrinfos;
+    struct timeval tv0, tv1, timeout;
+    int stackid = 0;
 
+    memset(&ptrinfos, 0, sizeof(ptrinfos));
     memset(&stack, 0, sizeof(stack));
+    for (i=0;i < cli_apicall_maxglobal - _FIRST_GLOBAL; i++) {
+	void *apiptr;
+	uint32_t size;
+	const struct cli_apiglobal *g = &cli_globals[i];
+	void **apiglobal = (void**)(((char*)ctx) + g->offset);
+	if (!apiglobal)
+	    continue;
+	apiptr = *apiglobal;
+	size = globaltypesize(g->type);
+	ptr_register_glob_fixedid(&ptrinfos, apiptr, size, g->globalid - _FIRST_GLOBAL+1);
+    }
+    ptr_register_glob_fixedid(&ptrinfos, bc->globalBytes, bc->numGlobalBytes,
+			      cli_apicall_maxglobal - _FIRST_GLOBAL + 2);
+
+    gettimeofday(&tv0, NULL);
+    timeout.tv_usec = tv0.tv_usec + ctx->bytecode_timeout*1000;
+    timeout.tv_sec = tv0.tv_sec + timeout.tv_usec/1000000;
+    timeout.tv_usec %= 1000000;
+
     do {
 	pc++;
+	if (!(pc % 5000)) {
+	    gettimeofday(&tv1, NULL);
+	    if (tv1.tv_sec > timeout.tv_sec ||
+		(tv1.tv_sec == timeout.tv_sec &&
+		 tv1.tv_usec > timeout.tv_usec)) {
+		cli_errmsg("Bytecode run timed out in interpreter\n");
+		stop = CL_ETIMEOUT;
+		break;
+	    }
+	}
 	switch (inst->interp_op) {
 	    DEFINE_BINOP(OP_BC_ADD, res = op0 + op1);
 	    DEFINE_BINOP(OP_BC_SUB, res = op0 - op1);
@@ -588,14 +761,13 @@ int cli_vm_execute(const struct cli_bc *bc, struct cli_bc_ctx *ctx, const struct
 			break;
 		    }
 		    case 1: {
-			cli_errmsg("bytecode: type 1 apicalls not yet implemented!\n");
-			stop = CL_EBYTECODE;
-		/*	void *p;
-			uint32_t u;
-			p = ...;
-			u = READ32(v, inst->u.ops.ops[1]);
-			res =  cli_apicalls1[api->idx](p, u);
-			break;*/
+			void* arg1;
+			unsigned arg2;
+			/* check that arg2 is size of arg1 */
+			READ32(arg2, inst->u.ops.ops[1]);
+			READP(arg1, inst->u.ops.ops[0], arg2);
+			res = cli_apicalls1[api->idx](ctx, arg1, arg2);
+			break;
 		    }
 		    case 2: {
 			int32_t a;
@@ -604,15 +776,48 @@ int cli_vm_execute(const struct cli_bc *bc, struct cli_bc_ctx *ctx, const struct
 			break;
 		    }
 		    case 3: {
-			cli_errmsg("bytecode: type 3 apicalls not yet implemented!\n");
+			int32_t a;
+			void *resp;
+			READ32(a, inst->u.ops.ops[0]);
+			resp = cli_apicalls3[api->idx](ctx, a);
+			res = ptr_register_glob(&ptrinfos, resp, a);
+			break;
+		    }
+		    case 4: {
+			int32_t arg2, arg3, arg4, arg5;
+			void *arg1;
+			READ32(arg2, inst->u.ops.ops[1]);
+			READP(arg1, inst->u.ops.ops[0], arg2);
+			READ32(arg3, inst->u.ops.ops[2]);
+			READ32(arg4, inst->u.ops.ops[3]);
+			READ32(arg5, inst->u.ops.ops[4]);
+			res = cli_apicalls4[api->idx](ctx, arg1, arg2, arg3, arg4, arg5);
+			break;
+		    }
+		    case 5: {
+			res = cli_apicalls5[api->idx](ctx);
+			break;
+		    }
+		    case 6: {
+			int32_t arg1, arg2;
+			void *resp;
+			READ32(arg1, inst->u.ops.ops[0]);
+			READ32(arg2, inst->u.ops.ops[1]);
+			resp = cli_apicalls6[api->idx](ctx, arg1, arg2);
+			res = ptr_register_glob(&ptrinfos, resp, arg2);
+			break;
+		    }
+		    case 7: {
+			int32_t arg1,arg2,arg3;
+			READ32(arg1, inst->u.ops.ops[0]);
+			READ32(arg2, inst->u.ops.ops[1]);
+			READ32(arg3, inst->u.ops.ops[2]);
+			res = cli_apicalls7[api->idx](ctx, arg1, arg2, arg3);
+			break;
+		    }
+		    default:
+			cli_errmsg("bytecode: type %u apicalls not yet implemented!\n", api->kind);
 			stop = CL_EBYTECODE;
-		/*	void *p;
-			uint32_t u;
-			p = ...;
-			u = READ32(v, inst->u.ops.ops[1]);
-			res =  cli_apicalls1[api->idx](p, u);
-			break;*/
-			    }
 		}
 		WRITE32(inst->dest, res);
 		break;
@@ -630,6 +835,7 @@ int cli_vm_execute(const struct cli_bc *bc, struct cli_bc_ctx *ctx, const struct
 		    break;
 		}
 		values = stack_entry->values;
+		/* TODO: unregister on ret */
 		TRACE_EXEC(inst->u.ops.funcid, inst->dest, inst->type, stack_depth);
 		if (stack_depth > 10000) {
 		    cli_errmsg("bytecode: stack depth exceeded\n");
@@ -676,6 +882,7 @@ int cli_vm_execute(const struct cli_bc *bc, struct cli_bc_ctx *ctx, const struct
 		    }
 		}
 		func = func2;
+		stackid = ptr_register_stack(&ptrinfos, values, 0, func->numBytes)>>32;
 		CHECK_GT(func->numBB, 0);
 		stop = jump(func, 0, &bb, &inst, &bb_inst);
 		stack_depth++;
@@ -721,32 +928,28 @@ int cli_vm_execute(const struct cli_bc *bc, struct cli_bc_ctx *ctx, const struct
 	    case OP_BC_LOAD*5+1:
 	    {
 		uint8_t *ptr;
-		READP(ptr, inst->u.unaryop);
+		READP(ptr, inst->u.unaryop, 1);
 		WRITE8(inst->dest, (*ptr));
 		break;
 	    }
 	    case OP_BC_LOAD*5+2:
 	    {
 		const union unaligned_16 *ptr;
-		READP(ptr, inst->u.unaryop);
+		READP(ptr, inst->u.unaryop, 2);
 		WRITE16(inst->dest, (ptr->una_u16));
 		break;
 	    }
 	    case OP_BC_LOAD*5+3:
 	    {
 		const union unaligned_32 *ptr;
-		READP(ptr, inst->u.unaryop);
-		if (!ptr) {
-		    cli_dbgmsg("Bytecode attempted to load from null pointer!\n");
-		    return CL_EBYTECODE;
-		}
+		READP(ptr, inst->u.unaryop, 4);
 		WRITE32(inst->dest, (ptr->una_u32));
 		break;
 	    }
 	    case OP_BC_LOAD*5+4:
 	    {
 		const union unaligned_64 *ptr;
-		READP(ptr, inst->u.unaryop);
+		READP(ptr, inst->u.unaryop, 8);
 		WRITE64(inst->dest, (ptr->una_u64));
 		break;
 	    }
@@ -755,8 +958,8 @@ int cli_vm_execute(const struct cli_bc *bc, struct cli_bc_ctx *ctx, const struct
 	    {
 		uint8_t *ptr;
 		uint8_t v;
-		READP(ptr, BINOP(0));
-		READ1(v, BINOP(1));
+		READP(ptr, BINOP(1), 1);
+		READ1(v, BINOP(0));
 		*ptr = v;
 		break;
 	    }
@@ -764,8 +967,8 @@ int cli_vm_execute(const struct cli_bc *bc, struct cli_bc_ctx *ctx, const struct
 	    {
 		uint8_t *ptr;
 		uint8_t v;
-		READP(ptr, BINOP(0));
-		READ8(v, BINOP(1));
+		READP(ptr, BINOP(1), 1);
+		READ8(v, BINOP(0));
 		*ptr = v;
 		break;
 	    }
@@ -773,8 +976,8 @@ int cli_vm_execute(const struct cli_bc *bc, struct cli_bc_ctx *ctx, const struct
 	    {
 		union unaligned_16 *ptr;
 		uint16_t v;
-		READP(ptr, BINOP(0));
-		READ16(v, BINOP(1));
+		READP(ptr, BINOP(1), 2);
+		READ16(v, BINOP(0));
 		ptr->una_s16 = v;
 		break;
 	    }
@@ -782,8 +985,8 @@ int cli_vm_execute(const struct cli_bc *bc, struct cli_bc_ctx *ctx, const struct
 	    {
 		union unaligned_32 *ptr;
 		uint32_t v;
-		READP(ptr, BINOP(0));
-		READ32(v, BINOP(1));
+		READP(ptr, BINOP(1), 4);
+		READ32(v, BINOP(0));
 		ptr->una_u32 = v;
 		break;
 	    }
@@ -791,13 +994,92 @@ int cli_vm_execute(const struct cli_bc *bc, struct cli_bc_ctx *ctx, const struct
 	    {
 		union unaligned_64 *ptr;
 		uint64_t v;
-		READP(ptr, BINOP(0));
-		READ64(v, BINOP(1));
+		READP(ptr, BINOP(1), 8);
+		READ64(v, BINOP(0));
 		ptr->una_u64 = v;
 		break;
 	    }
 	    DEFINE_OP(OP_BC_ISBIGENDIAN) {
 		WRITE8(inst->dest, WORDS_BIGENDIAN);
+		break;
+	    }
+	    DEFINE_OP(OP_BC_GEPZ) {
+		int64_t ptr;
+		if (!(inst->interp_op%5)) {
+		    int32_t off;
+		    READ32(off, inst->u.three[2]);
+		    WRITE64(inst->dest, ptr_compose(stackid,
+						    inst->u.three[1]+off));
+		} else {
+		    READ64(ptr, inst->u.three[1]);
+		    WRITE64(inst->dest, ptr);
+		}
+		break;
+	    }
+	    DEFINE_OP(OP_BC_MEMCMP) {
+		int32_t arg3;
+		void *arg1, *arg2;
+		READ32(arg3, inst->u.three[2]);
+		READP(arg1, inst->u.three[0], arg3);
+		READP(arg2, inst->u.three[1], arg3);
+		WRITE32(inst->dest, memcmp(arg1, arg2, arg3));
+		break;
+	    }
+	    DEFINE_OP(OP_BC_MEMCPY) {
+		int32_t arg3;
+		void *arg1, *arg2, *resp;
+		int64_t res;
+
+		READ32(arg3, inst->u.three[2]);
+		READP(arg1, inst->u.three[0], arg3);
+		READP(arg2, inst->u.three[1], arg3);
+		memcpy(arg1, arg2, arg3);
+		READ64(res, inst->u.three[0]);
+		WRITE64(inst->dest, res);
+		break;
+	    }
+	    DEFINE_OP(OP_BC_MEMMOVE) {
+		int32_t arg3;
+		void *arg1, *arg2, *resp;
+		int64_t res;
+
+		READ32(arg3, inst->u.three[2]);
+		READP(arg1, inst->u.three[0], arg3);
+		READP(arg2, inst->u.three[1], arg3);
+		memmove(arg1, arg2, arg3);
+		READ64(res, inst->u.three[0]);
+		WRITE64(inst->dest, res);
+		break;
+	    }
+	    DEFINE_OP(OP_BC_MEMSET) {
+		int32_t arg2, arg3;
+		void *arg1;
+		int64_t res;
+
+		READ32(arg3, inst->u.three[2]);
+		READP(arg1, inst->u.three[0], arg3);
+		READ32(arg2, inst->u.three[1]);
+		memset(arg1, arg2, arg3);
+		READ64(res, inst->u.three[0]);
+		WRITE64(inst->dest, res);
+		break;
+	    }
+	    DEFINE_OP(OP_BC_BSWAP16) {
+		int16_t arg1;
+		READ16(arg1, inst->u.unaryop);
+		WRITE16(inst->dest, cbswap16(arg1));
+		break;
+	    }
+	    DEFINE_OP(OP_BC_BSWAP32) {
+		int32_t arg1;
+		READ32(arg1, inst->u.unaryop);
+		WRITE32(inst->dest, cbswap32(arg1));
+		break;
+	    }
+	    DEFINE_OP(OP_BC_BSWAP64) {
+		int32_t arg1;
+		READ64(arg1, inst->u.unaryop);
+		WRITE64(inst->dest, cbswap64(arg1));
 		break;
 	    }
 	    /* TODO: implement OP_BC_GEP1, OP_BC_GEP2, OP_BC_GEPN */
@@ -813,7 +1095,16 @@ int cli_vm_execute(const struct cli_bc *bc, struct cli_bc_ctx *ctx, const struct
 	    CHECK_GT(bb->numInsts, bb_inst);
 	}
     } while (stop == CL_SUCCESS);
+    if (cli_debug_flag) {
+	gettimeofday(&tv1, NULL);
+	tv1.tv_sec -= tv0.tv_sec;
+	tv1.tv_usec -= tv0.tv_usec;
+	cli_dbgmsg("intepreter bytecode run finished in %luus\n",
+		   tv1.tv_sec*1000000 + tv1.tv_usec);
+    }
 
     cli_stack_destroy(&stack);
+    free(ptrinfos.stack_infos);
+    free(ptrinfos.glob_infos);
     return stop == CL_BREAK ? CL_SUCCESS : stop;
 }

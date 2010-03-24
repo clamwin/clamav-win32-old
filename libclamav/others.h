@@ -251,6 +251,7 @@ struct cl_engine {
     unsigned hooks_cnt[_BC_LAST_HOOK - _BC_START_HOOKS];
     unsigned hook_lsig_ids;
     enum bytecode_security bytecode_security;
+    uint32_t bytecode_timeout;
 };
 
 struct cl_settings {
@@ -422,7 +423,9 @@ void cli_errmsg(const char *str, ...);
 
 #ifdef __GNUC__
 #define always_inline inline __attribute__((always_inline))
+#define never_inline __attribute__((noinline))
 #else
+#define never_inline
 #define always_inline inline
 #endif
 

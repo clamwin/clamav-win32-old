@@ -20,12 +20,22 @@
  *  MA 02110-1301, USA.
  */
 #define DEBUG_TYPE "clamavjit"
+#include <pthread.h>
+#ifndef _WIN32
+#include <sys/time.h>
+#endif
 #include "ClamBCModule.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/Analysis/Verifier.h"
 #include "llvm/CallingConv.h"
 #include "llvm/DerivedTypes.h"
 #include "llvm/Function.h"
@@ -33,6 +43,7 @@
 #include "llvm/ExecutionEngine/JIT.h"
 #include "llvm/ExecutionEngine/JITEventListener.h"
 #include "llvm/LLVMContext.h"
+#include "llvm/Intrinsics.h"
 #include "llvm/Module.h"
 #include "llvm/PassManager.h"
 #include "llvm/Support/Compiler.h"
@@ -54,12 +65,13 @@
 #include "llvm/Target/TargetData.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Support/TargetFolder.h"
-#include "llvm/Analysis/Verifier.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/System/ThreadLocal.h"
 #include <cstdlib>
 #include <csetjmp>
 #include <new>
+#include <cerrno>
 
 #include "llvm/Config/config.h"
 #if !ENABLE_THREADS
@@ -89,6 +101,11 @@ extern "C" {
 #include "md5.h"
 }
 
+#ifdef _WIN32
+#include <winsock2.h>
+#include <cw_inline.h>
+#endif
+
 #define MODULE "libclamav JIT: "
 
 extern "C" unsigned int cli_rndnum(unsigned int max);
@@ -96,6 +113,7 @@ using namespace llvm;
 typedef DenseMap<const struct cli_bc_func*, void*> FunctionMapTy;
 struct cli_bcengine {
     ExecutionEngine *EE;
+    JITEventListener *Listener;
     LLVMContext Context;
     FunctionMapTy compiledFunctions;
     union {
@@ -104,6 +122,7 @@ struct cli_bcengine {
     } guard;
 };
 
+extern "C" BCAPI uint8_t cli_debug_flag;
 namespace {
 
 static sys::ThreadLocal<const jmp_buf> ExceptionReturn;
@@ -202,6 +221,21 @@ static void* noUnknownFunctions(const std::string& name) {
     llvm_error_handler(0, reason);
     return 0;
 }
+
+class NotifyListener : public JITEventListener {
+public:
+    virtual void NotifyFunctionEmitted(const Function &F,
+				       void *Code, size_t Size,
+				       const EmittedFunctionDetails &Details)
+    {
+	if (!cli_debug_flag)
+	    return;
+	errs() << "bytecode JIT: emitted function " << F.getName() << 
+	    " of " << Size << " bytes at 0x";
+	errs().write_hex((uintptr_t)Code);
+	errs() << "\n";
+    }
+};
 
 class LLVMTypeMapper {
 private:
@@ -307,6 +341,184 @@ struct CommonFunctions {
     Function *FBSwap64;
 };
 
+// loops with tripcounts higher than this need timeout check
+static const unsigned LoopThreshold = 1000;
+
+// after every N API calls we need timeout check
+static const unsigned ApiThreshold = 100;
+
+class RuntimeLimits : public FunctionPass {
+    typedef SmallVector<std::pair<const BasicBlock*, const BasicBlock*>, 16>
+	BBPairVectorTy;
+    typedef SmallSet<BasicBlock*, 16> BBSetTy;
+    typedef DenseMap<const BasicBlock*, unsigned> BBMapTy;
+    bool loopNeedsTimeoutCheck(ScalarEvolution &SE, const Loop *L, BBMapTy &Map) {
+	// This BB is a loop header, if trip count is small enough
+	// no timeout checks are needed here.
+	const SCEV *S = SE.getMaxBackedgeTakenCount(L);
+	if (isa<SCEVCouldNotCompute>(S))
+	    return true;
+	DEBUG(errs() << "Found loop trip count" << *S << "\n");
+	ConstantRange CR = SE.getUnsignedRange(S);
+	uint64_t max = CR.getUnsignedMax().getLimitedValue();
+	DEBUG(errs() << "Found max trip count " << max << "\n");
+	if (max > LoopThreshold)
+	    return true;
+	unsigned apicalls = 0;
+	for (Loop::block_iterator J=L->block_begin(),JE=L->block_end();
+	     J != JE; ++J) {
+	    apicalls += Map[*J];
+	}
+	apicalls *= max;
+	if (apicalls > ApiThreshold) {
+	    DEBUG(errs() << "apicall threshold exceeded: " << apicalls << "\n");
+	    return true;
+	}
+	Map[L->getHeader()] = apicalls;
+	return false;
+    }
+
+public:
+    static char ID;
+    RuntimeLimits() : FunctionPass(&ID) {}
+
+
+    virtual bool runOnFunction(Function &F) {
+	BBSetTy BackedgeTargets;
+	if (!F.isDeclaration()) {
+	    // Get the common backedge targets.
+	    // Note that we don't rely on LoopInfo here, since
+	    // it is possible to construct a CFG that doesn't have natural loops,
+	    // yet it does have backedges, and thus can lead to unbounded/high
+	    // execution time.
+	    BBPairVectorTy V;
+	    FindFunctionBackedges(F, V);
+	    for (BBPairVectorTy::iterator I=V.begin(),E=V.end();I != E; ++I) {
+		BackedgeTargets.insert(const_cast<BasicBlock*>(I->second));
+	    }
+	}
+	BBSetTy  needsTimeoutCheck;
+	BBMapTy BBMap;
+	DominatorTree &DT = getAnalysis<DominatorTree>();
+	for (Function::iterator I=F.begin(),E=F.end(); I != E; ++I) {
+	    BasicBlock *BB = &*I;
+	    unsigned apicalls = 0;
+	    for (BasicBlock::const_iterator J=BB->begin(),JE=BB->end();
+		 J != JE; ++J) {
+		if (const CallInst *CI = dyn_cast<CallInst>(J)) {
+		    Function *F = CI->getCalledFunction();
+		    if (!F || F->isDeclaration())
+			apicalls++;
+		}
+	    }
+	    if (apicalls > ApiThreshold) {
+		DEBUG(errs() << "apicall threshold exceeded: " << apicalls << "\n");
+		needsTimeoutCheck.insert(BB);
+		apicalls = 0;
+	    }
+	    BBMap[BB] = apicalls;
+	}
+	if (!BackedgeTargets.empty()) {
+	    LoopInfo &LI = getAnalysis<LoopInfo>();
+	    ScalarEvolution &SE = getAnalysis<ScalarEvolution>();
+
+	    // Now check whether any of these backedge targets are part of a loop
+	    // with a small constant trip count
+	    for (BBSetTy::iterator I=BackedgeTargets.begin(),E=BackedgeTargets.end();
+		 I != E; ++I) {
+		const Loop *L = LI.getLoopFor(*I);
+		if (L && L->getHeader() == *I &&
+		    !loopNeedsTimeoutCheck(SE, L, BBMap))
+		    continue;
+		needsTimeoutCheck.insert(*I);
+		BBMap[*I] = 0;
+	    }
+	}
+	// Estimate number of apicalls by walking dominator-tree bottom-up.
+	// BBs that have timeout checks are considered to have 0 APIcalls
+	// (since we already checked for timeout).
+	for (po_iterator<DomTreeNode*> I = po_begin(DT.getRootNode()),
+	     E = po_end(DT.getRootNode()); I != E; ++I) {
+	    if (needsTimeoutCheck.count(I->getBlock()))
+		continue;
+	    unsigned apicalls = BBMap[I->getBlock()];
+	    for (DomTreeNode::iterator J=I->begin(),JE=I->end();
+		 J != JE; ++J) {
+		apicalls += BBMap[(*J)->getBlock()];
+	    }
+	    if (apicalls > ApiThreshold) {
+		needsTimeoutCheck.insert(I->getBlock());
+		apicalls = 0;
+	    }
+	    BBMap[I->getBlock()] = apicalls;
+	}
+	if (needsTimeoutCheck.empty())
+	    return false;
+	DEBUG(errs() << "needs timeoutcheck:\n");
+	std::vector<const Type*>args;
+	FunctionType* abrtTy = FunctionType::get(
+	    Type::getVoidTy(F.getContext()),args,false);
+	Constant *func_abort =
+	    F.getParent()->getOrInsertFunction("abort", abrtTy);
+	BasicBlock *AbrtBB = BasicBlock::Create(F.getContext(), "", &F);
+        CallInst* AbrtC = CallInst::Create(func_abort, "", AbrtBB);
+        AbrtC->setCallingConv(CallingConv::C);
+        AbrtC->setTailCall(true);
+        AbrtC->setDoesNotReturn(true);
+        AbrtC->setDoesNotThrow(true);
+        new UnreachableInst(F.getContext(), AbrtBB);
+	IRBuilder<false> Builder(F.getContext());
+	Function *LSBarrier = Intrinsic::getDeclaration(F.getParent(),
+							Intrinsic::memory_barrier);
+	Value *Flag = F.arg_begin();
+	Value *MBArgs[] = {
+	    ConstantInt::getFalse(F.getContext()),
+	    ConstantInt::getFalse(F.getContext()),
+	    ConstantInt::getTrue(F.getContext()),
+	    ConstantInt::getFalse(F.getContext()),
+	    ConstantInt::getFalse(F.getContext())
+	};
+	verifyFunction(F);
+	BasicBlock *BB = &F.getEntryBlock();
+	Builder.SetInsertPoint(BB, BB->getTerminator());
+	Flag = Builder.CreatePointerCast(Flag, PointerType::getUnqual(
+		Type::getInt1Ty(F.getContext())));
+	for (BBSetTy::iterator I=needsTimeoutCheck.begin(),
+	     E=needsTimeoutCheck.end(); I != E; ++I) {
+	    BasicBlock *BB = *I;
+	    Builder.SetInsertPoint(BB, BB->getTerminator());
+	    // store-load barrier: will be a no-op on x86 but not other arches
+	    Builder.CreateCall(LSBarrier, MBArgs, MBArgs+5);
+	    // Load Flag that tells us we timed out (first byte in bc_ctx)
+	    Value *Cond = Builder.CreateLoad(Flag, true);
+	    BasicBlock *newBB = SplitBlock(BB, BB->getTerminator(), this);
+	    TerminatorInst *TI = BB->getTerminator();
+	    BranchInst::Create(AbrtBB, newBB, Cond, TI);
+	    TI->eraseFromParent();
+	    // Update dominator info
+	    DomTreeNode *N = DT.getNode(AbrtBB);
+	    if (!N) {
+		DT.addNewBlock(AbrtBB, BB);
+	    } else {
+		BasicBlock *DomBB = DT.findNearestCommonDominator(BB,
+								  N->getIDom()->getBlock());
+		DT.changeImmediateDominator(AbrtBB, DomBB);
+	    }
+	    DEBUG(errs() << *I << "\n");
+	}
+	//verifyFunction(F);
+	return true;
+    }
+
+    virtual void getAnalysisUsage(AnalysisUsage &AU) const {
+      AU.setPreservesAll();
+      AU.addRequired<LoopInfo>();
+      AU.addRequired<ScalarEvolution>();
+      AU.addRequired<DominatorTree>();
+    }
+};
+char RuntimeLimits::ID;
+
 class VISIBILITY_HIDDEN LLVMCodegen {
 private:
     const struct cli_bc *bc;
@@ -339,7 +551,11 @@ private:
 	unsigned map[] = {0, 1, 2, 3, 3, 4, 4, 4, 4};
 	if (operand < func->numValues)
 	    return Values[operand];
-	unsigned w = (Ty->getPrimitiveSizeInBits()+7)/8;
+	unsigned w = Ty->getPrimitiveSizeInBits();
+	if (w > 1)
+	    w = (w+7)/8;
+	else
+	    w = 0;
 	return convertOperand(func, map[w], operand);
     }
 
@@ -366,7 +582,11 @@ private:
 	    }
 	    return V;
 	}
-	unsigned w = (Ty->getPrimitiveSizeInBits()+7)/8;
+	unsigned w = Ty->getPrimitiveSizeInBits();
+	if (w > 1)
+	    w = (w+7)/8;
+	else
+	    w = 0;
 	return convertOperand(func, map[w], operand);
     }
 
@@ -460,7 +680,6 @@ private:
     Constant *buildConstant(const Type *Ty, uint64_t *components, unsigned &c)
     {
         if (const PointerType *PTy = dyn_cast<PointerType>(Ty)) {
-
           Value *idxs[1] = {
 	      ConstantInt::get(Type::getInt64Ty(Context), components[c++])
 	  };
@@ -658,6 +877,7 @@ public:
 	const Type *I32Ty = Type::getInt32Ty(Context);
 	if (!bc->trusted)
 	    PM.add(createClamBCRTChecks());
+	PM.add(new RuntimeLimits());
 	for (unsigned j=0;j<bc->num_func;j++) {
 	    PrettyStackTraceString CrashInfo("Generate LLVM IR");
 	    const struct cli_bc_func *func = &bc->funcs[j];
@@ -1020,6 +1240,7 @@ public:
 			case OP_BC_MEMSET:
 			{
 			    Value *Dst = convertOperand(func, inst, inst->u.three[0]);
+			    Dst = Builder.CreatePointerCast(Dst, PointerType::getUnqual(Type::getInt8Ty(Context)));
 			    Value *Val = convertOperand(func, Type::getInt8Ty(Context), inst->u.three[1]);
 			    Value *Len = convertOperand(func, Type::getInt32Ty(Context), inst->u.three[2]);
 			    CallInst *c = Builder.CreateCall4(CF->FMemset, Dst, Val, Len,
@@ -1031,7 +1252,9 @@ public:
 			case OP_BC_MEMCPY:
 			{
 			    Value *Dst = convertOperand(func, inst, inst->u.three[0]);
+			    Dst = Builder.CreatePointerCast(Dst, PointerType::getUnqual(Type::getInt8Ty(Context)));
 			    Value *Src = convertOperand(func, inst, inst->u.three[1]);
+			    Src = Builder.CreatePointerCast(Src, PointerType::getUnqual(Type::getInt8Ty(Context)));
 			    Value *Len = convertOperand(func, Type::getInt32Ty(Context), inst->u.three[2]);
 			    CallInst *c = Builder.CreateCall4(CF->FMemcpy, Dst, Src, Len,
 								ConstantInt::get(Type::getInt32Ty(Context), 1));
@@ -1042,7 +1265,9 @@ public:
 			case OP_BC_MEMMOVE:
 			{
 			    Value *Dst = convertOperand(func, inst, inst->u.three[0]);
+			    Dst = Builder.CreatePointerCast(Dst, PointerType::getUnqual(Type::getInt8Ty(Context)));
 			    Value *Src = convertOperand(func, inst, inst->u.three[1]);
+			    Src = Builder.CreatePointerCast(Dst, PointerType::getUnqual(Type::getInt8Ty(Context)));
 			    Value *Len = convertOperand(func, Type::getInt32Ty(Context), inst->u.three[2]);
 			    CallInst *c = Builder.CreateCall4(CF->FMemmove, Dst, Src, Len,
 								ConstantInt::get(Type::getInt32Ty(Context), 1));
@@ -1053,7 +1278,9 @@ public:
 			case OP_BC_MEMCMP:
 			{
 			    Value *Dst = convertOperand(func, inst, inst->u.three[0]);
+			    Dst = Builder.CreatePointerCast(Dst, PointerType::getUnqual(Type::getInt8Ty(Context)));
 			    Value *Src = convertOperand(func, inst, inst->u.three[1]);
+			    Src = Builder.CreatePointerCast(Dst, PointerType::getUnqual(Type::getInt8Ty(Context)));
 			    Value *Len = convertOperand(func, EE->getTargetData()->getIntPtrType(Context), inst->u.three[2]);
 			    CallInst *c = Builder.CreateCall3(CF->FRealmemcmp, Dst, Src, Len);
 			    c->setTailCall(true);
@@ -1279,20 +1506,33 @@ static void addFunctionProtos(struct CommonFunctions *CF, ExecutionEngine *EE, M
 
 }
 
-int cli_vm_execute_jit(const struct cli_all_bc *bcs, struct cli_bc_ctx *ctx,
-		       const struct cli_bc_func *func)
+struct bc_watchdog {
+    volatile uint8_t* timeout;
+    struct timespec * abstimeout;
+    pthread_mutex_t   mutex;
+    pthread_cond_t    cond;
+    int finished;
+};
+
+static void *bytecode_watchdog(void *arg)
 {
-    // no locks needed here, since LLVM automatically acquires a JIT lock
-    // if needed.
-    jmp_buf env;
-    void *code = bcs->engine->compiledFunctions[func];
-    if (!code) {
-	errs() << MODULE << "Unable to find compiled function\n";
-	if (func->numArgs)
-	    errs() << MODULE << "Function has "
-		<< (unsigned)func->numArgs << " arguments, it must have 0 to be called as entrypoint\n";
-	return CL_EBYTECODE;
+    int ret = 0;
+    struct bc_watchdog *w = (struct bc_watchdog*)arg;
+    pthread_mutex_lock(&w->mutex);
+    while (!w->finished && ret != ETIMEDOUT) {
+	ret = pthread_cond_timedwait(&w->cond, &w->mutex, w->abstimeout);
     }
+    pthread_mutex_unlock(&w->mutex);
+    if (ret == ETIMEDOUT) {
+	*w->timeout = 1;
+	errs() << "Bytecode run timed out, timeout flag set\n";
+    }
+    return NULL;
+}
+
+static int bytecode_execute(intptr_t code, struct cli_bc_ctx *ctx)
+{
+    jmp_buf env;
     // execute;
     if (setjmp(env) == 0) {
 	// setup exception handler to longjmp back here
@@ -1306,6 +1546,64 @@ int cli_vm_execute_jit(const struct cli_all_bc *bcs, struct cli_bc_ctx *ctx,
 	<< "*** JITed code intercepted runtime error!\n";
     errs().resetColor();
     return CL_EBYTECODE;
+}
+
+extern "C" const char *cli_strerror(int errnum, char* buf, size_t len);
+int cli_vm_execute_jit(const struct cli_all_bc *bcs, struct cli_bc_ctx *ctx,
+		       const struct cli_bc_func *func)
+{
+    char buf[1024];
+    int ret;
+    pthread_t thread;
+    struct timeval tv0, tv1;
+    uint32_t timeoutus;
+    // no locks needed here, since LLVM automatically acquires a JIT lock
+    // if needed.
+    void *code = bcs->engine->compiledFunctions[func];
+    if (!code) {
+	errs() << MODULE << "Unable to find compiled function\n";
+	if (func->numArgs)
+	    errs() << MODULE << "Function has "
+		<< (unsigned)func->numArgs << " arguments, it must have 0 to be called as entrypoint\n";
+	return CL_EBYTECODE;
+    }
+    gettimeofday(&tv0, NULL);
+    struct timespec abstime;
+
+    timeoutus = (ctx->bytecode_timeout%1000)*1000 + tv0.tv_usec;
+    abstime.tv_sec = tv0.tv_sec + ctx->bytecode_timeout/1000 + timeoutus/1000000;
+    abstime.tv_nsec = 1000*(timeoutus%1000000);
+    ctx->timeout = 0;
+
+    struct bc_watchdog w = {
+	&ctx->timeout,
+	&abstime,
+	PTHREAD_MUTEX_INITIALIZER,
+	PTHREAD_COND_INITIALIZER,
+	0
+    };
+
+    if ((ret = pthread_create(&thread, NULL, bytecode_watchdog, &w))) {
+	errs() << "Bytecode: failed to create new thread!";
+	errs() << cli_strerror(ret, buf, sizeof(buf));
+	errs() << "\n";
+	return CL_EBYTECODE;
+    }
+
+    ret = bytecode_execute((intptr_t)code, ctx);
+    pthread_mutex_lock(&w.mutex);
+    w.finished = 1;
+    pthread_cond_signal(&w.cond);
+    pthread_mutex_unlock(&w.mutex);
+    pthread_join(thread, NULL);
+
+    if (cli_debug_flag) {
+	gettimeofday(&tv1, NULL);
+	tv1.tv_sec -= tv0.tv_sec;
+	tv1.tv_usec -= tv0.tv_usec;
+	errs() << "bytecode finished in " << (tv1.tv_sec*1000000 + tv1.tv_usec) << "us\n";
+    }
+    return ctx->timeout ? CL_ETIMEOUT : ret;
 }
 
 static unsigned char name_salt[16] = { 16, 38, 97, 12, 8, 4, 72, 196, 217, 144, 33, 124, 18, 11, 17, 253 };
@@ -1355,7 +1653,8 @@ int cli_bytecode_prepare_jit(struct cli_all_bc *bcs)
 		errs() << MODULE << "JIT not registered?\n";
 	    return CL_EBYTECODE;
 	}
-
+	bcs->engine->Listener  = new NotifyListener();
+	EE->RegisterJITEventListener(bcs->engine->Listener);
 //	EE->RegisterJITEventListener(createOProfileJITEventListener());
 	// Due to LLVM PR4816 only X86 supports non-lazy compilation, disable
 	// for now.
@@ -1398,6 +1697,18 @@ int cli_bytecode_prepare_jit(struct cli_all_bc *bcs)
 		    break;
 		case 3:
 		    dest = (void*)(intptr_t)cli_apicalls3[api->idx];
+		    break;
+		case 4:
+		    dest = (void*)(intptr_t)cli_apicalls4[api->idx];
+		    break;
+		case 5:
+		    dest = (void*)(intptr_t)cli_apicalls5[api->idx];
+		    break;
+		case 6:
+		    dest = (void*)(intptr_t)cli_apicalls6[api->idx];
+		    break;
+		case 7:
+		    dest = (void*)(intptr_t)cli_apicalls7[api->idx];
 		    break;
 		default:
 		    llvm_unreachable("invalid api type");
@@ -1472,7 +1783,9 @@ int bytecode_init(void)
     atexit(do_shutdown);
 
 #ifdef CL_DEBUG
-    llvm::JITEmitDebugInfo = true;
+    //disable this for now, it leaks
+    llvm::JITEmitDebugInfo = false;
+//    llvm::JITEmitDebugInfo = true;
 #else
     llvm::JITEmitDebugInfo = false;
 #endif
@@ -1491,7 +1804,6 @@ int bytecode_init(void)
     return 0;
 }
 
-extern "C" BCAPI uint8_t cli_debug_flag;
 // Called once when loading a new set of BC files
 int cli_bytecode_init_jit(struct cli_all_bc *bcs, unsigned dconfmask)
 {
@@ -1543,6 +1855,7 @@ int cli_bytecode_init_jit(struct cli_all_bc *bcs, unsigned dconfmask)
     if (!bcs->engine)
 	return CL_EMEM;
     bcs->engine->EE = 0;
+    bcs->engine->Listener = 0;
     return 0;
 }
 
@@ -1550,8 +1863,12 @@ int cli_bytecode_done_jit(struct cli_all_bc *bcs)
 {
     LLVMApiScopedLock scopedLock;
     if (bcs->engine) {
-	if (bcs->engine->EE)
+	if (bcs->engine->EE) {
+	    if (bcs->engine->Listener)
+		bcs->engine->EE->UnregisterJITEventListener(bcs->engine->Listener);
 	    delete bcs->engine->EE;
+	}
+	delete bcs->engine->Listener;
 	delete bcs->engine;
 	bcs->engine = 0;
     }

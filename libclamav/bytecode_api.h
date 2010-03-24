@@ -174,7 +174,7 @@ uint32_t pe_rawaddr(uint32_t rva);
   * @param[in] data the sequence of bytes to look for
   * @param len length of \p data, cannot be more than 1024
   * @return offset in the current file if match is found, -1 otherwise */
-int32_t file_find(const uint8_t* data, uint32_t len); 
+int32_t file_find(const uint8_t* data, uint32_t len);
 
 /** Read a single byte from current file
   * @param offset file offset
@@ -190,7 +190,62 @@ void* malloc(uint32_t size);
 
 uint32_t test2(uint32_t a);
 
+/** Gets information about the specified PE section.
+ * @param[out] section PE section information will be stored here
+ * @param[in] num PE section number */
 int32_t get_pe_section(struct cli_exe_section *section, uint32_t num);
+
+/** Fills the specified buffer with at least \p fill bytes.
+ * @param[out] buffer the buffer to fill
+ * @param[in] len length of buffer
+ * @param[in] filled how much of the buffer is currently filled
+ * @param[in] cursor position of cursor in buffer
+ * @param[in] fill amount of bytes to fill in (0 is valid)
+ * @return <0 on error,
+ *          0 on EOF,
+ *          number bytes available in buffer (starting from 0)
+ * The character at the cursor will be at position 0 after this call.
+ */
+int32_t fill_buffer(uint8_t* buffer, uint32_t len, uint32_t filled, uint32_t cur, uint32_t fill);
+
+/**
+ * Prepares for extracting a new file, if we've already extracted one it scans
+ * it.
+ * @param[in] id an id for the new file (for example position in container)
+ * @return 1 if previous extracted file was infected
+*/
+int32_t extract_new(int32_t id);
+
+/**
+  * Reads a number in the specified radix starting from the current position.
+  * Non-numeric characters are ignored.
+  * @param[in] radix 10 or 16
+  * @return the number read
+  */
+int32_t read_number(uint32_t radix);
+
+int32_t hashset_new(void);
+int32_t hashset_add(int32_t hs, uint32_t key);
+int32_t hashset_remove(int32_t hs, uint32_t key);
+int32_t hashset_contains(int32_t hs, uint32_t key);
+int32_t hashset_done(int32_t id);
+int32_t hashset_empty(int32_t id);
+
+int32_t  buffer_pipe_new(uint32_t size);
+int32_t  buffer_pipe_new_fromfile(uint32_t pos);
+uint32_t buffer_pipe_read_avail(int32_t id);
+uint8_t *buffer_pipe_read_get(int32_t id, uint32_t amount);
+int32_t  buffer_pipe_read_stopped(int32_t id, uint32_t amount);
+uint32_t buffer_pipe_write_avail(int32_t id);
+uint8_t *buffer_pipe_write_get(int32_t id, uint32_t size);
+int32_t  buffer_pipe_write_stopped(int32_t id, uint32_t amount);
+int32_t  buffer_pipe_done(int32_t id);
+
+int32_t inflate_init(int32_t from_buffer, int32_t to_buffer, int32_t windowBits);
+int32_t inflate_process(int32_t id);
+int32_t inflate_done(int32_t id);
+
+int32_t bytecode_rt_error(int32_t locationid);
 
 #endif
 #endif

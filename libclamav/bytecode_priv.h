@@ -23,12 +23,14 @@
 #ifndef BYTECODE_PRIV_H
 #define BYTECODE_PRIV_H
 
+#include <zlib.h>
 #include "bytecode.h"
 #include "type_desc.h"
 #include "execs.h"
 #include "bytecode_hooks.h"
 #include "fmap.h"
 #include "mpool.h"
+#include "hashtab.h"
 
 typedef uint32_t operand_t;
 typedef uint16_t bbid_t;
@@ -115,10 +117,27 @@ enum trace_level {
     trace_op,
     trace_val
 };
+
+struct bc_buffer {
+    unsigned char *data;
+    unsigned size;
+    unsigned write_cursor;
+    unsigned read_cursor;
+};
+
+struct bc_inflate {
+    z_stream stream;
+    int32_t from;
+    int32_t to;
+    int8_t  needSync;
+};
+
 struct cli_bc_ctx {
+    uint8_t timeout;/* must be first byte in struct! */
     /* id and params of toplevel function called */
     const struct cli_bc *bc;
     const struct cli_bc_func *func;
+    uint32_t bytecode_timeout;
     unsigned bytes;
     uint16_t *opsizes;
     char *values;
@@ -135,6 +154,8 @@ struct cli_bc_ctx {
     char *tempfile;
     void *ctx;
     unsigned written;
+    unsigned filewritten;
+    unsigned found;
     bc_dbg_callback_trace trace;
     bc_dbg_callback_trace_op trace_op;
     bc_dbg_callback_trace_val trace_val;
@@ -147,8 +168,12 @@ struct cli_bc_ctx {
     unsigned line;
     unsigned col;
     mpool_t *mpool;
-    uint32_t numGlobals;
-    uint8_t* globals;
+    struct bc_inflate* inflates;
+    unsigned ninflates;
+    struct bc_buffer *buffers;
+    unsigned nbuffers;
+    struct cli_hashset *hashsets;
+    unsigned nhashsets;
 };
 struct cli_all_bc;
 int cli_vm_execute(const struct cli_bc *bc, struct cli_bc_ctx *ctx, const struct cli_bc_func *func, const struct cli_bc_inst *inst);
