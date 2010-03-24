@@ -188,8 +188,6 @@ void scanfile(const char *filename, struct cl_engine *engine, const struct optst
     cbdata.size = lseek(fd, 0, SEEK_END);
     lseek(fd, 0, SEEK_SET);
 
-    info.files++;
-
     if((ret = cl_scandesc(fd, &virname, &info.blocks, engine, options)) == CL_VIRUS) {
 	logg("~%s: %s FOUND\n", filename, virname);
 	info.files++;
