@@ -60,7 +60,7 @@ static double speed = 0.0;
 static int runs = 1;
 static int cycles = 0;
 
-static void console_ctrl_handler(DWORD ctrl_type)
+BOOL WINAPI cw_stop_ctrl_handler(DWORD CtrlType)
 {
     printf("\nControl+C pressed, aborting...\n");
     if (speed > 0.0f) printf("Average speed: %4.3f mb/s" PADDING_50, (speed * BMTOMS / runs));
@@ -69,7 +69,7 @@ static void console_ctrl_handler(DWORD ctrl_type)
 
 static void stop_console_handler(void)
 {
-    SetConsoleCtrlHandler((PHANDLER_ROUTINE) console_ctrl_handler, FALSE);
+    SetConsoleCtrlHandler(cw_stop_ctrl_handler, FALSE);
 }
 
 double benchmark(void)
@@ -168,7 +168,7 @@ int main(int argc, char *argv[])
         }
     }
 
-    SetConsoleCtrlHandler((PHANDLER_ROUTINE) console_ctrl_handler, TRUE);
+    SetConsoleCtrlHandler(cw_stop_ctrl_handler, TRUE);
     atexit(stop_console_handler);
 
 

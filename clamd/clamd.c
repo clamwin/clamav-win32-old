@@ -595,3 +595,16 @@ int main(int argc, char **argv)
 
     return ret;
 }
+
+#ifdef _WIN32
+extern HANDLE event_wake_recv;
+BOOL WINAPI cw_stop_ctrl_handler(DWORD CtrlType)
+{
+    fprintf(stderr, "[clamd] Control+C pressed, aborting...\n");
+    pthread_mutex_lock(&exit_mutex);
+    progexit = 1;
+    pthread_mutex_unlock(&exit_mutex);
+    SetEvent(event_wake_recv);
+    return TRUE;
+}
+#endif

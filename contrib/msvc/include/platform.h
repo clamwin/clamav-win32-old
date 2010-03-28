@@ -61,6 +61,9 @@ extern int cw_installservice(const char *name, const char *dname, const char *de
 extern int cw_uninstallservice(const char *name, int verbose);
 extern int cw_init(void);
 
+/* ctrl + c handler */
+extern BOOL WINAPI cw_stop_ctrl_handler(DWORD CtrlType);
+
 /* gnulib entries */
 extern char *strtok_r(char *s, const char *delim, char **save_ptr);
 extern struct tm *localtime_r(time_t const *t, struct tm *tp);

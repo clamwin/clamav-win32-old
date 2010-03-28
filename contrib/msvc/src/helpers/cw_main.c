@@ -23,15 +23,9 @@
 
 extern int cw_main(int argc, char *argv[]);
 
-void ConsoleCtrlHandler(DWORD ctrl_type)
-{
-    fprintf(stderr, "Control+C pressed, aborting...\n");
-    exit(1);
-}
-
 static void StopConsoleHandler(void)
 {
-    SetConsoleCtrlHandler((PHANDLER_ROUTINE) ConsoleCtrlHandler, FALSE);
+    SetConsoleCtrlHandler(cw_stop_ctrl_handler, FALSE);
 }
 
 #undef main
@@ -45,7 +39,7 @@ int main(int argc, char* argv[])
 
     _setmode(_fileno(stdin), O_BINARY);
 
-    if (!SetConsoleCtrlHandler((PHANDLER_ROUTINE) ConsoleCtrlHandler, TRUE))
+    if (!SetConsoleCtrlHandler(cw_stop_ctrl_handler, TRUE))
         fprintf(stderr, "[cw_main] Cannot install Console Ctrl Handler (%d)\n", GetLastError());
 
     atexit(StopConsoleHandler);

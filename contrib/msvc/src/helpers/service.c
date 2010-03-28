@@ -24,7 +24,6 @@
 #include <shared/output.h>
 
 extern int gnulib_snprintf(char *str, size_t size, const char *format, ...);
-extern void ConsoleCtrlHandler(DWORD ctrl_type);
 
 void WINAPI ServiceMain(DWORD dwArgc, LPSTR *lpszArgv);
 
@@ -142,7 +141,7 @@ void cw_registerservice(const char *name)
     DWORD tid;
     DT->lpServiceName = (char *) name;
     /* remove ctrl + c handler to avoid termination on logout */
-    SetConsoleCtrlHandler((PHANDLER_ROUTINE) ConsoleCtrlHandler, FALSE);
+    SetConsoleCtrlHandler(cw_stop_ctrl_handler, FALSE);
     ServiceProc = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE) StartServiceCtrlDispatcherA, (LPVOID) DT, 0, &tid);
 }
 

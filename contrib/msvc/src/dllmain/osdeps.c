@@ -312,3 +312,10 @@ void cw_freeaddrinfo(struct addrinfo *res)
         free(prev);
     } while (res);
 }
+
+/* default stop control handler */
+BOOL WINAPI cw_stop_ctrl_handler(DWORD CtrlType)
+{
+    fprintf(stderr, "Control+C pressed, aborting...\n");
+    exit(1);
+}

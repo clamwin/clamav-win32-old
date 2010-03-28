@@ -50,10 +50,6 @@
 #include "libclamav/str.h"
 #include "libclamav/clamav.h"
 
-#ifdef _WIN32
-void clamscan_ctrl_handler(DWORD ctrl_type);
-#endif
-
 void help(void);
 
 struct s_info info;
@@ -147,8 +143,8 @@ int main(int argc, char **argv)
     memset(&info, 0, sizeof(struct s_info));
 
 #ifdef _WIN32
-    if(!optget(opts, "no-summary")->enabled)
-        SetConsoleCtrlHandler((PHANDLER_ROUTINE) clamscan_ctrl_handler, TRUE);
+    if(optget(opts, "no-summary")->enabled)
+        SetConsoleCtrlHandler(cw_stop_ctrl_handler, FALSE);
 #endif
 
     gettimeofday(&t1, NULL);
@@ -271,8 +267,7 @@ void help(void)
 }
 
 #ifdef _WIN32
-/* Display summary on Ctrl+C, --no-summary is not honored here :( */
-void clamscan_ctrl_handler(DWORD ctrl_type)
+BOOL WINAPI cw_stop_ctrl_handler(DWORD CtrlType)
 {
     double mb;
     logg("\nScanning aborted...\n");
@@ -291,5 +286,6 @@ void clamscan_ctrl_handler(DWORD ctrl_type)
     mb = info.blocks * (CL_COUNT_PRECISION / 1024) / 1024.0;
     logg("Data scanned: %2.2lf MB\n", mb);
     exit(1);
+    return TRUE;
 }
 #endif
