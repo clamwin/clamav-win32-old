@@ -34,19 +34,23 @@
 #endif
 
 /* Enable this to catch more bugs in the RC phase */
-#define CL_BYTECODE_DEBUG
+#define CL_BYTECODE_SAFE
 
+
+#ifdef CL_BYTECODE_SAFE
 /* These checks will also be done by the bytecode verifier, but for
  * debugging purposes we have explicit checks, these should never fail! */
-#ifdef CL_BYTECODE_DEBUG
+#ifdef CL_DEBUG
 static int never_inline bcfail(const char *msg, long a, long b,
 		  const char *file, unsigned line)
 {
     cli_warnmsg("bytecode: check failed %s (%lx and %lx) at %s:%u\n", msg, a, b, file, line);
     return CL_EARG;
 }
+#else
+#define bcfail(msg,a,b,f,l) CL_EBYTECODE
+#endif
 
-#define CHECK_UNREACHABLE do { cli_dbgmsg("bytecode: unreachable executed!\n"); return CL_EBYTECODE; } while(0)
 #define CHECK_FUNCID(funcid) do { if (funcid >= bc->num_func) return \
     bcfail("funcid out of bounds!",funcid, bc->num_func,__FILE__,__LINE__); } while(0)
 #define CHECK_APIID(funcid) do { if (funcid >= cli_apicall_maxapi) return \
@@ -55,20 +59,26 @@ static int never_inline bcfail(const char *msg, long a, long b,
     bcfail("Values "#a" and "#b" don't match!",(a),(b),__FILE__,__LINE__); } while(0)
 #define CHECK_GT(a, b) do {if ((a) <= (b)) return \
     bcfail("Condition failed "#a" > "#b,(a),(b), __FILE__, __LINE__); } while(0)
-#define TRACE_R(x) cli_dbgmsg("bytecode trace: %u, read %llx\n", pc, (long long)x);
-#define TRACE_W(x, w, p) cli_dbgmsg("bytecode trace: %u, write%d @%u %llx\n", pc, p, w, (long long)(x));
-#define TRACE_EXEC(id, dest, ty, stack) cli_dbgmsg("bytecode trace: executing %d, -> %u (%u); %u\n", id, dest, ty, stack)
+
 #else
 static inline int bcfail(const char *msg, long a, long b,
 			 const char *file, unsigned line) {}
-#define TRACE_R(x)
-#define TRACE_W(x, w, p)
-#define TRACE_EXEC(id, dest, ty, stack)
-#define CHECK_UNREACHABLE return CL_EBYTECODE
 #define CHECK_FUNCID(x);
 #define CHECK_APIID(x);
 #define CHECK_EQ(a,b)
 #define CHECK_GT(a,b)
+#endif
+
+#ifdef CL_DEBUG
+#define CHECK_UNREACHABLE do { cli_dbgmsg("bytecode: unreachable executed!\n"); return CL_EBYTECODE; } while(0)
+#define TRACE_R(x) cli_dbgmsg("bytecode trace: %u, read %llx\n", pc, (long long)x);
+#define TRACE_W(x, w, p) cli_dbgmsg("bytecode trace: %u, write%d @%u %llx\n", pc, p, w, (long long)(x));
+#define TRACE_EXEC(id, dest, ty, stack) cli_dbgmsg("bytecode trace: executing %d, -> %u (%u); %u\n", id, dest, ty, stack)
+#else
+#define CHECK_UNREACHABLE return CL_EBYTECODE
+#define TRACE_R(x)
+#define TRACE_W(x, w, p)
+#define TRACE_EXEC(id, dest, ty, stack)
 #endif
 
 #define SIGNEXT(a, from) CLI_SRS(((int64_t)(a)) << (64-(from)), (64-(from)))
@@ -297,6 +307,15 @@ static always_inline struct stack_entry *pop_stack(struct stack *stack,
 	break;\
     }\
     TRACE_R(x)\
+}
+#define READPOP(x, p, asize) {\
+    if ((p)&0x40000000) {\
+	unsigned ptr__ = (p)&0xbfffffff;\
+	CHECK_GT(func->numBytes, ptr__);\
+	x = (void*)&values[ptr__];\
+    } else {\
+	READP(x, p, asize)\
+    }\
 }
 
 #define READOLD8(x, p) CHECK_GT(func->numBytes, p);\
@@ -928,28 +947,28 @@ int cli_vm_execute(const struct cli_bc *bc, struct cli_bc_ctx *ctx, const struct
 	    case OP_BC_LOAD*5+1:
 	    {
 		uint8_t *ptr;
-		READP(ptr, inst->u.unaryop, 1);
+		READPOP(ptr, inst->u.unaryop, 1);
 		WRITE8(inst->dest, (*ptr));
 		break;
 	    }
 	    case OP_BC_LOAD*5+2:
 	    {
 		const union unaligned_16 *ptr;
-		READP(ptr, inst->u.unaryop, 2);
+		READPOP(ptr, inst->u.unaryop, 2);
 		WRITE16(inst->dest, (ptr->una_u16));
 		break;
 	    }
 	    case OP_BC_LOAD*5+3:
 	    {
 		const union unaligned_32 *ptr;
-		READP(ptr, inst->u.unaryop, 4);
+		READPOP(ptr, inst->u.unaryop, 4);
 		WRITE32(inst->dest, (ptr->una_u32));
 		break;
 	    }
 	    case OP_BC_LOAD*5+4:
 	    {
 		const union unaligned_64 *ptr;
-		READP(ptr, inst->u.unaryop, 8);
+		READPOP(ptr, inst->u.unaryop, 8);
 		WRITE64(inst->dest, (ptr->una_u64));
 		break;
 	    }
@@ -1020,47 +1039,47 @@ int cli_vm_execute(const struct cli_bc *bc, struct cli_bc_ctx *ctx, const struct
 		int32_t arg3;
 		void *arg1, *arg2;
 		READ32(arg3, inst->u.three[2]);
-		READP(arg1, inst->u.three[0], arg3);
-		READP(arg2, inst->u.three[1], arg3);
+		READPOP(arg1, inst->u.three[0], arg3);
+		READPOP(arg2, inst->u.three[1], arg3);
 		WRITE32(inst->dest, memcmp(arg1, arg2, arg3));
 		break;
 	    }
 	    DEFINE_OP(OP_BC_MEMCPY) {
 		int32_t arg3;
 		void *arg1, *arg2, *resp;
-		int64_t res;
+		int64_t res=0;
 
 		READ32(arg3, inst->u.three[2]);
-		READP(arg1, inst->u.three[0], arg3);
-		READP(arg2, inst->u.three[1], arg3);
+		READPOP(arg1, inst->u.three[0], arg3);
+		READPOP(arg2, inst->u.three[1], arg3);
 		memcpy(arg1, arg2, arg3);
-		READ64(res, inst->u.three[0]);
+/*		READ64(res, inst->u.three[0]);*/
 		WRITE64(inst->dest, res);
 		break;
 	    }
 	    DEFINE_OP(OP_BC_MEMMOVE) {
 		int32_t arg3;
 		void *arg1, *arg2, *resp;
-		int64_t res;
+		int64_t res=0;
 
 		READ32(arg3, inst->u.three[2]);
-		READP(arg1, inst->u.three[0], arg3);
-		READP(arg2, inst->u.three[1], arg3);
+		READPOP(arg1, inst->u.three[0], arg3);
+		READPOP(arg2, inst->u.three[1], arg3);
 		memmove(arg1, arg2, arg3);
-		READ64(res, inst->u.three[0]);
+/*		READ64(res, inst->u.three[0]);*/
 		WRITE64(inst->dest, res);
 		break;
 	    }
 	    DEFINE_OP(OP_BC_MEMSET) {
 		int32_t arg2, arg3;
 		void *arg1;
-		int64_t res;
+		int64_t res=0;
 
 		READ32(arg3, inst->u.three[2]);
-		READP(arg1, inst->u.three[0], arg3);
+		READPOP(arg1, inst->u.three[0], arg3);
 		READ32(arg2, inst->u.three[1]);
 		memset(arg1, arg2, arg3);
-		READ64(res, inst->u.three[0]);
+/*		READ64(res, inst->u.three[0]);*/
 		WRITE64(inst->dest, res);
 		break;
 	    }

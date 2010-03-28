@@ -83,7 +83,7 @@ static void runtest(const char *file, uint64_t expected, int fail, int nojit,
 
     ctx = cli_bytecode_context_alloc();
     /* small timeout, these bytecodes are fast! */
-    ctx->bytecode_timeout = 10;
+    ctx->bytecode_timeout = 100;
     fail_unless(!!ctx, "cli_bytecode_context_alloc failed");
 
     if (infile) {
@@ -213,9 +213,8 @@ END_TEST
 START_TEST (test_bswap)
 {
     cl_init(CL_INIT_DEFAULT);
-    if (have_clamjit)
-	runtest("input/bswap.cbc", 0xbeef, 0, 0, NULL, NULL, NULL, NULL);
-//    runtest("input/bswap.cbc", 0xbeef, 0, 1, NULL, NULL, NULL, NULL);
+    runtest("input/bswap.cbc", 0xbeef, 0, 0, NULL, NULL, NULL, NULL);
+    runtest("input/bswap.cbc", 0xbeef, 0, 1, NULL, NULL, NULL, NULL);
 }
 END_TEST
 
@@ -233,7 +232,6 @@ Suite *test_bytecode_suite(void)
     Suite *s = suite_create("bytecode");
     TCase *tc_cli_arith = tcase_create("arithmetic");
     suite_add_tcase(s, tc_cli_arith);
-#if 0
     tcase_add_test(tc_cli_arith, test_retmagic);
     tcase_add_test(tc_cli_arith, test_arith);
     tcase_add_test(tc_cli_arith, test_apicalls);
@@ -244,7 +242,6 @@ Suite *test_bytecode_suite(void)
     tcase_add_test(tc_cli_arith, test_matchwithread);
     tcase_add_test(tc_cli_arith, test_pdf);
     tcase_add_test(tc_cli_arith, test_bswap);
-#endif
     tcase_add_test(tc_cli_arith, test_inflate);
     return s;
 }
