@@ -8,6 +8,7 @@ CFLAGS+=-DHAVE_CONFIG_H
 CFLAGS+=-Wall -Wextra -Wno-unused -Wno-sign-compare -Wno-switch -Wno-format -pipe
 CFLAGS+=-fno-strict-aliasing
 CFLAGS+=-O3 -mtune=generic -march=i686 -fomit-frame-pointer -ffast-math
+LDFLAGS=-Wl,--enable-stdcall-fixup
 
 LLVM=-I$(top)/libclamav/c++ -I$(top)/libclamav/c++/llvm/include
 LLVM+=-I$(top)/libclamav/c++/llvm/lib/Target/X86 -I$(msvc)/include/llvmbuild
