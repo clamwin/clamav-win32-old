@@ -987,6 +987,7 @@ public:
 			case OP_BC_COPY:
 			case OP_BC_RET:
 			case OP_BC_PTRDIFF32:
+			case OP_BC_PTRTOINT64:
 			    // these instructions represents operands differently
 			    break;
 			default:
@@ -1336,6 +1337,13 @@ public:
 				Value *R = Builder.CreateSub(P1, P2);
 				R = Builder.CreateTrunc(R, Type::getInt32Ty(Context));
 				Store(inst->dest, R);
+				break;
+			    }
+			case OP_BC_PTRTOINT64:
+			    {
+				Value *P1 = convertOperand(func, inst, inst->u.unaryop);
+				P1 = Builder.CreatePtrToInt(P1, Type::getInt64Ty(Context));
+				Store(inst->dest, P1);
 				break;
 			    }
 			default:
@@ -1858,7 +1866,7 @@ int cli_bytecode_init_jit(struct cli_all_bc *bcs, unsigned dconfmask)
     if (B.base() == 0) {
 	errs() << MODULE << ErrMsg << "\n";
 #ifdef __linux__
-	errs() << MODULE << "SELinux is preventing 'execmem' access\n";
+	errs() << MODULE << "SELinux is preventing 'execmem' access. Run 'setsebool -P clamd_use_jit on' to allow access\n";
 #endif
 	errs() << MODULE << "falling back to interpreter mode\n";
 	return 0;
