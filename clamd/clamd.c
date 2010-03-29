@@ -600,7 +600,11 @@ int main(int argc, char **argv)
 extern HANDLE event_wake_recv;
 BOOL WINAPI cw_stop_ctrl_handler(DWORD CtrlType)
 {
-    fprintf(stderr, "[clamd] Control+C pressed, aborting...\n");
+    fprintf(stderr, "[clamd] Control+C pressed...\n");
+
+    if (exit_mutex == PTHREAD_MUTEX_INITIALIZER)
+        exit(1);
+
     pthread_mutex_lock(&exit_mutex);
     progexit = 1;
     pthread_mutex_unlock(&exit_mutex);
