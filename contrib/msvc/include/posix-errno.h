@@ -21,8 +21,6 @@
 #ifndef _POSIX_ERRNO_H
 #define _POSIX_ERRNO_H
 
-#undef ETIMEDOUT
-
 #define MAX_CW_ERRNO        128
 
 /* winsock specific */
@@ -91,7 +89,7 @@
 #define ENOTCONN            107 /* Transport endpoint is not connected */
 #define ESHUTDOWN           108 /* Cannot send after transport endpoint shutdown */
 #define ETOOMANYREFS        109 /* Too many references: cannot splice */
-#define ETIMEDOUT           110 /* Connection timed out */
+#define _ETIMEDOUT          110 /* Connection timed out */
 #define ECONNREFUSED        111 /* Connection refused */
 #define EHOSTDOWN           112 /* Host is down */
 #define EHOSTUNREACH        113 /* No route to host */
@@ -106,6 +104,8 @@
 #define EDQUOT              122 /* Quota exceeded */
 
 #define EWOULDBLOCK         EALREADY  /* Operation would block - should be EAGAIN */
+
+#define ETIMEDOUT           WSAETIMEDOUT /* needed by pthreads win32, it will use winsock value */
 
 extern int cw_wseterrno(void);
 extern const char *cw_strerror(int errnum);

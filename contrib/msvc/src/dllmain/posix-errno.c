@@ -168,6 +168,10 @@ static const char *const cw_errlist[MAX_CW_ERRNO] =
 
 const char *cw_strerror(int errnum)
 {
+    /* need to use the one provided by winsock */
+    if (errnum == ETIMEDOUT)
+        errnum = _ETIMEDOUT;
+
     assert((errnum >= 0) && (errnum < MAX_CW_ERRNO));
     if ((errnum >= 0) && (errnum < MAX_CW_ERRNO))
         return cw_errlist[errnum];
