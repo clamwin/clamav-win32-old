@@ -23,11 +23,6 @@
 
 extern int cw_main(int argc, char *argv[]);
 
-static void StopConsoleHandler(void)
-{
-    SetConsoleCtrlHandler(cw_stop_ctrl_handler, FALSE);
-}
-
 #undef main
 int main(int argc, char* argv[])
 {
@@ -41,8 +36,6 @@ int main(int argc, char* argv[])
 
     if (!SetConsoleCtrlHandler(cw_stop_ctrl_handler, TRUE))
         fprintf(stderr, "[cw_main] Cannot install Console Ctrl Handler (%d)\n", GetLastError());
-
-    atexit(StopConsoleHandler);
 
     return cw_main(argc, argv);
 }

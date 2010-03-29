@@ -324,6 +324,11 @@ void cw_freeaddrinfo(struct addrinfo *res)
 /* default stop control handler */
 BOOL WINAPI MANGLE(cw_stop_ctrl_handler)(DWORD CtrlType)
 {
-    fprintf(stderr, "Control+C pressed, aborting...\n");
-    exit(1);
+    if (CtrlType == CTRL_C_EVENT)
+    {
+        SetConsoleCtrlHandler(MANGLE(cw_stop_ctrl_handler), FALSE);
+        fprintf(stderr, "Control+C pressed, aborting...\n");
+        exit(1);
+    }
+    return TRUE;
 }

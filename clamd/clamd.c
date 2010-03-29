@@ -600,15 +600,19 @@ int main(int argc, char **argv)
 extern HANDLE event_wake_recv;
 BOOL WINAPI cw_stop_ctrl_handler(DWORD CtrlType)
 {
-    fprintf(stderr, "[clamd] Control+C pressed...\n");
+    if (CtrlType == CTRL_C_EVENT)
+    {
+        SetConsoleCtrlHandler(cw_stop_ctrl_handler, FALSE);
+        fprintf(stderr, "[clamd] Control+C pressed...\n");
 
-    if (exit_mutex == PTHREAD_MUTEX_INITIALIZER)
-        exit(1);
+        if (!event_wake_recv)
+            exit(1);
 
-    pthread_mutex_lock(&exit_mutex);
-    progexit = 1;
-    pthread_mutex_unlock(&exit_mutex);
-    SetEvent(event_wake_recv);
+        pthread_mutex_lock(&exit_mutex);
+        progexit = 1;
+        pthread_mutex_unlock(&exit_mutex);
+        SetEvent(event_wake_recv);
+    }
     return TRUE;
 }
 #endif

@@ -140,8 +140,6 @@ void cw_registerservice(const char *name)
 {
     DWORD tid;
     DT->lpServiceName = (char *) name;
-    /* remove ctrl + c handler to avoid termination on logout */
-    SetConsoleCtrlHandler(cw_stop_ctrl_handler, FALSE);
     ServiceProc = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE) StartServiceCtrlDispatcherA, (LPVOID) DT, 0, &tid);
 }
 

@@ -270,22 +270,26 @@ void help(void)
 BOOL WINAPI cw_stop_ctrl_handler(DWORD CtrlType)
 {
     double mb;
-    logg("\nScanning aborted...\n");
-    logg("\n----------- SCAN SUMMARY -----------\n");
-    logg("Known viruses: %u\n", info.sigs);
-    logg("Engine version: %s\n", cl_retver());
-    logg("Scanned directories: %u\n", info.dirs);
-	logg("Scanned files: %u\n", info.files);
-    logg("Infected files: %u\n", info.ifiles);
-	if(info.errors)
-	    logg("Total errors: %u\n", info.errors);
-	if(notremoved)
-	    logg("Not removed: %u\n", notremoved);
-	if(notmoved)
-	    logg("Not moved: %u\n", notmoved);
-    mb = info.blocks * (CL_COUNT_PRECISION / 1024) / 1024.0;
-    logg("Data scanned: %2.2lf MB\n", mb);
-    exit(1);
+    if (CtrlType == CTRL_C_EVENT)
+    {
+        SetConsoleCtrlHandler(cw_stop_ctrl_handler, FALSE);
+        logg("\nScanning aborted...\n");
+        logg("\n----------- SCAN SUMMARY -----------\n");
+        logg("Known viruses: %u\n", info.sigs);
+        logg("Engine version: %s\n", cl_retver());
+        logg("Scanned directories: %u\n", info.dirs);
+        logg("Scanned files: %u\n", info.files);
+        logg("Infected files: %u\n", info.ifiles);
+        if(info.errors)
+            logg("Total errors: %u\n", info.errors);
+        if(notremoved)
+            logg("Not removed: %u\n", notremoved);
+        if(notmoved)
+            logg("Not moved: %u\n", notmoved);
+        mb = info.blocks * (CL_COUNT_PRECISION / 1024) / 1024.0;
+        logg("Data scanned: %2.2lf MB\n", mb);
+        exit(1);
+    }
     return TRUE;
 }
 #endif

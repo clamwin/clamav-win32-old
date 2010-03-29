@@ -62,14 +62,10 @@ static int cycles = 0;
 
 BOOL WINAPI cw_stop_ctrl_handler(DWORD CtrlType)
 {
+    SetConsoleCtrlHandler(cw_stop_ctrl_handler, FALSE);
     printf("\nControl+C pressed, aborting...\n");
     if (speed > 0.0f) printf("Average speed: %4.3f mb/s" PADDING_50, (speed * BMTOMS / runs));
     exit(1);
-}
-
-static void stop_console_handler(void)
-{
-    SetConsoleCtrlHandler(cw_stop_ctrl_handler, FALSE);
 }
 
 double benchmark(void)
@@ -169,8 +165,6 @@ int main(int argc, char *argv[])
     }
 
     SetConsoleCtrlHandler(cw_stop_ctrl_handler, TRUE);
-    atexit(stop_console_handler);
-
 
     wprintf(L"Loading Clamav DB...\n");
 
