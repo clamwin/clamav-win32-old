@@ -526,7 +526,7 @@ private:
     Module *M;
     LLVMContext &Context;
     ExecutionEngine *EE;
-    FunctionPassManager &PM;
+    PassManager &PM;
     LLVMTypeMapper *TypeMap;
 
     Function **apiFuncs;
@@ -723,7 +723,7 @@ private:
 
 public:
     LLVMCodegen(const struct cli_bc *bc, Module *M, struct CommonFunctions *CF, FunctionMapTy &cFuncs,
-		ExecutionEngine *EE, FunctionPassManager &PM,
+		ExecutionEngine *EE, PassManager &PM,
 		Function **apiFuncs, LLVMTypeMapper &apiMap)
 	: bc(bc), M(M), Context(M->getContext()), EE(EE),
 	PM(PM), apiFuncs(apiFuncs),apiMap(apiMap),
@@ -815,6 +815,33 @@ public:
 	}
     }
 
+    Value *GEPOperand(Value *V) {
+	if (LoadInst *LI = dyn_cast<LoadInst>(V)) {
+	    Value *VI = LI->getOperand(0);
+	    StoreInst *SI = 0;
+	    for (Value::use_iterator I=VI->use_begin(),
+		 E=VI->use_end(); I != E; ++I) {
+		if (StoreInst *S = dyn_cast<StoreInst>(I)) {
+		    if (SI)
+			return V;
+		    SI = S;
+		} else if (!isa<LoadInst>(I))
+		    return V;
+	    }
+	    V = SI->getOperand(0);
+	}
+	if (EE->getTargetData()->getPointerSize() == 8) {
+	    // eliminate useless trunc, GEP can take i64 too
+	    if (TruncInst *I = dyn_cast<TruncInst>(V)) {
+		Value *Src = I->getOperand(0);
+		if (Src->getType() == Type::getInt64Ty(Context) &&
+		    I->getType() == Type::getInt32Ty(Context))
+		    return Src;
+	    }
+	}
+	return V;
+    }
+
     bool generate() {
 	TypeMap = new LLVMTypeMapper(Context, bc->types + 4, bc->num_types - 5);
 	for (unsigned i=0;i<bc->dbgnode_cnt;i++) {
@@ -876,6 +903,7 @@ public:
 	    Functions[j]->setCallingConv(CallingConv::Fast);
 	}
 	const Type *I32Ty = Type::getInt32Ty(Context);
+	PM.add(createDeadCodeEliminationPass());
 	if (!bc->trusted)
 	    PM.add(createClamBCRTChecks());
 	PM.add(new RuntimeLimits());
@@ -1167,6 +1195,7 @@ public:
 			    }
 			    CallInst *CI = Builder.CreateCall(DestF, args.begin(), args.end());
 			    CI->setCallingConv(CallingConv::Fast);
+			    CI->setDoesNotThrow(true);
 			    if (CI->getType()->getTypeID() != Type::VoidTyID)
 				Store(inst->dest, CI);
 			    break;
@@ -1181,7 +1210,9 @@ public:
 				operand_t op = inst->u.ops.ops[a];
 				args.push_back(convertOperand(func, DestF->getFunctionType()->getParamType(a+1), op));
 			    }
-			    Store(inst->dest, Builder.CreateCall(DestF, args.begin(), args.end()));
+			    CallInst *CI = Builder.CreateCall(DestF, args.begin(), args.end());
+			    CI->setDoesNotThrow(true);
+			    Store(inst->dest, CI);
 			    break;
 			}
 			case OP_BC_GEP1:
@@ -1189,7 +1220,7 @@ public:
 			    const Type *SrcTy = mapType(inst->u.three[0]);
 			    Value *V = convertOperand(func, SrcTy, inst->u.three[1]);
 			    Value *Op = convertOperand(func, I32Ty, inst->u.three[2]);
-//			    Op = Builder.CreateTrunc(Op, I32Ty);
+			    Op = GEPOperand(Op);
 			    if (!createGEP(inst->dest, V, &Op, &Op+1))
 				return false;
 			    break;
@@ -1201,7 +1232,7 @@ public:
 			    const Type *SrcTy = mapType(inst->u.three[0]);
 			    Value *V = convertOperand(func, SrcTy, inst->u.three[1]);
 			    Ops[1] = convertOperand(func, I32Ty, inst->u.three[2]);
-//			    Ops[1] = Builder.CreateTrunc(Ops[1], I32Ty);
+			    Ops[1] = GEPOperand(Ops[1]);
 			    if (!createGEP(inst->dest, V, Ops, Ops+2))
 				return false;
 			    break;
@@ -1214,7 +1245,7 @@ public:
 			    Value *V = convertOperand(func, SrcTy, inst->u.ops.ops[1]);
 			    for (unsigned a=2;a<inst->u.ops.numOps;a++) {
 				Value *Op = convertOperand(func, I32Ty, inst->u.ops.ops[a]);
-//				Op = Builder.CreateTrunc(Op, I32Ty);
+				Op = GEPOperand(Op);
 				Idxs.push_back(Op);
 			    }
 			    if (!createGEP(inst->dest, V, Idxs.begin(), Idxs.end()))
@@ -1360,10 +1391,15 @@ public:
 		// verification failed
 		return false;
 	    }
-	    PM.run(*F);
-	    AddStackProtect(F);
 	    delete [] Values;
 	    delete [] BB;
+	}
+
+	PM.run(*M);
+	for (unsigned j=0;j<bc->num_func;j++) {
+	    PrettyStackTraceString CrashInfo("Generate LLVM IR2");
+	    Function *F = Functions[j];
+	    AddStackProtect(F);
 	}
 	DEBUG(M->dump());
 	delete TypeMap;
@@ -1673,14 +1709,15 @@ int cli_bytecode_prepare_jit(struct cli_all_bc *bcs)
 	struct CommonFunctions CF;
 	addFunctionProtos(&CF, EE, M);
 
-	FunctionPassManager OurFPM(M);
+	PassManager OurFPM;
+	M->setDataLayout(EE->getTargetData()->getStringRepresentation());
+	M->setTargetTriple(sys::getHostTriple());
 	// Set up the optimizer pipeline.  Start with registering info about how
 	// the target lays out data structures.
 	OurFPM.add(new TargetData(*EE->getTargetData()));
 	// Promote allocas to registers.
 	OurFPM.add(createPromoteMemoryToRegisterPass());
 	OurFPM.add(createDeadCodeEliminationPass());
-	OurFPM.doInitialization();
 
 	//TODO: create a wrapper that calls pthread_getspecific
 	unsigned maxh = cli_globals[0].offset + sizeof(struct cli_bc_hooks);
