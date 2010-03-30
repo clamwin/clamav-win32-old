@@ -445,6 +445,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Analysis\IPA\CallGraph.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\CodeGen\SelectionDAG\CallingConvLower.cpp"
 				>
 			</File>
