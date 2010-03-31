@@ -31,7 +31,7 @@ static SERVICE_STATUS svc;
 static SERVICE_STATUS_HANDLE svc_handle;
 static SERVICE_TABLE_ENTRYA DT[] = {{ "Service", ServiceMain }, { NULL, NULL }};
 
-static HANDLE ServiceProc = INVALID_HANDLE_VALUE;
+static HANDLE ServiceProc;
 
 int cw_uninstallservice(const char *name, int verbose)
 {
@@ -140,7 +140,13 @@ void cw_registerservice(const char *name)
 {
     DWORD tid;
     DT->lpServiceName = (char *) name;
-    ServiceProc = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE) StartServiceCtrlDispatcherA, (LPVOID) DT, 0, &tid);
+
+    if (!DuplicateHandle(GetCurrentProcess(), GetCurrentThread(), GetCurrentProcess(), &ServiceProc, 0, FALSE, DUPLICATE_SAME_ACCESS))
+    {
+        logg("[service] DuplicateHandle() failed with %d\n", GetLastError());
+        exit(1);
+    }
+    CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE) StartServiceCtrlDispatcherA, (LPVOID) DT, 0, &tid);
 }
 
 void WINAPI ServiceCtrlHandler(DWORD code)
@@ -158,6 +164,7 @@ void WINAPI ServiceCtrlHandler(DWORD code)
             svc.dwCurrentState = SERVICE_STOPPED;
             svc.dwCheckPoint = 0;
             svc.dwWaitHint = 0;
+            cw_stop_ctrl_handler(CTRL_C_EVENT);
             SetServiceStatus(svc_handle, &svc);
             break;
         case SERVICE_CONTROL_INTERROGATE:
@@ -193,5 +200,4 @@ void WINAPI ServiceMain(DWORD dwArgc, LPSTR *lpszArgv)
     }
 
     WaitForSingleObject(ServiceProc, INFINITE);
-    exit(0); /* Quick and dirty */
 }

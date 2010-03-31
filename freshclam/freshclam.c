@@ -538,3 +538,16 @@ int main(int argc, char **argv)
 
     return(ret);
 }
+
+#ifdef _WIN32
+BOOL WINAPI cw_stop_ctrl_handler(DWORD CtrlType)
+{
+    if (CtrlType == CTRL_C_EVENT)
+    {
+        SetConsoleCtrlHandler(cw_stop_ctrl_handler, FALSE);
+        fprintf(stderr, "[freshclam] Control+C pressed...\n");
+        terminate = 1;
+    }
+    return TRUE;
+}
+#endif
