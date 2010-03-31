@@ -176,7 +176,11 @@ void WINAPI ServiceMain(DWORD dwArgc, LPSTR *lpszArgv)
     svc.dwCheckPoint = 0;
     svc.dwWaitHint = 0;
 
-    svc_handle = RegisterServiceCtrlHandlerA(DT->lpServiceName, ServiceCtrlHandler);
+    if (!(svc_handle = RegisterServiceCtrlHandlerA(DT->lpServiceName, ServiceCtrlHandler)))
+    {
+        logg("[service] RegisterServiceCtrlHandler() failed with %d\n", GetLastError());
+        exit(1);
+    }
 
     svc.dwCurrentState = SERVICE_RUNNING;
     svc.dwCheckPoint = 0;
