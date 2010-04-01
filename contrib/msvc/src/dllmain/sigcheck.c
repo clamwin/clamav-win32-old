@@ -100,7 +100,8 @@ static int cw_getfnfromhandle(void *mem, wchar_t *filename)
             wcsncat(filename, flname + len, MAX_PATH);
             return 1;
         }
-    } while (*p++);
+        while (*p++) {}
+    } while (*p);
     return 0;
 }
 
@@ -132,10 +133,7 @@ static int sigcheck(cli_ctx *ctx, int checkfp)
         }
 
         if (!cw_getfnfromhandle(map->data, filename))
-        {
-            cli_errmsg("sigcheck: get file name from handle() failed: %d\n", GetLastError());
             break;
-        }
 
         /*
         for (i = 0; i < sizeof(bHash); i++)
