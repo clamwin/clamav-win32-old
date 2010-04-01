@@ -697,10 +697,9 @@ int mszip_decompress(struct mszip_stream *zip, off_t out_bytes) {
     out_bytes   -= i;
   }
 
-  if (out_bytes) {
+  if (out_bytes)
     cli_dbgmsg("mszip_decompress: bytes left to output\n");
-    return zip->error = CL_EFORMAT;
-  }
+
   return CL_SUCCESS;
 }
 
@@ -1508,10 +1507,8 @@ int lzx_decompress(struct lzx_stream *lzx, off_t out_bytes) {
 
   } /* while (lzx->frame < end_frame) */
 
-  if (out_bytes) {
+  if (out_bytes)
     cli_dbgmsg("lzx_decompress: bytes left to output\n");
-    return lzx->error = CL_EFORMAT;
-  }
 
   /* store local state */
   LZX_STORE_BITS;
@@ -1896,6 +1893,11 @@ int qtm_decompress(struct qtm_stream *qtm, off_t out_bytes) {
 
 	default:
 	  /* should be impossible, model7 can only return 0-6 */
+	  return qtm->error = CL_EFORMAT;
+	}
+
+	if (window_posn + match_length > qtm->window_size) {
+	  cli_dbgmsg("qtm_decompress: match ran over window wrap\n");
 	  return qtm->error = CL_EFORMAT;
 	}
 

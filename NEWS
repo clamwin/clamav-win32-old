@@ -1,5 +1,5 @@
-0.96rc2
--------
+0.96
+----
 
 This release of ClamAV introduces new malware detection mechanisms and other
 significant improvements to the scan engine. The key features include:
@@ -23,6 +23,8 @@ significant improvements to the scan engine. The key features include:
     - Support for new executable file formats: 64-bit ELF files and OS X
       Universal Binaries with Mach-O files. Additionally, the PE module
       can now decompress and inspect executables packed with UPX 3.0.
+
+    - Support for DazukoFS in clamd
 
     - Performance improvements: overall performance improvements and memory
       optimizations for a better overall resource utilization experience.
