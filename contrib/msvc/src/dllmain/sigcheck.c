@@ -179,8 +179,8 @@ static int sigcheck(cli_ctx *ctx, int checkfp)
     }
 
     if (checkfp && (lsigned == ERROR_SUCCESS))
-        fwprintf(stderr, L"Microsoft Signed File detected as virus, "
-        L"please submit \"%s\" "
+        fwprintf(stderr, L"A file Digitally Signed by Microsoft has been detected as a virus.\n"
+        L"Please do not be alarmed and help us by submitting \"%s\" "
         L"as false positive to http://www.clamav.net/sendvirus/\n", filename);
 
     return lsigned;
