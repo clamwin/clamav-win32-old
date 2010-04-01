@@ -502,11 +502,18 @@
 /* use syslog */
 #undef USE_SYSLOG
 
+/* Stable releases tag */
+#define CLAMWIN_RELEASE "0.96"
+
 /* Version number of package */
+#ifdef CLAMWIN_RELEASE
+#define VERSION CLAMWIN_RELEASE
+#else
 #ifdef _MSC_VER
 #define VERSION "devel@clamwin msvc - "__DATE__
 #else
 #define VERSION "devel@clamwin MinGW - "__DATE__
+#endif
 #endif
 
 /* Version suffix for package */

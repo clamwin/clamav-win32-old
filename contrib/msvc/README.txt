@@ -1,6 +1,6 @@
 -- ClamAV native win32 port --
 
-Copyright (c) 2005-2009 Gianluigi Tiesi <sherpya@netfarm.it>
+Copyright (c) 2005-2010 Gianluigi Tiesi <sherpya@netfarm.it>
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU Library General Public
@@ -18,11 +18,12 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 --
 
 [features]
- * [clamav] small footprint (all distribution is around 1.5 MiB)
+ * [clamav] small footprint (all distribution is around 1.5 MiB - except llvm dll)
  * [clamav] nice icons ;)
  * [clamav] support for unc paths, esotic/long file names
  * [clamscan] memory scanner
  * [libclamav] dynamic libclamav.dll library common for all executables
+ * [llvm] jit dll is optional, and since not supported on old os will be loaded dinamically
  * [libclamav] support for 7zip archives
  * [freshclam] native dns txt query on win98/ME / DnsAPI query on Win2k+
  * [clamd/freshclam] may also be used as Windows Services
