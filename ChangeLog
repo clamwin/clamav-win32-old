@@ -1,3 +1,31 @@
+Sat Apr  3 21:05:35 EEST 2010 (edwin)
+-------------------------------------
+ * contrib/split-tarball.sh: update to work with 0.96
+
+Sat Apr  3 20:30:39 EEST 2010 (edwin)
+-------------------------------------
+ * libclamav/Makefile.{am,in}: Fix unit test failure with non-English locale (bb #1922)
+
+Fri Apr  2 16:22:26 EEST 2010 (edwin)
+-------------------------------------
+ * libclamav/c++/llvm/lib/Support/Allocator.cpp: Fix SpecificBumpPtrAllocator
+    destructor iteration. Thanks to Nicolas Capens.
+
+Fri Apr  2 16:19:26 EEST 2010 (edwin)
+-------------------------------------
+ * libclamav/c++/llvm/lib/ExecutionEngine/JIT/JIT.cpp:
+ Fix the previous PowerPC workaround to not crash when not using the JIT.
+
+Fri Apr  2 13:09:54 EEST 2010 (edwin)
+------------------------------------
+ * libclamav/c++/{bytecode2llvm.cpp,llvm/lib/ExecutionEngine/JIT/JIT.cpp,
+     llvm/lib/Target/PowerPC/PPCISelLowering.cpp}: Workaround LLVM JIT PowerPC relocation bug (bb #1921).
+    Based on Gary Benson's workaround for OpenJDK Shark / IcedTea.
+
+Fri Apr  2 13:07:50 EEST 2010 (edwin)
+-------------------------------------
+ * unit_tests: Fix matchwithread.cbc
+
 Wed Mar 31 19:30:59 CEST 2010 (tk)
 ----------------------------------
  * V 0.96
