@@ -313,20 +313,12 @@ void cw_freeaddrinfo(struct addrinfo *res)
     } while (res);
 }
 
-/* stdcall vision of exports is different between msvc and mingw */
-
-#ifdef __MINGW32__
-#define MANGLE(x) _##x
-#else
-#define MANGLE(x) x
-#endif
-
 /* default stop control handler */
-BOOL WINAPI MANGLE(cw_stop_ctrl_handler)(DWORD CtrlType)
+BOOL WINAPI cw_stop_ctrl_handler(DWORD CtrlType)
 {
     if (CtrlType == CTRL_C_EVENT)
     {
-        SetConsoleCtrlHandler(MANGLE(cw_stop_ctrl_handler), FALSE);
+        SetConsoleCtrlHandler(cw_stop_ctrl_handler, FALSE);
         fprintf(stderr, "Control+C pressed, aborting...\n");
         exit(1);
     }

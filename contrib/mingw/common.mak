@@ -7,7 +7,15 @@ CFLAGS+=-I$(top)/win32/3rdparty/bzip2 -I$(top)/win32/3rdparty/pthreads -I$(top)/
 CFLAGS+=-DHAVE_CONFIG_H
 CFLAGS+=-Wall -Wextra -Wno-unused -Wno-sign-compare -Wno-switch -Wno-format -pipe
 CFLAGS+=-fno-strict-aliasing
-CFLAGS+=-O3 -mtune=generic -march=i686 -fomit-frame-pointer -ffast-math
+CFLAGS+=-O3 -mtune=generic -fomit-frame-pointer -ffast-math
+
+ifneq (,$(findstring 64,$(MSYSTEM)))
+# defines clashes in various includes
+CFLAGS+=-D_TIMESPEC_DEFINED -D_TIMEZONE_DEFINED
+else
+CFLAGS+=-march=i686
+endif
+
 LDFLAGS=-Wl,--enable-stdcall-fixup
 
 LLVM=-I$(top)/libclamav/c++ -I$(top)/libclamav/c++/llvm/include
