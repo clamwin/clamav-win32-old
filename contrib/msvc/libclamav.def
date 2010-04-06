@@ -63,9 +63,9 @@ cw_wseterrno                @52 NONAME
 
 ; stdcall vision of exports is different between
 ; msvc and mingw, and why not? mingw64 is different from both :)
-; looks like the only way to make it works is not using NONAME
-; but unfortunately it will not work with old version of binutils
-cw_stop_ctrl_handler        @53
+cw_stop_ctrl_handler                            @53
+_cw_stop_ctrl_handler@4 = cw_stop_ctrl_handler  @54
+cw_stop_ctrl_handler@4  = cw_stop_ctrl_handler  @55
 
 cw_platform                 @60 NONAME DATA
 cw_helpers                  @61 NONAME DATA
