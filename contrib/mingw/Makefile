@@ -18,4 +18,4 @@ clean:
 	$(MAKE) -f libs.mak clean
 	$(MAKE) -f tools.mak clean
 
-.PHONY: clean
+.PHONY: all llvm clean llvm-clean
