@@ -97,7 +97,7 @@ static int cw_getfnfromhandle(void *mem, wchar_t *filename)
             && !wcsnicmp(flname, szName, len))
         {
             wcsncpy(filename, szDrive, MAX_PATH);
-            wcsncat(filename, flname + len, MAX_PATH);
+            wcsncat(filename, flname + len, MAX_PATH - 1 - wcslen(filename));
             return 1;
         }
         while (*p++) {}
