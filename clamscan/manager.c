@@ -686,12 +686,14 @@ int scanmanager(const struct optstruct *opts)
 		perror(file);
 		ret = 2;
 	    } else {
+#ifdef NOCLAMWIN
 		for(i = strlen(file) - 1; i > 0; i--) {
 		    if(file[i] == *PATHSEP)
 			file[i] = 0;
 		    else
 			break;
 		}
+#endif
 
 		fmode = (mode_t) fmodeint;
 
