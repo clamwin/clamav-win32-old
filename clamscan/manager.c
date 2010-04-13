@@ -177,6 +177,9 @@ void scanfile(const char *filename, struct cl_engine *engine, const struct optst
 
     if((fd = safe_open(filename, O_RDONLY|O_BINARY)) == -1) {
 	logg("^Can't open file %s: %s\n", filename, strerror(errno));
+#ifndef NOCLAMWIN
+	if (errno != EACCES)
+#endif
 	info.errors++;
 	return;
     }
