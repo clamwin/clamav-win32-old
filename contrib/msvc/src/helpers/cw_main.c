@@ -21,6 +21,11 @@
 #include <platform.h>
 #include <cwhelpers.h>
 
+/* Disable crt globbing, it's broken */
+#ifdef __MINGW32__
+int _CRT_glob = 0;
+#endif
+
 extern int cw_main(int argc, char *argv[]);
 
 #undef main
