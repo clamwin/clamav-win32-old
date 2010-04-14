@@ -36,23 +36,26 @@
 /* Define to 1 if using `alloca.c'. */
 /* #undef C_ALLOCA */
 
-/* Define to 1 when using the gnulib module ftruncate. */
-#define GNULIB_FTRUNCATE 1
+/* Define to 1 when the gnulib module ftruncate should be tested. */
+#define GNULIB_TEST_FTRUNCATE 1
 
-/* Define to 1 when using the gnulib module memchr. */
-#define GNULIB_MEMCHR 1
+/* Define to 1 when the gnulib module memchr should be tested. */
+#define GNULIB_TEST_MEMCHR 1
 
-/* Define to 1 when using the gnulib module snprintf. */
-#define GNULIB_SNPRINTF 1
+/* Define to 1 when the gnulib module snprintf should be tested. */
+#define GNULIB_TEST_SNPRINTF 1
 
-/* Define to 1 when using the gnulib module strptime. */
-#define GNULIB_STRPTIME 1
+/* Define to 1 when the gnulib module strptime should be tested. */
+#define GNULIB_TEST_STRPTIME 1
 
-/* Define to 1 when using the gnulib module strtok_r. */
-#define GNULIB_STRTOK_R 1
+/* Define to 1 when the gnulib module strtok_r should be tested. */
+#define GNULIB_TEST_STRTOK_R 1
 
-/* Define to 1 when using the gnulib module vsnprintf. */
-#define GNULIB_VSNPRINTF 1
+/* Define to 1 when the gnulib module time_r should be tested. */
+#define GNULIB_TEST_TIME_R 1
+
+/* Define to 1 when the gnulib module vsnprintf should be tested. */
+#define GNULIB_TEST_VSNPRINTF 1
 
 /* Define to 1 if you have 'alloca' after including <alloca.h>, a header that
    may be supplied by this distribution. */
@@ -106,6 +109,9 @@
 /* Define if <inttypes.h> exists, doesn't clash with <sys/types.h>, and
    declares uintmax_t. */
 #define HAVE_INTTYPES_H_WITH_UINTMAX 1
+
+/* Define to 1 if you have the `localtime_r' function. */
+/* #undef HAVE_LOCALTIME_R */
 
 /* Define to 1 if the system has the type `long long int'. */
 #define HAVE_LONG_LONG_INT 1
@@ -300,14 +306,17 @@
 /* Define to 1 if strncasecmp is declared even after undefining macros. */
 /* #undef HAVE_RAW_DECL_STRNCASECMP */
 
+/* Define to 1 if strncat is declared even after undefining macros. */
+#define HAVE_RAW_DECL_STRNCAT 1
+
 /* Define to 1 if strndup is declared even after undefining macros. */
 /* #undef HAVE_RAW_DECL_STRNDUP */
 
 /* Define to 1 if strnlen is declared even after undefining macros. */
-#define HAVE_RAW_DECL_STRNLEN 1
+/* #undef HAVE_RAW_DECL_STRNLEN */
 
 /* Define to 1 if strpbrk is declared even after undefining macros. */
-#define HAVE_RAW_DECL_STRPBRK 1
+/* #undef HAVE_RAW_DECL_STRPBRK */
 
 /* Define to 1 if strsep is declared even after undefining macros. */
 /* #undef HAVE_RAW_DECL_STRSEP */
@@ -326,6 +335,12 @@
 
 /* Define to 1 if symlinkat is declared even after undefining macros. */
 /* #undef HAVE_RAW_DECL_SYMLINKAT */
+
+/* Define to 1 if tmpfile is declared even after undefining macros. */
+#define HAVE_RAW_DECL_TMPFILE 1
+
+/* Define to 1 if ttyname_r is declared even after undefining macros. */
+/* #undef HAVE_RAW_DECL_TTYNAME_R */
 
 /* Define to 1 if unlink is declared even after undefining macros. */
 #define HAVE_RAW_DECL_UNLINK 1
@@ -369,6 +384,11 @@
 /* Define to 1 if you have the `snprintf' function. */
 /* #undef HAVE_SNPRINTF */
 
+/* Define if the return value of the snprintf function is the number of of
+   bytes (excluding the terminating NUL) that would have been produced if the
+   buffer had been large enough. */
+/* #undef HAVE_SNPRINTF_RETVAL_C99 */
+
 /* Define to 1 if stdbool.h conforms to C99. */
 /* #undef HAVE_STDBOOL_H */
 
@@ -401,7 +421,7 @@
 /* #undef HAVE_STRNCASECMP */
 
 /* Define to 1 if you have the `strnlen' function. */
-#define HAVE_STRNLEN 1
+/* #undef HAVE_STRNLEN */
 
 /* Define to 1 if you have the `strptime' function. */
 /* #undef HAVE_STRPTIME */
@@ -422,7 +442,7 @@
 #define HAVE_SYS_STAT_H 1
 
 /* Define to 1 if you have the <sys/time.h> header file. */
-#define HAVE_SYS_TIME_H 1
+/* #undef HAVE_SYS_TIME_H */
 
 /* Define to 1 if you have the <sys/types.h> header file. */
 #define HAVE_SYS_TYPES_H 1
@@ -603,13 +623,14 @@
    nothing if this is not supported.  Do not define if restrict is
    supported directly.  */
 #define restrict /**/
-/* Work around a bug in Sun C++: it does not support _Restrict, even
-   though the corresponding Sun C compiler does, which causes
-   "#define restrict _Restrict" in the previous line.  Perhaps some future
-   version of Sun C++ will work with _Restrict; if so, it'll probably
-   define __RESTRICT, just as Sun C does.  */
+/* Work around a bug in Sun C++: it does not support _Restrict or
+   __restrict__, even though the corresponding Sun C compiler ends up with
+   "#define restrict _Restrict" or "#define restrict __restrict__" in the
+   previous line.  Perhaps some future version of Sun C++ will work with
+   restrict; if so, hopefully it defines __RESTRICT like Sun C does.  */
 #if defined __SUNPRO_CC && !defined __RESTRICT
 # define _Restrict
+# define __restrict__
 #endif
 
 /* Define to `unsigned int' if <sys/types.h> does not define. */
