@@ -115,6 +115,10 @@ BOOL WINAPI cUnregisterWaitEx(HANDLE WaitHandle, HANDLE CompletionEvent)
 
 static void dynLoad(void)
 {
+    /* avoid popping messages while trying to load libraries */
+    UINT oldErr = SetErrorMode(SEM_FAILCRITICALERRORS);
+    SetErrorMode(oldErr | SEM_FAILCRITICALERRORS);
+
     memset(&cw_helpers, 0, sizeof(cw_helpers));
     memset(&cw_helpers.av32, 0, sizeof(advapi32_t));
     memset(&cw_helpers.k32, 0, sizeof(kernel32_t));
@@ -214,6 +218,9 @@ static void dynLoad(void)
 
     /* DynLoad jit */
     jit_init();
+
+    /* Restore original error mode */
+    SetErrorMode(oldErr);
 }
 static void dynUnLoad(void)
 {
