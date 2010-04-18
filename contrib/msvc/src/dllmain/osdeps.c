@@ -264,11 +264,22 @@ int cw_getaddrinfo(const char *node, const char *service, const struct addrinfo 
     if (cw_helpers.ws2.ok)
         return cw_helpers.ws2.getaddrinfo(node, service, hints, res);
 
-    if (!node && !service)
+    if (!(node || service))
         return EAI_NONAME;
 
-    if (hints->ai_flags)
+    if (hints->ai_flags && (hints->ai_flags != AI_PASSIVE))
+    {
+        fprintf(stderr, "[getaddrinfo] unsupported ai_flags: 0x%x, please report\n", hints->ai_flags);
         return EAI_BADFLAGS;
+    }
+
+    if (!node)
+    {
+        if (hints->ai_flags & AI_PASSIVE)
+            node = "localhost";
+        else
+            return EAI_BADFLAGS;
+    }
 
     if ((hints->ai_family != AF_UNSPEC) && (hints->ai_family != AF_INET))
         return EAI_FAMILY;
