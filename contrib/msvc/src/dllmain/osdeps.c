@@ -267,7 +267,7 @@ int cw_getaddrinfo(const char *node, const char *service, const struct addrinfo 
     if (!(node || service))
         return EAI_NONAME;
 
-    if (hints->ai_flags && (hints->ai_flags != AI_PASSIVE))
+    if (hints->ai_flags)
     {
         fprintf(stderr, "[getaddrinfo] unsupported ai_flags: 0x%x, please report\n", hints->ai_flags);
         return EAI_BADFLAGS;
@@ -276,9 +276,9 @@ int cw_getaddrinfo(const char *node, const char *service, const struct addrinfo 
     if (!node)
     {
         if (hints->ai_flags & AI_PASSIVE)
-            node = "localhost";
-        else
             return EAI_BADFLAGS;
+        else
+            node = "localhost";
     }
 
     if ((hints->ai_family != AF_UNSPEC) && (hints->ai_family != AF_INET))
