@@ -183,8 +183,16 @@ static char *do_query(struct hostent *he, const char *domain, unsigned int *ttl)
     simple_dns_query query, *res;
     int numbytes, addr_len, i;
     int start, rev, len, off;
-    uint16_t tid = rand();
+    uint16_t tid;
     int sockfd = -1;
+    struct timeval tv;
+
+/* win32 random functions are enough here */
+#undef rand
+#undef srand
+    gettimeofday(&tv, NULL);
+    srand(tv.tv_usec + clock() + rand());
+    tid = rand();
 
     if ((sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1)
     {
