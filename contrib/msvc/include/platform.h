@@ -84,6 +84,12 @@ extern int cw_unlink(const char *pathname);
 #define strerror cw_strerror
 #define perror cw_perror
 
+/* random */
+extern int cw_rand(void);
+extern void cw_srand(unsigned int seed);
+#define rand cw_rand
+#define srand cw_srand
+
 #define mkdir(a, b) mkdir(a)
 
 /* no ipv6 on windows < 2000 */

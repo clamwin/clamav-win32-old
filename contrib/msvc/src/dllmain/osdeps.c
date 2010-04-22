@@ -324,6 +324,20 @@ void cw_freeaddrinfo(struct addrinfo *res)
     } while (res);
 }
 
+/* A non TLS based and non thread safe canonical rand() implementation */
+/* aCaB <acab@clamav.net> */
+static unsigned long next = 1;
+int cw_rand(void)
+{
+    next = next * 1103515245 + 12345;
+    return((unsigned)(next/65536) % (RAND_MAX+1));
+}
+
+void cw_srand(unsigned int seed)
+{
+    next = seed;
+}
+
 /* default stop control handler */
 BOOL WINAPI cw_stop_ctrl_handler(DWORD CtrlType)
 {
