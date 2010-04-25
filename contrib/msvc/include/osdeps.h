@@ -30,8 +30,8 @@
 
 #define DATADIRBASEKEY  "Software\\ClamAV"
 
-LIBCLAMAV_API uint32_t cw_platform;
-LIBCLAMAV_API helpers_t cw_helpers;
+LIBCLAMAV_API extern uint32_t cw_platform;
+LIBCLAMAV_API extern helpers_t cw_helpers;
 
 /* Process execution */
 #define WIFSIGNALED(x) (x)
