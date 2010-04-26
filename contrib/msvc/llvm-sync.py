@@ -89,7 +89,7 @@ def gen_vcproj(path, mksources):
 def gen_mingwmake(path, sources):
     print 'Writing mingw makefile'
     f = open(path, 'wb')
-    f.write('libclamav_llvm_SOURCES=$(addprefix $(top)/libclamav/c++/,' + ' '.join(sources) + ')')
+    f.write('libclamav_llvm_SOURCES=$(addprefix $(top)/libclamav/c++/,' + ' \\\n\t'.join(sources) + ')')
     f.write('\n')
     f.close()
 
