@@ -48,7 +48,7 @@ libclamav_llvm_OBJECTS=$(libclamav_llvm_SOURCES:.cpp=.o)
 libclamav_llvm_OBJECTS:=$(libclamav_llvm_OBJECTS:.c=.o)
 libclamav_llvm_OBJECTS+=$(msvc)/resources/libclamav_llvm-rc.o
 libclamav_llvm.dll: $(libclamav_llvm_OBJECTS) libclamav.dll.a
-	$(DLLWRAP) --driver-name=$(CXX) $(LDFLAGS) --def $(msvc)/libclamav_llvm.def -o $@ $^ -liphlpapi -limagehlp -lpsapi
+	$(DLLWRAP) --driver-name=$(CXX) $(LDFLAGS) --def $(msvc)/libclamav_llvm.def -o $@ $^ -limagehlp -lpsapi
 
 llvm: libclamav_llvm.dll
 
