@@ -51,6 +51,7 @@ libclamav_llvm.dll: $(libclamav_llvm_OBJECTS) libclamav.dll.a
 	$(DLLWRAP) --driver-name=$(CXX) $(LDFLAGS) --def $(msvc)/libclamav_llvm.def -o $@ $^ -limagehlp -lpsapi
 
 llvm: libclamav_llvm.dll
+llvm: CFLAGS+=-fno-omit-frame-pointer
 
 llvm-clean:
 	@rm -f libclamav_llvm.dll $(libclamav_llvm_OBJECTS)
