@@ -17,6 +17,7 @@
 namespace llvm {
 using namespace sys;
 
+#ifdef NOCLAMWIN
 //===----------------------------------------------------------------------===//
 //=== WARNING: Implementation here must contain only TRULY operating system
 //===          independent code.
@@ -58,3 +59,19 @@ Program::ExecuteNoWait(const Path& path,
 #ifdef LLVM_ON_WIN32
 #include "Win32/Program.inc"
 #endif
+#else
+/* hack to avoid inclusion of Program Class, not fully needed here, removes some API calls not supported on old systems */
+#include <cstdio>
+#include <io.h>
+#include <fcntl.h>
+
+Program::Program() {}
+bool Program::ChangeStdinToBinary() {
+    return (_setmode(_fileno(stdin), _O_BINARY) == -1);
+}
+bool Program::ChangeStdoutToBinary() {
+    return (_setmode(_fileno(stdout), _O_BINARY) == -1);
+}
+
+}
+#endif /* NOCLAMWIN */
