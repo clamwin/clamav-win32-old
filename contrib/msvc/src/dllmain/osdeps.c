@@ -252,7 +252,6 @@ int cw_movefile(const char *source, const char *dest, int reboot)
     ((struct sockaddr_in *) ai->ai_addr)->sin_port = port;              \
     ((struct sockaddr_in *) ai->ai_addr)->sin_addr.s_addr = ((struct in_addr *) addr)->s_addr
 
-#undef gethostbyname
 int cw_getaddrinfo(const char *node, const char *service, const struct addrinfo *hints, struct addrinfo **res)
 {
     struct hostent *he;
@@ -288,7 +287,22 @@ int cw_getaddrinfo(const char *node, const char *service, const struct addrinfo 
         return EAI_SOCKTYPE;
 
     if (!(he = gethostbyname(node)))
-        return WSAGetLastError();
+    {
+        switch (h_errno)
+        {
+            case HOST_NOT_FOUND:
+            case NO_DATA:
+                errno = 63;
+                break;
+            case TRY_AGAIN:
+                errno = 64;
+                break;
+            case NO_RECOVERY:
+            default:
+                errno = 65;
+        }
+        return EAI_SYSTEM;
+    }
 
     if (service)
         port = htons(strtoul(service, &p, 10));
@@ -322,6 +336,40 @@ void cw_freeaddrinfo(struct addrinfo *res)
         if (prev->ai_addr) free(prev->ai_addr);
         free(prev);
     } while (res);
+}
+
+const char *cw_gai_strerror(int errcode)
+{
+    switch (errcode)
+    {
+/*
+        case EAI_ADDRFAMILY:
+            return "Address family for hostname not supported";
+*/
+        case EAI_AGAIN:
+            return "Temporary failure in name resolution";
+        case EAI_BADFLAGS:
+            return "Bad value for ai_flags";
+        case EAI_FAIL:
+            return "Non-recoverable failure in name resolution";
+        case EAI_FAMILY:
+            return "ai_family not supported";
+        case EAI_MEMORY:
+            return "Memory allocation failure";
+        case EAI_NODATA:
+            return "No address associated with hostname";
+/*
+        case EAI_NONAME:
+            return "Name or service not known";
+*/
+        case EAI_SERVICE:
+            return "Servname not supported for ai_socktype";
+        case EAI_SOCKTYPE:
+            return "ai_socktype not supported";
+        case EAI_SYSTEM:
+        default:
+            return "System error";
+    }
 }
 
 /* A non TLS based and non thread safe canonical rand() implementation */
