@@ -93,13 +93,20 @@ extern void cw_srand(unsigned int seed);
 #define mkdir(a, b) mkdir(a)
 
 /* no ipv6 on windows < 2000 */
+#ifndef EAI_SYSTEM
+#define EAI_SYSTEM -11
+#endif
 #undef getaddrinfo
 #undef freeaddrinfo
+#undef gai_strerror
 #define getaddrinfo cw_getaddrinfo
 #define freeaddrinfo cw_freeaddrinfo
+#define gai_strerror cw_gai_strerror
+
 extern int cw_getaddrinfo(const char *node, const char *service,
                           const struct addrinfo *hints, struct addrinfo **res);
 extern void cw_freeaddrinfo(struct addrinfo *res);
+extern const char *cw_gai_strerror(int errcode);
 
 #define S_IROTH S_IREAD
 #define S_ISLNK(x) (0)
