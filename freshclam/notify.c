@@ -35,6 +35,7 @@
 #include <netdb.h>
 #endif
 #include <string.h>
+#include <errno.h>
 
 #include "shared/optparser.h"
 #include "shared/output.h"
@@ -112,8 +113,7 @@ int notify(const char *cfgfile)
 	ret = getaddrinfo(addr, port, &hints, &res);
 
 	if(ret) {
-	    perror("getaddrinfo()");
-	    logg("^Clamd was NOT notified: Can't resolve hostname %s\n", addr ? addr : "");
+	    logg("^Clamd was NOT notified: Can't resolve hostname %s (%s)\n", addr ? addr : "", (ret == EAI_SYSTEM) ? strerror(errno) : gai_strerror(ret));
 	    optfree(opts);
 	    return 1;
 	}
