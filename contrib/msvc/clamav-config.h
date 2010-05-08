@@ -410,6 +410,9 @@
 /* This value is set to 1 to indicate that the system argz facility works */
 #undef HAVE_WORKING_ARGZ
 
+/* For internal use only - DO NOT DEFINE */
+#undef HAVE__INTERNAL__SHA_COLLECT
+
 /* "Full library version number" */
 #define LIBCLAMAV_FULLVER "dll"
 
