@@ -21,6 +21,9 @@
 /* enable clamuko */
 #undef CLAMUKO
 
+/* disable loading of unsigned bytecode */
+#undef CL_BCUNSIGNED
+
 /* enable debugging */
 #ifdef _DEBUG
 #define CL_DEBUG 1
@@ -395,6 +398,9 @@
 /* Define to 1 if you have the <termios.h> header file. */
 #define HAVE_TERMIOS_H 1
 
+/* Define this if uname(2) is POSIX */
+#undef HAVE_UNAME_SYSCALL
+
 /* Define to 1 if you have the <unistd.h> header file. */
 #define HAVE_UNISTD_H 1
 
@@ -403,6 +409,9 @@
 
 /* This value is set to 1 to indicate that the system argz facility works */
 #undef HAVE_WORKING_ARGZ
+
+/* For internal use only - DO NOT DEFINE */
+#undef HAVE__INTERNAL__SHA_COLLECT
 
 /* "Full library version number" */
 #define LIBCLAMAV_FULLVER "dll"

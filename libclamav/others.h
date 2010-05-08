@@ -53,7 +53,7 @@
  * in re-enabling affected modules.
  */
 
-#define CL_FLEVEL 51
+#define CL_FLEVEL 52
 #define CL_FLEVEL_DCONF	CL_FLEVEL
 #define CL_FLEVEL_SIGTOOL CL_FLEVEL
 
@@ -122,6 +122,10 @@ typedef struct cli_ctx_tag {
     struct cli_dconf *dconf;
     fmap_t **fmap;
     bitset_t* hook_lsig_matches;
+#ifdef HAVE__INTERNAL__SHA_COLLECT
+    char entry_filename[2048];
+    int sha_collect;
+#endif
 } cli_ctx;
 
 

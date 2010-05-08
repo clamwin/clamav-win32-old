@@ -612,6 +612,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\..\libclamav\sha1.c"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\..\libclamav\sha256.c"
 				>
 			</File>
@@ -1187,6 +1191,10 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\libclamav\scanners.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\sha1.h"
 				>
 			</File>
 			<File

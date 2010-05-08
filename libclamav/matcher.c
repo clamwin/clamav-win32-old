@@ -51,6 +51,11 @@
 #include "filtering.h"
 #include "perflogging.h"
 
+#ifdef HAVE__INTERNAL__SHA_COLLECT
+#include "sha256.h"
+#include "sha1.h"
+#endif
+
 #ifdef CLI_PERF_LOGGING
 
 static inline void PERF_LOG_FILTER(int32_t pos, int32_t length, int8_t trie)
@@ -395,6 +400,36 @@ int cli_checkfp(unsigned char *digest, size_t size, cli_ctx *ctx)
 	sprintf(md5 + i * 2, "%02x", digest[i]);
     md5[32] = 0;
     cli_dbgmsg("FP SIGNATURE: %s:%u:%s\n", md5, (unsigned int) size, *ctx->virname ? *ctx->virname : "Name");
+
+#ifdef HAVE__INTERNAL__SHA_COLLECT
+    if((ctx->options & CL_SCAN_INTERNAL_COLLECT_SHA) && ctx->sha_collect>0) {
+        SHA1Context sha1;
+        SHA256_CTX sha256;
+        fmap_t *map = *ctx->fmap;
+        char *ptr;
+        uint8_t shash1[SHA1_HASH_SIZE*2+1];
+        uint8_t shash256[SHA256_HASH_SIZE*2+1];
+
+        if((ptr = fmap_need_off_once(map, 0, size))) {
+            sha256_init(&sha256);
+            sha256_update(&sha256, ptr, size);
+            sha256_final(&sha256, &shash256[SHA256_HASH_SIZE]);
+            for(i=0; i<SHA256_HASH_SIZE; i++)
+                sprintf((char *)shash256+i*2, "%02x", shash256[SHA256_HASH_SIZE+i]);
+
+            SHA1Init(&sha1);
+            SHA1Update(&sha1, ptr, size);
+            SHA1Final(&sha1, &shash1[SHA1_HASH_SIZE]);
+            for(i=0; i<SHA1_HASH_SIZE; i++)
+                sprintf((char *)shash1+i*2, "%02x", shash1[SHA1_HASH_SIZE+i]);
+
+	    cli_errmsg("COLLECT:%s:%s:%u:%s:%s\n", shash256, shash1, size, *ctx->virname, ctx->entry_filename);
+        } else
+            cli_errmsg("can't compute sha\n!");
+        ctx->sha_collect = -1;
+    }
+#endif
+
     return CL_VIRUS;
 }
 
@@ -410,15 +445,17 @@ static int matchicon(cli_ctx *ctx, const char *grp1, const char *grp2)
 
 int cli_scandesc(int desc, cli_ctx *ctx, cli_file_t ftype, uint8_t ftonly, struct cli_matched_type **ftoffset, unsigned int acmode)
 {
-    int ret = CL_EMEM;
+    int ret = CL_EMEM, empty;
     fmap_t *map = *ctx->fmap;
 
-    if((*ctx->fmap = fmap(desc, 0, 0))) {
+    if((*ctx->fmap = fmap_check_empty(desc, 0, 0, &empty))) {
 	ret = cli_fmap_scandesc(ctx, ftype, ftonly, ftoffset, acmode, NULL);
 	map->dont_cache_flag = (*ctx->fmap)->dont_cache_flag;
 	funmap(*ctx->fmap);
     }
     *ctx->fmap = map;
+    if(empty)
+	return CL_CLEAN;
     return ret;
 }
 
