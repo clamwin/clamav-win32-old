@@ -158,9 +158,6 @@ CONFDIR_CLAMD               @176 NONAME DATA
 CONFDIR_FRESHCLAM           @177 NONAME DATA
 CONFDIR_MILTER              @178 NONAME DATA
 
-; mpool
-mpool_getstats              @180 NONAME
-
 ; pthreads-win32 @ 200
 pthread_attr_destroy        @200 NONAME
 pthread_attr_init           @201 NONAME

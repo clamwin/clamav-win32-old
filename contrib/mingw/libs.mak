@@ -35,7 +35,6 @@ libclamav_SOURCES+=$(wildcard $(top)/libclamav/7z/Archive/7z/*.c)
 
 libclamav_SOURCES:=$(subst $(top)/libclamav/regex/engine.c,,$(libclamav_SOURCES))
 libclamav_SOURCES:=$(subst $(top)/libclamav/bytecode_nojit.c,,$(libclamav_SOURCES))
-libclamav_SOURCES:=$(subst $(top)/libclamav/mpool.c,,$(libclamav_SOURCES))
 libclamav_SOURCES:=$(subst $(top)/libclamav/others.c,$(msvc)/src/dllmain/win32others.c,$(libclamav_SOURCES))
 
 libclamav_OBJECTS=$(libclamav_SOURCES:.c=.o)
