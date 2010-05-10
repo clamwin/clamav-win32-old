@@ -497,7 +497,11 @@
 #define SIZEOF_SHORT 2
 
 /* The number of bytes in type void * */
-#undef SIZEOF_VOID_P
+#ifdef _WIN64
+#define SIZEOF_VOID_P 8
+#else
+#define SIZEOF_VOID_P 4
+#endif
 
 /* Define to 1 if you have the ANSI C header files. */
 #define STDC_HEADERS 1
@@ -506,7 +510,7 @@
 #define SUPPORT_IPv6 1
 
 /* enable memory pools */
-#undef USE_MPOOL
+#define USE_MPOOL 1
 
 /* use syslog */
 #undef USE_SYSLOG
