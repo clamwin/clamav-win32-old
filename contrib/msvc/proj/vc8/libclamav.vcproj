@@ -528,6 +528,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\..\libclamav\mpool.c"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\..\libclamav\msexpand.c"
 				>
 			</File>
@@ -1396,10 +1400,6 @@
 				</File>
 				<File
 					RelativePath="..\..\src\dllmain\mkstemp.c"
-					>
-				</File>
-				<File
-					RelativePath="..\..\src\dllmain\mpool.c"
 					>
 				</File>
 				<File

@@ -506,7 +506,7 @@
 #define SUPPORT_IPv6 1
 
 /* enable memory pools */
-#define USE_MPOOL 1
+#undef USE_MPOOL
 
 /* use syslog */
 #undef USE_SYSLOG
