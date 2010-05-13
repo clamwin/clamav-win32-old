@@ -1300,7 +1300,7 @@ public:
 			    Value *Dst = convertOperand(func, inst, inst->u.three[0]);
 			    Dst = Builder.CreatePointerCast(Dst, PointerType::getUnqual(Type::getInt8Ty(Context)));
 			    Value *Src = convertOperand(func, inst, inst->u.three[1]);
-			    Src = Builder.CreatePointerCast(Dst, PointerType::getUnqual(Type::getInt8Ty(Context)));
+			    Src = Builder.CreatePointerCast(Src, PointerType::getUnqual(Type::getInt8Ty(Context)));
 			    Value *Len = convertOperand(func, Type::getInt32Ty(Context), inst->u.three[2]);
 			    CallInst *c = Builder.CreateCall4(CF->FMemmove, Dst, Src, Len,
 								ConstantInt::get(Type::getInt32Ty(Context), 1));
@@ -1313,7 +1313,7 @@ public:
 			    Value *Dst = convertOperand(func, inst, inst->u.three[0]);
 			    Dst = Builder.CreatePointerCast(Dst, PointerType::getUnqual(Type::getInt8Ty(Context)));
 			    Value *Src = convertOperand(func, inst, inst->u.three[1]);
-			    Src = Builder.CreatePointerCast(Dst, PointerType::getUnqual(Type::getInt8Ty(Context)));
+			    Src = Builder.CreatePointerCast(Src, PointerType::getUnqual(Type::getInt8Ty(Context)));
 			    Value *Len = convertOperand(func, EE->getTargetData()->getIntPtrType(Context), inst->u.three[2]);
 			    CallInst *c = Builder.CreateCall3(CF->FRealmemcmp, Dst, Src, Len);
 			    c->setTailCall(true);
@@ -1762,8 +1762,18 @@ int cli_bytecode_prepare_jit(struct cli_all_bc *bcs)
 		case 7:
 		    dest = (void*)(intptr_t)cli_apicalls7[api->idx];
 		    break;
+		case 8:
+		    dest = (void*)(intptr_t)cli_apicalls8[api->idx];
+		    break;
+		case 9:
+		    dest = (void*)(intptr_t)cli_apicalls9[api->idx];
+		    break;
 		default:
 		    llvm_unreachable("invalid api type");
+	    }
+	    if (!dest) {
+		std::string reason((Twine("No mapping for builtin api ")+api->name).str());
+		llvm_error_handler(0, reason);
 	    }
 	    EE->addGlobalMapping(F, dest);
 	    EE->getPointerToFunction(F);

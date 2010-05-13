@@ -1,3 +1,19 @@
+Wed May 12 19:10:39 CEST 2010 (acab)
+------------------------------------
+ * docs/man: add clamav.milter.conf.5
+
+Wed May 12 14:21:23 CEST 2010 (tk)
+----------------------------------
+ * freshclam: fix handling of temporary files
+
+Tue May 11 22:44:06 CEST 2010 (tk)
+----------------------------------
+ * freshclam: add new option TestDatabases
+
+Tue May 11 21:33:49 EEST 2010 (edwin)
+-------------------------------------
+ * libclamav/filtering.c: fix handling of alternates and negated alternates (bb #2004)
+
 Tue May 11 15:31:40 EEST 2010 (edwin)
 -------------------------------------
  * libclamav/readdb.c: read the entire .cbc files, fix loading of bytecode.cvd

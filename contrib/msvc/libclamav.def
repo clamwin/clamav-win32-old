@@ -210,7 +210,9 @@ cli_apicalls4               @319 NONAME DATA
 cli_apicalls5               @320 NONAME DATA
 cli_apicalls6               @321 NONAME DATA
 cli_apicalls7               @322 NONAME DATA
-cli_globals                 @323 NONAME DATA
+cli_apicalls8               @323 NONAME DATA
+cli_apicalls9               @324 NONAME DATA
+cli_globals                 @325 NONAME DATA
 
 ; clambc
 cli_bytecode_context_alloc          @350 NONAME
