@@ -266,6 +266,7 @@ struct char_spec {
 	uint8_t start;
 	uint8_t end;
 	uint8_t step;
+	uint8_t negative;
 };
 
 static inline unsigned char spec_ith_char(const struct char_spec *spec, unsigned i)
@@ -279,7 +280,7 @@ static inline unsigned char spec_ith_char(const struct char_spec *spec, unsigned
 	return i;
 }
 
-static const struct char_spec full_range = {NULL, 0,0xff,1};
+static const struct char_spec full_range = {NULL, 0,0xff,1,0};
 
 static inline int spec_is_fullrange(const struct char_spec *spec0, const struct char_spec *spec1)
 {
@@ -291,6 +292,24 @@ static inline int spec_is_fullrange(const struct char_spec *spec0, const struct 
 #ifndef MIN
 #define MIN(a,b) ((a) < (b) ? (a) : (b))
 #endif
+
+#define SPEC_FOREACH(spec0, k0, spec1, k1) do {\
+    unsigned char c0 = spec_ith_char(spec0, k0);\
+    unsigned char c1 = spec_ith_char(spec1, k1);\
+    unsigned c0end, c1end, cc0,cc1;\
+    c0end = spec0->negative ? 255 : c0;\
+    c1end = spec1->negative ? 255 : c1;\
+    cc0 = spec0->negative ? 0 : c0;\
+    cc1 = spec1->negative ? 0 : c1;\
+    for (;cc0 <= c0end;cc0++) {\
+	for (;cc1 <= c1end; cc1++) {\
+	    uint16_t a = cc0 | (cc1<<8);\
+	    if (spec0->negative && cc0 == c0)\
+	    continue;\
+	    if (spec1->negative && cc1 == c1)\
+	    continue;
+
+#define SPEC_END_FOR }}} while(0)
 
 enum badness {
 	reject,
@@ -343,11 +362,10 @@ static inline void get_score(enum badness badness, unsigned i, const struct filt
 	/* at most 256 iterations here, otherwise base would be negative */
 	for(k0=spec0->start;k0 <= spec0->end;k0 += spec0->step) {
 		for(k1=spec1->start;k1 <= spec1->end;k1 += spec1->step) {
-			unsigned char c0 = spec_ith_char(spec0, k0);
-			unsigned char c1 = spec_ith_char(spec1, k1);
-			uint16_t a = c0 | (c1<<8);
+		    SPEC_FOREACH(spec0, k0, spec1, k1) {
 			num_introduced += filter_isset(m, i, a);
 			num_end_introduced += filter_end_isset(m, i, a);
+		    } SPEC_END_FOR;
 		}
 	}
 	*score = base - num_introduced;
@@ -396,8 +414,12 @@ static inline void add_choice(struct choice *choices, unsigned *cnt, unsigned i,
 
 static inline int32_t spec_iter(const struct char_spec *spec)
 {
-	assert(spec->step);
-	return (1 + spec->end - spec->start)/spec->step;
+    unsigned count;
+    assert(spec->step);
+    count = (1 + spec->end - spec->start)/spec->step;
+    if (spec->negative) /* all chars except itself are added */
+	count *= 254;
+    return count;
 }
 
 int  filter_add_acpatt(struct filter *m, const struct cli_ac_patt *pat)
@@ -417,6 +439,7 @@ int  filter_add_acpatt(struct filter *m, const struct cli_ac_patt *pat)
 	struct choice choices[MAX_CHOICES];
 	unsigned choices_cnt = 0;
 	unsigned prefix_len = pat->prefix_length;
+	unsigned speci;
 
 	j = MIN(prefix_len + pat->length, MAXPATLEN);
 	for(i=0;i<j;i++) {
@@ -431,11 +454,22 @@ int  filter_add_acpatt(struct filter *m, const struct cli_ac_patt *pat)
 		return filter_add_static(m, patc, j, pat->virname);
 	}
 	cli_perf_log_count(TRIE_ORIG_LEN, j > 8 ? 8 : j);
+	i = 0;
+	if (!prefix_len) {
+	    while ((pat->pattern[i] & CLI_MATCH_WILDCARD) == CLI_MATCH_SPECIAL) {
+		/* we support only ALT_CHAR, skip the rest */
+		if (pat->special_table[altcnt]->type == 1)
+		    break;
+		altcnt++;
+		i++;
+	    }
+	}
 	/* transform AC characters into our representation */
-	for (i=0;i<j && !stop; i++) {
-		struct char_spec *spec = &chars[i];
+	for (speci=0;i<j && !stop; speci++,i++) {
+		struct char_spec *spec = &chars[speci];
 		const uint16_t p = i < prefix_len ? pat->prefix[i] : pat->pattern[i - prefix_len];
 		spec->alt = NULL;
+		spec->negative = 0;
 		switch (p & CLI_MATCH_WILDCARD) {
 			case CLI_MATCH_CHAR:
 				spec->start = spec->end = (uint8_t)p;
@@ -450,6 +484,7 @@ int  filter_add_acpatt(struct filter *m, const struct cli_ac_patt *pat)
 				assert(pat->special_table);
 				/* assert(altcnt < pat->alt); */
 				assert(pat->special_table[altcnt]);
+				spec->negative = pat->special_table[altcnt]->negative;
 				switch (pat->special_table[altcnt++]->type) {
 				    case 1: /* ALT_CHAR */
 					spec->start = 0;
@@ -459,8 +494,7 @@ int  filter_add_acpatt(struct filter *m, const struct cli_ac_patt *pat)
 					break;
 				    default:
 					stop = 1;
-					break;
-					/* TODO: should something be done here?
+					break;	/* TODO: should something be done here?
 					 * */
 				}
 				break;
@@ -479,8 +513,8 @@ int  filter_add_acpatt(struct filter *m, const struct cli_ac_patt *pat)
 				return -1;
 		}
 	}
-	if (stop) --i;
-	j = i;
+	if (stop) --speci;
+	j = speci;
 	if (j < 2) {
 		if (stop)
 			cli_warnmsg("Don't know how to create filter for: %s\n",pat->virname);
@@ -508,6 +542,10 @@ int  filter_add_acpatt(struct filter *m, const struct cli_ac_patt *pat)
 				for(k1=spec1->start;k1 <= spec1->end;k1 += spec1->step) {
 					unsigned char c0 = spec_ith_char(spec0, k0);
 					unsigned char c1 = spec_ith_char(spec1, k1);
+					if (spec0->negative || spec1->negative) {
+					    scor = avoid_anywhere;
+					    break;
+					}
 					if ((!c0 && !c1) || (c0 == 0xff && c1 == 0xff)) {
 						scor = avoid_first;
 						break;
@@ -630,12 +668,12 @@ int  filter_add_acpatt(struct filter *m, const struct cli_ac_patt *pat)
 
 		for(k0=spec0->start;k0 <= spec0->end;k0 += spec0->step) {
 			for(k1=spec1->start;k1 <= spec1->end;k1 += spec1->step) {
-				unsigned char c0 = spec_ith_char(spec0, k0);
-				unsigned char c1 = spec_ith_char(spec1, k1);
-				if (!c0 && !c1 && !i) {
+			    SPEC_FOREACH(spec0, k0, spec1, k1) {
+				if (!cc0 && !cc1 && !i) {
 					detailed_dbg("filter (warning): subsignature begins with zero: %s\n",pat->virname);
 				}
-				filter_set_atpos(m, i, c0 | (c1<<8));
+				filter_set_atpos(m, i, a);
+			    } SPEC_END_FOR;
 			}
 		}
 	}
@@ -644,12 +682,12 @@ int  filter_add_acpatt(struct filter *m, const struct cli_ac_patt *pat)
 	if (spec0 && spec1) {
 	    for (k0=spec0->start;k0 <= spec0->end;k0 += spec0->step) {
 		for (k1=spec1->start;k1 <= spec1->end;k1 += spec1->step) {
-			unsigned char c0 = spec_ith_char(spec0, k0);
-			unsigned char c1 = spec_ith_char(spec1, k1);
-			if (!c0 && !c1) {
-				detailed_dbg("filter (warning): subsignature ends with zero: %s\n",pat->virname);
+		    SPEC_FOREACH(spec0, k0, spec1, k1) {
+			if (!cc0 && !cc1) {
+			    detailed_dbg("filter (warning): subsignature ends with zero: %s\n",pat->virname);
 			}
-			filter_set_end(m, j, c0 | (c1<<8));
+			filter_set_end(m, j, a);
+		    } SPEC_END_FOR;
 		}
 	    }
 	}

@@ -87,10 +87,12 @@ static void context_safe(struct cli_bc_ctx *ctx)
 	ctx->hooks.pedata = &nopedata;
 }
 
+static int cli_bytecode_context_reset(struct cli_bc_ctx *ctx);
 struct cli_bc_ctx *cli_bytecode_context_alloc(void)
 {
     struct cli_bc_ctx *ctx = cli_calloc(1, sizeof(*ctx));
     ctx->bytecode_timeout = 60000;
+    cli_bytecode_context_reset(ctx);
     return ctx;
 }
 
@@ -194,6 +196,14 @@ static int cli_bytecode_context_reset(struct cli_bc_ctx *ctx)
     ctx->jsnorms = NULL;
     ctx->njsnorms = 0;
     ctx->jsnormdir = NULL;
+
+    for (i=0;i<ctx->nmaps;i++)
+	cli_bcapi_map_done(ctx, i);
+    free(ctx->maps);
+    ctx->maps = NULL;
+    ctx->nmaps = 0;
+
+    ctx->containertype = CL_TYPE_ANY;
     return CL_SUCCESS;
 }
 
@@ -1269,8 +1279,11 @@ static int parseBB(struct cli_bc *bc, unsigned func, unsigned bb, unsigned char 
 			break;
 		}
 	}
-	if (inst.opcode == OP_BC_STORE)
-	    inst.type = get_optype(bcfunc, inst.u.binop[0]);
+	if (inst.opcode == OP_BC_STORE) {
+	    int16_t t = get_optype(bcfunc, inst.u.binop[0]);
+	    if (t)
+		inst.type = t;
+	}
 	if (inst.opcode == OP_BC_COPY)
 	    inst.type = get_optype(bcfunc, inst.u.binop[1]);
 	if (!ok) {
@@ -1839,7 +1852,8 @@ static int cli_bytecode_prepare_interpreter(struct cli_bc *bc)
 		    MAPPTR(inst->u.unaryop);
 		    break;
 		case OP_BC_GEP1:
-		    if (bcfunc->types[inst->u.binop[1]]&0x8000) {
+		    if (inst->u.three[1]&0x80000000 ||
+			bcfunc->types[inst->u.binop[1]]&0x8000) {
                       cli_errmsg("bytecode: gep1 of alloca is not allowed\n");
                       return CL_EBYTECODE;
                     }
@@ -1851,7 +1865,8 @@ static int cli_bytecode_prepare_interpreter(struct cli_bc *bc)
                     break;
 		case OP_BC_GEPZ:
 		    /*three[0] is the type*/
-		    if (bcfunc->types[inst->u.three[1]]&0x8000)
+		    if (inst->u.three[1]&0x80000000 ||
+			bcfunc->types[inst->u.three[1]]&0x8000)
 			inst->interp_op = 5*(inst->interp_op/5);
 		    else
 			inst->interp_op = 5*(inst->interp_op/5)+3;

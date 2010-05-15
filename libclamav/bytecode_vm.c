@@ -68,7 +68,6 @@ static inline int bcfail(const char *msg, long a, long b,
 #define CHECK_EQ(a,b)
 #define CHECK_GT(a,b)
 #endif
-
 #ifdef CL_DEBUG
 #define CHECK_UNREACHABLE do { cli_dbgmsg("bytecode: unreachable executed!\n"); return CL_EBYTECODE; } while(0)
 #define TRACE_R(x) cli_dbgmsg("bytecode trace: %u, read %llx\n", pc, (long long)x);
@@ -287,7 +286,11 @@ static always_inline struct stack_entry *pop_stack(struct stack *stack,
  do {\
      if (p&0x80000000) {\
 	 uint32_t pg = p&0x7fffffff;\
+	 if (!pg) {\
+	 x = 0;\
+	 } else {\
 	 READNfrom(bc->numGlobalBytes, bc->globalBytes, x, n, pg);\
+	 }\
      } else {\
 	 READNfrom(func->numBytes, values, x, n, p);\
      }\
@@ -539,6 +542,8 @@ static inline int64_t ptr_register_glob_fixedid(struct ptr_infos *infos,
 static inline int64_t ptr_register_glob(struct ptr_infos *infos,
 					void *values, uint32_t size)
 {
+    if (!values)
+	return 0;
     return ptr_register_glob_fixedid(infos, values, size, infos->nglobs+1);
 }
 
@@ -858,6 +863,29 @@ int cli_vm_execute(const struct cli_bc *bc, struct cli_bc_ctx *ctx, const struct
 			WRITE32(inst->dest, res32);
 			break;
 		    }
+		    case 8: {
+			int32_t arg2, arg4;
+			void *arg1, *arg3;
+			int32_t resp;
+			READ32(arg2, inst->u.ops.ops[1]);
+			READP(arg1, inst->u.ops.ops[0], arg2);
+			READ32(arg4, inst->u.ops.ops[3]);
+			READP(arg3, inst->u.ops.ops[0], arg4);
+			resp = cli_apicalls8[api->idx](ctx, arg1, arg2, arg3, arg4);
+			WRITE32(inst->dest, resp);
+			break;
+		    }
+		    case 9: {
+			int32_t arg2, arg3;
+			void *arg1;
+			int32_t resp;
+			READ32(arg2, inst->u.ops.ops[1]);
+			READP(arg1, inst->u.ops.ops[0], arg2);
+			READ32(arg3, inst->u.ops.ops[2]);
+			resp = cli_apicalls9[api->idx](ctx, arg1, arg2, arg3);
+			WRITE32(inst->dest, resp);
+			break;
+		    };
 		    default:
 			cli_warnmsg("bytecode: type %u apicalls not yet implemented!\n", api->kind);
 			stop = CL_EBYTECODE;
@@ -1121,7 +1149,7 @@ int cli_vm_execute(const struct cli_bc *bc, struct cli_bc_ctx *ctx, const struct
 		break;
 	    }
 	    DEFINE_OP(OP_BC_BSWAP64) {
-		int32_t arg1;
+		int64_t arg1;
 		READ64(arg1, inst->u.unaryop);
 		WRITE64(inst->dest, cbswap64(arg1));
 		break;

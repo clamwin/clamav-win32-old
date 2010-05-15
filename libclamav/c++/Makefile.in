@@ -980,7 +980,8 @@ libclamavcxx_la_LDFLAGS = -no-undefined
 libclamavcxx_la_CXXFLAGS = $(LLVM_CXXFLAGS)
 libclamavcxx_la_SOURCES = bytecode2llvm.cpp\
 			  ClamBCRTChecks.cpp\
-			  ClamBCModule.h
+			  ClamBCModule.h\
+			  ClamBCDiagnostics.h
 
 LLVM_CXXFLAGS = -Woverloaded-virtual -pedantic -Wno-long-long -Wall -W -Wno-unused-parameter -Wwrite-strings
 unittest_CXXFLAGS = @NO_VARIADIC_MACROS@ @NO_MISSING_FIELD_INITIALIZERS@

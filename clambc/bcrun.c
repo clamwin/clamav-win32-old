@@ -33,6 +33,7 @@
 #include "shared/optparser.h"
 #include "shared/misc.h"
 #include "libclamav/dconf.h"
+#include "libclamav/others.h"
 
 #include <fcntl.h>
 #include <stdlib.h>
@@ -123,7 +124,7 @@ static void tracehook_ptr(struct cli_bc_ctx *ctx, const void *ptr)
     fprintf(stderr, "[trace] %p\n", ptr);
 }
 
-static uint8_t cli_debug_flag=0;
+static uint8_t debug_flag = 0;
 static void print_src(const char *file)
 {
   char buf[4096];
@@ -143,7 +144,7 @@ static void print_src(const char *file)
       }
     }
   } while (!found && (nread == sizeof(buf)));
-  if (cli_debug_flag)
+  if (debug_flag)
       printf("[clambc] Source code:");
   do {
     for (;i+1<nread;i++) {
@@ -276,7 +277,7 @@ int main(int argc, char *argv[])
 
     if (optget(opts,"debug")->enabled) {
 	cl_debug();
-	cli_debug_flag=1;
+	debug_flag=1;
     }
     rc = cl_init(CL_INIT_DEFAULT);
     if (rc != CL_SUCCESS) {
@@ -316,25 +317,46 @@ int main(int argc, char *argv[])
 	fprintf(stderr,"bytecode load skipped\n");
 	exit(0);
     }
-    if (cli_debug_flag)
+    if (debug_flag)
 	printf("[clambc] Bytecode loaded\n");
     if (optget(opts, "info")->enabled) {
 	cli_bytecode_describe(bc);
     } else if (optget(opts, "printsrc")->enabled) {
         print_src(opts->filename[0]);
     } else {
+	cli_ctx cctx;
+	struct cl_engine *engine = cl_engine_new();
 	fmap_t *map = NULL;
+	memset(&cctx, 0, sizeof(cctx));
+	if (!engine) {
+	    fprintf(stderr,"Unable to create engine\n");
+	    optfree(opts);
+	    exit(3);
+	}
+	rc = cl_engine_compile(engine);
+	if (rc) {
+	    fprintf(stderr,"Unable to compile engine: %s\n", cl_strerror(rc));
+	    optfree(opts);
+	    exit(4);
+	}
 	rc = cli_bytecode_prepare(&bcs, BYTECODE_ENGINE_MASK);
 	if (rc != CL_SUCCESS) {
 	    fprintf(stderr,"Unable to prepare bytecode: %s\n", cl_strerror(rc));
 	    optfree(opts);
 	    exit(4);
 	}
-	if (cli_debug_flag)
+	if (debug_flag)
 	    printf("[clambc] Bytecode prepared\n");
 
 	ctx = cli_bytecode_context_alloc();
 	if (!ctx) {
+	    fprintf(stderr,"Out of memory\n");
+	    exit(3);
+	}
+	ctx->ctx = &cctx;
+	cctx.engine = engine;
+	cctx.fmap = cli_calloc(sizeof(fmap_t*), engine->maxreclevel+2);
+	if (!cctx.fmap) {
 	    fprintf(stderr,"Out of memory\n");
 	    exit(3);
 	}
@@ -354,7 +376,7 @@ int main(int argc, char *argv[])
 	    funcid = atoi(opts->filename[1]);
 	}
 	cli_bytecode_context_setfuncid(ctx, bc, funcid);
-	if (cli_debug_flag)
+	if (debug_flag)
 	    printf("[clambc] Running bytecode function :%u\n", funcid);
 
 	if (opts->filename[1]) {
@@ -395,15 +417,17 @@ int main(int argc, char *argv[])
 	    fprintf(stderr,"Unable to run bytecode: %s\n", cl_strerror(rc));
 	} else {
 	    uint64_t v;
-	    if (cli_debug_flag)
+	    if (debug_flag)
 		printf("[clambc] Bytecode run finished\n");
 	    v = cli_bytecode_context_getresult_int(ctx);
-	    if (cli_debug_flag)
+	    if (debug_flag)
 		printf("[clambc] Bytecode returned: 0x%llx\n", (long long)v);
 	}
 	cli_bytecode_context_destroy(ctx);
 	if (map)
 	    funmap(map);
+	cl_engine_free(engine);
+	free(cctx.fmap);
     }
     cli_bytecode_destroy(bc);
     cli_bytecode_done(&bcs);
@@ -411,7 +435,7 @@ int main(int argc, char *argv[])
     optfree(opts);
     if (fd != -1)
 	close(fd);
-    if (cli_debug_flag)
+    if (debug_flag)
 	printf("[clambc] Exiting\n");
     return 0;
 }

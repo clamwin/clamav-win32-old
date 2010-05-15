@@ -1,3 +1,48 @@
+Fri May 14 17:16:19 EEST 2010 (edwin)
+-------------------------------------
+ * unit_tests: add bytecode.cvd load test
+
+Wed May 12 19:10:39 CEST 2010 (acab)
+------------------------------------
+ * docs/man: add clamav.milter.conf.5
+
+Mon May 10 14:11:51 CEST 2010 (acab)
+------------------------------------
+ * win32: simulate gai_strerror
+
+Mon May 10 03:43:43 CEST 2010 (acab)
+------------------------------------
+ * libclamav: Use mpool in win32 (well, sort of) as the mighty crt allocator
+	      chokes when loading about one milion signatures
+
+Sat May  8 00:18:13 CEST 2010 (acab)
+------------------------------------
+ * libclamav/fmap.c: make oof need stfu (bb#2000)
+
+Fri May 14 11:28:52 EEST 2010 (edwin)
+-------------------------------------
+ * libclamav/bytecode.c: handle global gep parameter correctly (bb #1955)
+
+Thu May 13 23:40:11 EEST 2010 (edwin)
+-------------------------------------
+ * libclamav/c++/llvm: Update to LLVM 2.7 release.
+
+Thu May 13 23:35:55 EEST 2010 (edwin)
+-------------------------------------
+ * libclamav/bytecode*, unit_tests: add new unit tests for bytecode API and fix bugs.
+
+Thu May 13 12:41:24 EEST 2010 (edwin)
+------------------------------------
+ * libclamav/c++: Relax bounds checks. Was rejecting correct code.
+
+Tue May 11 21:33:49 EEST 2010 (edwin)
+-------------------------------------
+ * libclamav/filtering.c: fix handling of alternates and negated alternates (bb #2004)
+
+Tue May 11 15:31:40 EEST 2010 (edwin)
+-------------------------------------
+ * libclamav/readdb.c: read the entire .cbc files, fix loading of bytecode.cvd
+
 Wed May 12 14:21:23 CEST 2010 (tk)
 ----------------------------------
  * freshclam: fix handling of temporary files

@@ -145,6 +145,7 @@ funmap                      @159 NONAME
 print_version               @160 NONAME
 freshdbdir                  @161 NONAME
 match_regex                 @162 NONAME
+check_flevel                @163 NONAME
 
 ; optparser
 optget                      @170 NONAME
@@ -157,6 +158,9 @@ CONFDIR                     @175 NONAME DATA
 CONFDIR_CLAMD               @176 NONAME DATA
 CONFDIR_FRESHCLAM           @177 NONAME DATA
 CONFDIR_MILTER              @178 NONAME DATA
+
+; mpool
+mpool_getstats              @179 NONAME
 
 ; pthreads-win32 @ 200
 pthread_attr_destroy        @200 NONAME
@@ -205,7 +209,9 @@ cli_apicalls4               @319 NONAME DATA
 cli_apicalls5               @320 NONAME DATA
 cli_apicalls6               @321 NONAME DATA
 cli_apicalls7               @322 NONAME DATA
-cli_globals                 @323 NONAME DATA
+cli_apicalls8               @323 NONAME DATA
+cli_apicalls9               @324 NONAME DATA
+cli_globals                 @325 NONAME DATA
 
 ; clambc
 cli_bytecode_context_alloc          @350 NONAME
