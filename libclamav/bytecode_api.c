@@ -116,8 +116,9 @@ uint32_t cli_bcapi_debug_print_str(struct cli_bc_ctx *ctx, const uint8_t *str, u
 
 uint32_t cli_bcapi_debug_print_uint(struct cli_bc_ctx *ctx, uint32_t a)
 {
-    cli_dbgmsg("bytecode debug: %u\n", a);
-    return 0;
+    if (!cli_debug_flag)
+	return 0;
+    return fprintf(stderr, "%d", a);
 }
 
 /*TODO: compiler should make sure that only constants are passed here, and not
@@ -541,7 +542,7 @@ int32_t cli_bcapi_hashset_contains(struct cli_bc_ctx *ctx , int32_t id, uint32_t
 {
     struct cli_hashset *s = get_hashset(ctx, id);
     if (!s)
-	return 0;
+	return -1;
     return cli_hashset_contains(s, key);
 }
 
@@ -559,9 +560,14 @@ int32_t cli_bcapi_hashset_done(struct cli_bc_ctx *ctx , int32_t id)
     cli_hashset_destroy(s);
     if (id == ctx->nhashsets-1) {
 	ctx->nhashsets--;
-	s = cli_realloc(ctx->hashsets, ctx->nhashsets*sizeof(*s));
-	if (s)
-	    ctx->hashsets = s;
+	if (!ctx->nhashsets) {
+	    free(ctx->hashsets);
+	    ctx->hashsets = NULL;
+	} else {
+	    s = cli_realloc(ctx->hashsets, ctx->nhashsets*sizeof(*s));
+	    if (s)
+		ctx->hashsets = s;
+	}
     }
     return 0;
 }
@@ -926,6 +932,13 @@ int32_t cli_bcapi_jsnorm_done(struct cli_bc_ctx *ctx , int32_t id)
     return 0;
 }
 
+static inline double myround(double a)
+{
+    if (a < 0)
+	return a-0.5;
+    return a+0.5;
+}
+
 int32_t cli_bcapi_ilog2(struct cli_bc_ctx *ctx, uint32_t a, uint32_t b)
 {
     double f;
@@ -933,23 +946,23 @@ int32_t cli_bcapi_ilog2(struct cli_bc_ctx *ctx, uint32_t a, uint32_t b)
 	return 0x7fffffff;
     /* log(a/b) is -32..32, so 2^26*32=2^31 covers the entire range of int32 */
     f = (1<<26)*log((double)a / b) / log(2);
-    return (int32_t)f;
+    return (int32_t)myround(f);
 }
 
 int32_t cli_bcapi_ipow(struct cli_bc_ctx *ctx, int32_t a, int32_t b, int32_t c)
 {
     if (!a && b < 0)
 	return 0x7fffffff;
-    return (int32_t)c*pow(a,b);
+    return (int32_t)myround(c*pow(a,b));
 }
 
-int32_t cli_bcapi_iexp(struct cli_bc_ctx *ctx, int32_t a, int32_t b, int32_t c)
+uint32_t cli_bcapi_iexp(struct cli_bc_ctx *ctx, int32_t a, int32_t b, int32_t c)
 {
     double f;
     if (!b)
 	return 0x7fffffff;
     f= c*exp((double)a/b);
-    return (int32_t)f;
+    return (uint32_t)myround(f);
 }
 
 int32_t cli_bcapi_isin(struct cli_bc_ctx *ctx, int32_t a, int32_t b, int32_t c)
@@ -958,7 +971,7 @@ int32_t cli_bcapi_isin(struct cli_bc_ctx *ctx, int32_t a, int32_t b, int32_t c)
     if (!b)
 	return 0x7fffffff;
     f = c*sin((double)a/b);
-    return (int32_t)f;
+    return (int32_t)myround(f);
 }
 
 int32_t cli_bcapi_icos(struct cli_bc_ctx *ctx, int32_t a, int32_t b, int32_t c)
@@ -967,7 +980,7 @@ int32_t cli_bcapi_icos(struct cli_bc_ctx *ctx, int32_t a, int32_t b, int32_t c)
     if (!b)
 	return 0x7fffffff;
     f = c*cos((double)a/b);
-    return (int32_t)f;
+    return (int32_t)myround(f);
 }
 
 int32_t cli_bcapi_memstr(struct cli_bc_ctx *ctx, const uint8_t* h, int32_t hs,
@@ -1026,6 +1039,8 @@ uint32_t cli_bcapi_debug_print_str_nonl(struct cli_bc_ctx *ctx , const uint8_t* 
 {
     if (!s || len <= 0)
 	return -1;
+    if (!cli_debug_flag)
+	return 0;
     return fwrite(s, 1, len, stderr);
 }
 
@@ -1056,7 +1071,10 @@ uint32_t cli_bcapi_entropy_buffer(struct cli_bc_ctx *ctx , uint8_t* s, int32_t l
 int32_t cli_bcapi_map_new(struct cli_bc_ctx *ctx, int32_t keysize, int32_t valuesize)
 {
     unsigned n = ctx->nmaps+1;
-    struct cli_map *s = cli_realloc(ctx->maps, sizeof(*ctx->maps)*n);
+    struct cli_map *s;
+    if (!keysize)
+	return -1;
+    s = cli_realloc(ctx->maps, sizeof(*ctx->maps)*n);
     if (!s)
 	return -1;
     ctx->maps = s;
@@ -1131,9 +1149,14 @@ int32_t cli_bcapi_map_done(struct cli_bc_ctx *ctx , int32_t id)
     cli_map_delete(s);
     if (id == ctx->nmaps-1) {
 	ctx->nmaps--;
-	s = cli_realloc(ctx->maps, ctx->nmaps*(sizeof(*s)));
-	if (s)
-	    ctx->maps = s;
+	if (!ctx->nmaps) {
+	    free(ctx->maps);
+	    ctx->maps = NULL;
+	} else {
+	    s = cli_realloc(ctx->maps, ctx->nmaps*(sizeof(*s)));
+	    if (s)
+		ctx->maps = s;
+	}
     }
     return 0;
 }
