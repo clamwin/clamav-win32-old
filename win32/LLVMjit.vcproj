@@ -6,11 +6,14 @@
 	ProjectType="Visual C++"
 	RootNamespace="LLVMjit"
 	TargetFrameworkVersion="196613"
-	Version="9,00"
+	Version="9.00"
 	>
 	<Platforms>
 		<Platform
 			Name="Win32"
+		/>
+		<Platform
+			Name="x64"
 		/>
 	</Platforms>
 	<ToolFiles>
@@ -19,9 +22,9 @@
 		<Configuration
 			CharacterSet="1"
 			ConfigurationType="4"
-			IntermediateDirectory="$(SolutionDir)build\$(ProjectName)\$(ConfigurationName)"
+			IntermediateDirectory="$(SolutionDir)build\$(PlatformName)\$(ProjectName)\$(ConfigurationName)"
 			Name="Debug|Win32"
-			OutputDirectory="$(SolutionDir)$(ConfigurationName)"
+			OutputDirectory="$(SolutionDir)$(PlatformName)\$(ConfigurationName)"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -83,9 +86,9 @@
 		<Configuration
 			CharacterSet="1"
 			ConfigurationType="4"
-			IntermediateDirectory="$(SolutionDir)build\$(ProjectName)\$(ConfigurationName)"
+			IntermediateDirectory="$(SolutionDir)build\$(PlatformName)\$(ProjectName)\$(ConfigurationName)"
 			Name="Release|Win32"
-			OutputDirectory="$(SolutionDir)$(ConfigurationName)"
+			OutputDirectory="$(SolutionDir)$(PlatformName)\$(ConfigurationName)"
 			WholeProgramOptimization="1"
 			>
 			<Tool
@@ -146,6 +149,138 @@
 				Name="VCPostBuildEventTool"
 			/>
 		</Configuration>
+		<Configuration
+			CharacterSet="1"
+			ConfigurationType="4"
+			IntermediateDirectory="$(SolutionDir)build\$(PlatformName)\$(ProjectName)\$(ConfigurationName)"
+			Name="Debug|x64"
+			OutputDirectory="$(SolutionDir)$(PlatformName)\$(ConfigurationName)"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				TargetEnvironment="3"
+			/>
+			<Tool
+				AdditionalIncludeDirectories="&quot;$(SolutionDir)&quot;;&quot;$(SolutionDir)..\libclamav\c++\llvm\include&quot;;&quot;$(SolutionDir)llvmbuild\include&quot;"
+				BasicRuntimeChecks="3"
+				DebugInformationFormat="3"
+				DisableSpecificWarnings="4146;4503;4996;4800;4244;4624;4355;4715;4180;4345;4224;4351"
+				ExceptionHandling="1"
+				MinimalRebuild="true"
+				Name="VCCLCompilerTool"
+				Optimization="0"
+				PreprocessorDefinitions="_DEBUG;WIN32;_LIB;__STDC_LIMIT_MACROS;__STDC_CONSTANT_MACROS;_CRT_SECURE_NO_DEPRECATE;_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;CRT_NONSTDC_NO_WARNINGS;_SCl_SECURE_NO_DEPRECATE;WIN32_LEAN_AND_MEAN;_BIND_TO_CURRENT_VCLIBS_VERSION=1"
+				RuntimeLibrary="3"
+				UsePrecompiledHeader="0"
+				WarningLevel="3"
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLibrarianTool"
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCFxCopTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+		</Configuration>
+		<Configuration
+			CharacterSet="1"
+			ConfigurationType="4"
+			IntermediateDirectory="$(SolutionDir)build\$(PlatformName)\$(ProjectName)\$(ConfigurationName)"
+			Name="Release|x64"
+			OutputDirectory="$(SolutionDir)$(PlatformName)\$(ConfigurationName)"
+			WholeProgramOptimization="1"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				TargetEnvironment="3"
+			/>
+			<Tool
+				AdditionalIncludeDirectories="&quot;$(SolutionDir)&quot;;&quot;$(SolutionDir)..\libclamav\c++\llvm\include&quot;;&quot;$(SolutionDir)llvmbuild\include&quot;"
+				DebugInformationFormat="3"
+				DisableSpecificWarnings="4146;4503;4996;4800;4244;4624;4355;4715;4180;4345;4224;4351"
+				EnableFunctionLevelLinking="false"
+				EnableIntrinsicFunctions="true"
+				ExceptionHandling="1"
+				Name="VCCLCompilerTool"
+				Optimization="2"
+				PreprocessorDefinitions="NDEBUG;WIN32;_LIB;__STDC_LIMIT_MACROS;__STDC_CONSTANT_MACROS;_CRT_SECURE_NO_DEPRECATE;_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;CRT_NONSTDC_NO_WARNINGS;_SCl_SECURE_NO_DEPRECATE;WIN32_LEAN_AND_MEAN;_BIND_TO_CURRENT_VCLIBS_VERSION=1"
+				RuntimeLibrary="2"
+				UsePrecompiledHeader="0"
+				WarningLevel="3"
+				WholeProgramOptimization="false"
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLibrarianTool"
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCFxCopTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+		</Configuration>
 	</Configurations>
 	<References>
 	</References>
@@ -155,26 +290,6 @@
 			Name="Source Files"
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
-			<File
-				RelativePath="..\libclamav\c++\llvm\lib\Analysis\IPA\CallGraph.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\libclamav\c++\llvm\lib\VMCore\LLVMContextImpl.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\libclamav\c++\llvm\lib\Transforms\Scalar\DCE.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\libclamav\c++\llvm\lib\VMCore\GVMaterializer.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\libclamav\c++\llvm\lib\Analysis\PointerTracking.cpp"
-				>
-			</File>
 			<File
 				RelativePath="..\libclamav\c++\llvm\lib\Analysis\AliasAnalysis.cpp"
 				>
@@ -212,6 +327,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\libclamav\c++\llvm\lib\Analysis\IPA\CallGraph.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\libclamav\c++\llvm\lib\Analysis\CaptureTracking.cpp"
 				>
 			</File>
@@ -237,6 +356,10 @@
 			</File>
 			<File
 				RelativePath="..\libclamav\c++\llvm\lib\VMCore\Core.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\libclamav\c++\llvm\lib\Transforms\Scalar\DCE.cpp"
 				>
 			</File>
 			<File
@@ -292,6 +415,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\libclamav\c++\llvm\lib\VMCore\GVMaterializer.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\libclamav\c++\llvm\lib\VMCore\InlineAsm.cpp"
 				>
 			</File>
@@ -341,6 +468,10 @@
 			</File>
 			<File
 				RelativePath="..\libclamav\c++\llvm\lib\VMCore\LLVMContext.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\libclamav\c++\llvm\lib\VMCore\LLVMContextImpl.cpp"
 				>
 			</File>
 			<File
@@ -433,6 +564,10 @@
 			</File>
 			<File
 				RelativePath="..\libclamav\c++\llvm\lib\VMCore\PassManager.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\libclamav\c++\llvm\lib\Analysis\PointerTracking.cpp"
 				>
 			</File>
 			<File
