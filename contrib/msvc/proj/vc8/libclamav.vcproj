@@ -1315,6 +1315,10 @@
 					>
 				</File>
 				<File
+					RelativePath="..\..\include\clamwin.h"
+					>
+				</File>
+				<File
 					RelativePath="..\..\include\cw_inline.h"
 					>
 				</File>
@@ -1386,6 +1390,10 @@
 			<Filter
 				Name="Source Files"
 				>
+				<File
+					RelativePath="..\..\src\dllmain\clamwin.c"
+					>
+				</File>
 				<File
 					RelativePath="..\..\src\dllmain\dirent.c"
 					>
