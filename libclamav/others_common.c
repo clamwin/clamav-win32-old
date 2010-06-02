@@ -144,8 +144,9 @@ void *cli_calloc(size_t nmemb, size_t size)
 	void *alloc;
 
 
-    if(!size || size > CLI_MAX_ALLOCATION) {
-	cli_errmsg("cli_calloc(): Attempt to allocate %lu bytes. Please report to http://bugs.clamav.net\n", (unsigned long int) size);
+    if(!nmemb || !size || size > CLI_MAX_ALLOCATION || nmemb > CLI_MAX_ALLOCATION
+        || (nmemb*size > CLI_MAX_ALLOCATION)) {
+	cli_errmsg("cli_calloc(): Attempt to allocate %lu bytes. Please report to http://bugs.clamav.net\n", (unsigned long int) nmemb*size);
 	return NULL;
     }
 
@@ -693,14 +694,24 @@ static int cli_ftw_dir(const char *dirname, int flags, int maxdepth, cli_ftw_cb 
 	err = errno;
 #endif
 	closedir(dd);
+	ret = CL_SUCCESS;
 	if (err) {
 	    char errs[128];
 	    cli_errmsg("Unable to readdir() directory %s: %s\n", dirname,
 		       cli_strerror(errno, errs, sizeof(errs)));
 	    /* report error to callback using error_stat */
 	    ret = callback(NULL, NULL, dirname, error_stat, data);
-	    if (ret != CL_SUCCESS)
+	    if (ret != CL_SUCCESS) {
+		if (entries) {
+		    for (i++;i<entries_cnt;i++) {
+			struct dirent_data *entry = &entries[i];
+			free(entry->filename);
+			free(entry->statbuf);
+		    }
+		    free(entries);
+		}
 		return ret;
+	    }
 	}
 
 	if (entries) {
@@ -718,6 +729,7 @@ static int cli_ftw_dir(const char *dirname, int flags, int maxdepth, cli_ftw_cb 
 	    for (i++;i<entries_cnt;i++) {
 		struct dirent_data *entry = &entries[i];
 		free(entry->filename);
+		free(entry->statbuf);
 	    }
 	    free(entries);
 	}
