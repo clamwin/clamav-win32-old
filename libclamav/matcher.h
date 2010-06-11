@@ -52,6 +52,7 @@ struct cli_lsig_tdb {
     uint32_t *val, *range;
     char *str;
     uint32_t cnt[3];
+    uint32_t subsigs;
 
     const uint32_t *target;
     const uint32_t *engine, *nos, *ep, *filesize;
@@ -62,7 +63,6 @@ struct cli_lsig_tdb {
     */
     const char *icongrp1, *icongrp2;
     uint32_t *macro_ptids;
-    uint32_t subsigs;
 #ifdef USE_MPOOL
     mpool_t *mempool;
 #endif
@@ -71,10 +71,10 @@ struct cli_lsig_tdb {
 struct cli_bc;
 struct cli_ac_lsig {
     uint32_t id;
+    unsigned bc_idx;
     char *logic;
     const char *virname;
     struct cli_lsig_tdb tdb;
-    unsigned bc_idx;
 };
 
 struct cli_matcher {
@@ -163,8 +163,8 @@ struct cli_target_info {
 
 int cli_scanbuff(const unsigned char *buffer, uint32_t length, uint32_t offset, cli_ctx *ctx, cli_file_t ftype, struct cli_ac_data **acdata);
 
-int cli_scandesc(int desc, cli_ctx *ctx, cli_file_t ftype, uint8_t ftonly, struct cli_matched_type **ftoffset, unsigned int acmode);
-int cli_fmap_scandesc(cli_ctx *ctx, cli_file_t ftype, uint8_t ftonly, struct cli_matched_type **ftoffset, unsigned int acmode, unsigned char *refhash);
+int cli_scandesc(int desc, cli_ctx *ctx, cli_file_t ftype, uint8_t ftonly, struct cli_matched_type **ftoffset, unsigned int acmode, struct cli_ac_result **acres);
+int cli_fmap_scandesc(cli_ctx *ctx, cli_file_t ftype, uint8_t ftonly, struct cli_matched_type **ftoffset, unsigned int acmode, struct cli_ac_result **acres, unsigned char *refhash);
 int cli_lsig_eval(cli_ctx *ctx, struct cli_matcher *root, struct cli_ac_data *acdata);
 int cli_caloff(const char *offstr, struct cli_target_info *info, fmap_t *map, unsigned int target, uint32_t *offdata, uint32_t *offset_min, uint32_t *offset_max);
 

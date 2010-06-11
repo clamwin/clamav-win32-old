@@ -1,3 +1,34 @@
+Thu Jun 10 19:58:01 CEST 2010 (acab)
+------------------------------------
+ * libclamav/pe*: fix virusnames being hijacked by idb sigs (bb#2064)
+
+Thu Jun 10 16:06:56 CEST 2010 (tk)
+----------------------------------
+ * libclamav/str.c: fix cli_isnumber() (bb#2070)
+
+Thu Jun 10 12:15:17 CEST 2010 (tk)
+----------------------------------
+ * sigtool: print match count and offsets in --test-sigs mode (bb#2054)
+	    IMPORTANT NOTE: --test-sigs now only works against the final target file
+	    (after all processing, normalization, etc. for which the tested
+	    signature was directly created)
+
+Wed Jun  9 13:38:11 EEST 2010 (edwin)
+-------------------------------------
+ * libclamav/{matcher-bm.c, sha256.c}: improve DB load time (bb #1860).
+
+Tue Jun  8 16:32:47 CEST 2010 (tk)
+----------------------------------
+ * sigtool/sigtool.c: add --datadir (bb#2063)
+
+Tue Jun  8 12:47:25 CEST 2010 (tk)
+----------------------------------
+ * shared/cdiff.c: fix handling of massive XCHGs (bb#2017)
+
+Fri Jun  4 18:04:37 CEST 2010 (tk)
+----------------------------------
+ * libclamav/cvd.c: load daily.ign[2] files from CVDs (bb#2061)
+
 Wed Jun  2 10:08:00 EEST 2010 (edwin)
 -------------------------------------
  * libclamav/others_common.c: fix typo (bb #2060).
