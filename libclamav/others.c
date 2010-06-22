@@ -301,7 +301,6 @@ struct cl_engine *cl_engine_new(void)
     new->min_cc_count = CLI_DEFAULT_MIN_CC_COUNT;
     new->min_ssn_count = CLI_DEFAULT_MIN_SSN_COUNT;
 
-    new->callback = NULL;
     new->bytecode_security = CL_BYTECODE_TRUST_SIGNED;
     /* 5 seconds timeout */
     new->bytecode_timeout = 60000;
@@ -1011,4 +1010,24 @@ int cli_bitset_test(bitset_t *bs, unsigned long bit_offset)
 		return FALSE;
 	}
 	return (bs->bitset[char_offset] & ((unsigned char)1 << bit_offset));
+}
+
+void cl_engine_set_clcb_pre_scan(struct cl_engine *engine, clcb_pre_scan callback, void *context) {
+    engine->cb_pre_scan = callback;
+    engine->cb_pre_scan_ctx = callback ? context : NULL;
+}
+
+void cl_engine_set_clcb_post_scan(struct cl_engine *engine, clcb_post_scan callback, void *context) {
+    engine->cb_post_scan = callback;
+    engine->cb_post_scan_ctx = callback ? context : NULL;
+}
+
+void cl_engine_set_clcb_progress(struct cl_engine *engine, clcb_progress callback, void *context) {
+    engine->cb_progress = callback;
+    engine->cb_progress_ctx = callback ? context : NULL;
+}
+
+void cl_engine_set_clcb_sigload(struct cl_engine *engine, clcb_sigload callback, void *context) {
+    engine->cb_sigload = callback;
+    engine->cb_sigload_ctx = callback ? context : NULL;
 }

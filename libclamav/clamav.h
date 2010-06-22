@@ -43,7 +43,6 @@ typedef enum {
     CL_ECVD,
     CL_EVERIFY,
     CL_EUNPACK,
-    CL_EUSERABORT,
 
     /* I/O and memory errors */
     CL_EOPEN,
@@ -172,9 +171,66 @@ extern int cl_engine_compile(struct cl_engine *engine);
 
 extern int cl_engine_addref(struct cl_engine *engine);
 
-extern int cl_engine_setcallback(struct cl_engine *engine, int (*callback)(int desc, int bytes));
-
 extern int cl_engine_free(struct cl_engine *engine);
+
+
+/* CALLBACKS - WARNING: unstable API - WIP */
+
+
+typedef cl_error_t (*clcb_pre_scan)(int fd, void *context);
+/* PRE-SCAN
+Input:
+fd      = File descriptor which is about to be scanned
+context = Opaque application provided data
+
+Output:
+CL_CLEAN = File is scanned
+CL_BREAK = Whitelisted by callback - file is skipped and marked as clean
+CL_VIRUS = Blacklisted by callback - file is skipped and marked as infected
+*/
+extern void cl_engine_set_clcb_pre_scan(struct cl_engine *engine, clcb_pre_scan callback, void *context);
+
+
+typedef cl_error_t (*clcb_post_scan)(int fd, int result, void *context);
+/* POST-SCAN
+Input:
+fd      = File descriptor which is was scanned
+result  = The scan result for the file
+context = Opaque application provided data
+
+Output:
+CL_CLEAN = Scan result is not overridden
+CL_BREAK = Whitelisted by callback - scan result is set to CL_CLEAN
+CL_VIRUS = Blacklisted by callback - scan result is set to CL_VIRUS
+*/
+extern void cl_engine_set_clcb_post_scan(struct cl_engine *engine, clcb_post_scan callback, void *context);
+
+typedef cl_error_t (*clcb_progress)(int fd, int bytes, void *context);
+/* PROGRESS-SCAN
+Input:
+fd      = File descriptor which is was scanned
+bytes   = Scanned bytes
+context = Opaque application provided data
+
+Output:
+CL_CLEAN = Continue scanning
+CL_BREAK = Whitelisted by callback - break, scan result is set to CL_CLEAN
+CL_VIRUS = Blacklisted by callback - break, scan result is set to CL_VIRUS
+*/
+extern void cl_engine_set_clcb_progress(struct cl_engine *engine, clcb_progress callback, void *context);
+
+typedef int (*clcb_sigload)(const char *type, const char *name, void *context);
+/* SIGNATURE LOAD
+Input:
+type = The signature type (e.g. "db", "ndb", "mdb", etc.)
+name = The virus name
+context = Opaque application provided data
+
+Output:
+0     = Load the current signature
+Non 0 = Skip the current signature
+*/
+extern void cl_engine_set_clcb_sigload(struct cl_engine *engine, clcb_sigload callback, void *context);
 
 
 struct cl_stat {

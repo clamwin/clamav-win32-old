@@ -600,10 +600,11 @@ int cli_fmap_scandesc(cli_ctx *ctx, cli_file_t ftype, uint8_t ftonly, struct cli
 	if(ctx->scanned)
 	    *ctx->scanned += bytes / CL_COUNT_PRECISION;
 
-	if (ctx->engine->callback && !ctx->engine->callback(map->fd, bytes)) {
+    if (ctx->engine->cb_progress &&
+        ((ret = ctx->engine->cb_progress(map->fd, bytes, ctx->engine->cb_progress_ctx)) != CL_CLEAN)) {
 		if(info.exeinfo.section)
 		    free(info.exeinfo.section);
-		return CL_EUSERABORT;
+		return ret;
 	}
 
 	if(troot) {

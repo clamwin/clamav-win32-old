@@ -79,35 +79,35 @@ typedef struct _cb_data_t
     int condition;
 } cb_data_t;
 
-cb_data_t cbdata;
-
+static cb_data_t cbdata;
 static const char *rotation = "|/-\\";
 
 /* Callback function for scanning */
-int scancallback(int desc, int bytes)
+cl_error_t scancallback(int desc, int bytes, void *context)
 {
-    if (desc == cbdata.fd)
+    cb_data_t *cbctx = context;
+    if (desc == cbctx->fd)
     {
         int percent;
-        cbdata.count += bytes;
-        percent = MIN(100, (int) (((double) cbdata.count) * 100.0f / ((double) cbdata.size)));
-        if(percent != cbdata.oldvalue)
+        cbctx->count += bytes;
+        percent = MIN(100, (int) (((double) cbctx->count) * 100.0f / ((double) cbctx->size)));
+        if (percent != cbctx->oldvalue)
         {
-            mprintf("~%s: [%3i%%]\r", cbdata.filename, percent);
-            cbdata.oldvalue = percent;
+            mprintf("~%s: [%3i%%]\r", cbctx->filename, percent);
+            cbctx->oldvalue = percent;
         }
     }
     else /* archives or stdin */
     {
         int rotator = (int) time(NULL) % sizeof(rotation);
-        if(rotator != cbdata.oldvalue)
+        if (rotator != cbctx->oldvalue)
         {
-            mprintf("~%s: [%c]\r", cbdata.filename, rotation[rotator]);
-            cbdata.oldvalue = rotator;
+            mprintf("~%s: [%c]\r", cbctx->filename, rotation[rotator]);
+            cbctx->oldvalue = rotator;
         }
     }
 
-    return cbdata.condition;
+    return cbctx->condition;
 }
 
 void scanfile(const char *filename, struct cl_engine *engine, const struct optstruct *opts, unsigned int options)
@@ -515,9 +515,9 @@ int scanmanager(const struct optstruct *opts)
 
     /* setup callback */
     if(optget(opts, "show-progress")->enabled) {
-        cl_engine_setcallback(engine, scancallback);
         memset(&cbdata, 0, sizeof(cb_data_t));
-        cbdata.condition = 1;
+        cbdata.condition = CL_CLEAN;
+        cl_engine_set_clcb_progress(engine, scancallback, &cbdata);
     }
 
     /* set limits */

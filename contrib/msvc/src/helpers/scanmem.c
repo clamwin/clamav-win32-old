@@ -34,7 +34,7 @@
 
 #define TIMEOUT_MODULE  30000
 
-extern int scancallback(int desc, int bytes);
+extern cl_error_t scancallback(int desc, int bytes, void *context);
 
 /* Yes, I'm no so polite, but clamscan is single-threaded */
 #include <clamscan/global.h>
@@ -110,8 +110,6 @@ typedef struct _cb_data_t
     int fd;
     int condition;
 } cb_data_t;
-
-extern cb_data_t cbdata;
 
 typedef struct _scanmem_data_t
 {
@@ -610,13 +608,14 @@ int cw_scanfile(const char *filename, scanmem_data *scan_data)
         return -1;
     }
 
-    if (scan_data->engine->callback)
+    if (scan_data->engine->cb_progress_ctx)
     {
-        cbdata.count = 0;
-        cbdata.fd = fd;
-        cbdata.oldvalue = 0;
-        cbdata.filename = filename;
-        cbdata.size = lseek(fd, 0, SEEK_END);
+        cb_data_t *cbdata = scan_data->engine->cb_progress_ctx;
+        cbdata->count = 0;
+        cbdata->fd = fd;
+        cbdata->oldvalue = 0;
+        cbdata->filename = filename;
+        cbdata->size = lseek(fd, 0, SEEK_END);
         lseek(fd, 0, SEEK_SET);
     }
 
@@ -722,6 +721,7 @@ int scanmem_cb(PROCESSENTRY32 ProcStruct, MODULEENTRY32 me32, void *data)
 int scanmem(struct cl_engine *engine, const struct optstruct *opts, int options)
 {
     scanmem_data data;
+    cb_data_t cbdata;
     data.files = NULL;
     data.printclean = 1;
     data.kill = 0;
@@ -751,9 +751,9 @@ int scanmem(struct cl_engine *engine, const struct optstruct *opts, int options)
 
     if (optget(opts, "show-progress")->enabled)
     {
-        data.engine->callback = scancallback;
         memset(&cbdata, 0, sizeof(cb_data_t));
-        cbdata.condition = 1;
+        cbdata.condition = CL_CLEAN;
+        cl_engine_set_clcb_progress(data.engine, scancallback, &cbdata);
     }
 
     logg(" *** Scanning Programs in Computer Memory ***\n");

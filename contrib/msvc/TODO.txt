@@ -1,7 +1,7 @@
 [Todo list / Scratchbox]
 - on WIN64 SOCKET is 64bit while all socket functions suppose it to be an int
 - check for compatibility issues on WIN64
-- define CL_NOTHREADS/CL_NOLIBCLAMAV when needed and check if it breaks something
+- hook sigcheck in post (?) callback
 
 Output directories for vc8/9:
 $(SolutionDir)$(ConfigurationName)\$(PlatformName)

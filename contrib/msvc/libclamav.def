@@ -5,13 +5,16 @@ cl_init
 cl_load
 cl_retdbdir
 cl_engine_addref
-cl_engine_setcallback
 cl_engine_compile
 cl_engine_new
 cl_engine_set_num
 cl_engine_get_num
 cl_engine_set_str
 cl_engine_get_str
+cl_engine_set_clcb_pre_scan
+cl_engine_set_clcb_post_scan
+cl_engine_set_clcb_progress
+cl_engine_set_clcb_sigload
 cl_engine_free
 cl_engine_settings_copy
 cl_engine_settings_apply
