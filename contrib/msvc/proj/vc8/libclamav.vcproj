@@ -508,6 +508,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\..\libclamav\matcher-md5.c"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\..\libclamav\matcher.c"
 				>
 			</File>
@@ -1091,6 +1095,10 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\libclamav\matcher-bm.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\matcher-md5.h"
 				>
 			</File>
 			<File
