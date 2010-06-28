@@ -34,6 +34,7 @@
 #include "others.h"
 #include "matcher-ac.h"
 #include "matcher-bm.h"
+#include "matcher-md5.h"
 #include "md5.h"
 #include "filetypes.h"
 #include "matcher.h"
@@ -381,14 +382,14 @@ int cli_checkfp(unsigned char *digest, size_t size, cli_ctx *ctx)
 	char md5[33];
 	unsigned int i;
 	const char *virname;
-	const struct cli_bm_patt *patt = NULL;
+	const struct cli_md5m_patt *patt = NULL;
 
 #ifdef _WIN32
     if (!cw_sigcheck(ctx, 1))
         return CL_CLEAN;
 #endif
 
-    if(ctx->engine->md5_fp && cli_bm_scanbuff(digest, 16, &virname, &patt, ctx->engine->md5_fp, 0, NULL, NULL) == CL_VIRUS && patt->filesize == size) {
+    if(ctx->engine->md5_fp && cli_md5m_scan(digest, size, &virname, ctx->engine->md5_fp) == CL_VIRUS) {
 	cli_dbgmsg("cli_checkfp(): Found false positive detection (fp sig: %s)\n", virname);
 	return CL_CLEAN;
     }
@@ -519,7 +520,7 @@ int cli_fmap_scandesc(cli_ctx *ctx, cli_file_t ftype, uint8_t ftonly, struct cli
 {
  	unsigned char *buff;
 	int ret = CL_CLEAN, type = CL_CLEAN, bytes;
-	unsigned int i, bm_offmode = 0;
+	unsigned int i = 0, bm_offmode = 0;
 	uint32_t maxpatlen, offset = 0;
 	struct cli_ac_data gdata, tdata;
 	struct cli_bm_off toff;
@@ -668,12 +669,12 @@ int cli_fmap_scandesc(cli_ctx *ctx, cli_file_t ftype, uint8_t ftonly, struct cli
 	return CL_VIRUS;
 
     if(!ftonly && ctx->engine->md5_hdb) {
-	    const struct cli_bm_patt *patt;
+	    const struct cli_md5m_patt *patt;
 	if(!refhash) {
 	    cli_md5_final(digest, &md5ctx);
 	    refhash = digest;
 	}
-	if(cli_bm_scanbuff(refhash, 16, ctx->virname, &patt, ctx->engine->md5_hdb, 0, NULL, NULL) == CL_VIRUS && patt->filesize == map->len && (cli_bm_scanbuff(refhash, 16, NULL, &patt, ctx->engine->md5_fp, 0, NULL, NULL) != CL_VIRUS || patt->filesize != map->len))
+	if(cli_md5m_scan(refhash, map->len, ctx->virname, ctx->engine->md5_hdb) == CL_VIRUS && cli_md5m_scan(refhash, map->len, NULL, ctx->engine->md5_fp) != CL_VIRUS)
 	    return CL_VIRUS;
     }
 
