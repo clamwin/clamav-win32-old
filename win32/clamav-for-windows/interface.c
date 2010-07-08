@@ -1,3 +1,12 @@
+//TODO:
+// unify refcounting
+// check scan funcs
+// after scan returns and ret!=CL_VIRUS pInfoList NULL or unchanged?
+// changed set option value to 0 or non 0
+// restore file position
+// cb context per instance or per scanobj ??
+// optional shit to really be OPTIONAL!
+
 /*
  * Copyright (C) 2010 Sourcefire, Inc.
  * Authors: aCaB <acab@clamav.net>
@@ -27,7 +36,7 @@
 #include "interface.h"
 
 #define FMT(s) __FUNCTION__": "s"\n"
-#define FAIL(fmt, ...) do { logg(FMT(fmt), __VA_ARGS__); return CLAMAPI_FAILURE; } while(0)
+#define FAIL(errcode, fmt, ...) do { logg(FMT(fmt), __VA_ARGS__); return (errcode); } while(0)
 #define WIN() do { logg("%s completed successfully\n", __FUNCTION__); return CLAMAPI_SUCCESS; } while(0)
 
 HANDLE engine_event; /* refcount = 0 event */
@@ -43,21 +52,14 @@ unsigned int engine_refcnt;
 #define lock_engine()(WaitForSingleObject(engine_mutex, INFINITE) == WAIT_FAILED)
 #define unlock_engine() do {ReleaseMutex(engine_mutex);} while(0)
 
+cl_error_t prescan_cb(int fd, void *context);
+cl_error_t postscan_cb(int fd, int result, const char *virname, void *context);
+
 BOOL interface_setup(void) {
-    if(cl_init(CL_INIT_DEFAULT))
-	return FALSE;
     if(!(engine_mutex = CreateMutex(NULL, FALSE, NULL)))
 	return FALSE;
     if(!(engine_event = CreateEvent(NULL, TRUE, TRUE, NULL)))
 	return FALSE;
-
-    logg_verbose = 1;
-    logg_nowarn = 0;
-    logg_lock = 0;
-    logg_time = 1;
-    logg_size = -1;
-    logg_file = "C:\\clam4win.log";
-    logg("ClamAV support initialized\n");
     return TRUE;
 }
 
@@ -65,13 +67,13 @@ static int load_db(void) {
     int ret;
     if((ret = cl_load(dbdir, engine, NULL, CL_DB_STDOPT)) != CL_SUCCESS) {
 	engine = NULL;
-	FAIL("Failed to load database: %s", cl_strerror(ret));
+	FAIL(ret, "Failed to load database: %s", cl_strerror(ret));
     }
 
     if((ret = cl_engine_compile(engine))) {
 	cl_engine_free(engine);
 	engine = NULL;
-	FAIL("Failed to compile engine: %s", cl_strerror(ret));
+	FAIL(ret, "Failed to compile engine: %s", cl_strerror(ret));
     }
 
     engine_refcnt = 0;
@@ -116,23 +118,33 @@ static void free_engine_and_unlock(void) {
     unlock_engine();
 }
 
-int CLAMAPI Scan_Initialize(const wchar_t *pEnginesFolder, const wchar_t *pLicenseKey) {
+int CLAMAPI Scan_Initialize(const wchar_t *pEnginesFolder, const wchar_t *pTempRoot, const wchar_t *pLicenseKey) {
+    char tmpdir[PATH_MAX];
     BOOL cant_convert;
     int ret;
 
     if(lock_engine())
-	FAIL("Engine mutex fail");
+	FAIL(CL_EMEM, "Engine mutex fail");
     if(engine) {
 	unlock_engine();
-	FAIL("Already initialized");
+	FAIL(CL_EARG, "Already initialized");
     }
     if(!(engine = cl_engine_new())) {
 	unlock_engine();
-	FAIL("Not enough memory for a new engine");
+	FAIL(CL_EMEM, "Not enough memory for a new engine");
+    }
+    cl_engine_set_clcb_pre_scan(engine, prescan_cb);
+    if(!WideCharToMultiByte(CP_ACP, WC_NO_BEST_FIT_CHARS, pTempRoot, -1, tmpdir, sizeof(tmpdir), NULL, &cant_convert) || cant_convert) {
+	free_engine_and_unlock();
+	FAIL(CL_EARG, "Can't translate pTempRoot");
+    }
+    if((ret = cl_engine_set_str(engine, CL_ENGINE_TMPDIR, tmpdir))) {
+	free_engine_and_unlock();
+	FAIL(ret, "Failed to set engine tempdir: %s", cl_strerror(ret));
     }
     if(!WideCharToMultiByte(CP_ACP, WC_NO_BEST_FIT_CHARS, pEnginesFolder, -1, dbdir, sizeof(dbdir), NULL, &cant_convert) || cant_convert) {
 	free_engine_and_unlock();
-	FAIL("Can't translate pEnginesFolder");
+	FAIL(CL_EARG, "Can't translate pEnginesFolder");
     }
     logg("Scan_Initialize(%s)\n", dbdir);
     ret = load_db();
@@ -148,15 +160,15 @@ int CLAMAPI Scan_Uninitialize(void) {
  //   }
  //   logg("%x", rett);
     if(lock_engine())
-	FAIL("Engine mutex fail");
+	FAIL(CL_EMEM, "Engine mutex fail");
     if(!engine) {
 	unlock_engine();
-	FAIL("Attempted to uninit a NULL engine");
+	FAIL(CL_EARG, "Attempted to uninit a NULL engine");
     }
     if(engine_refcnt) {
 	volatile unsigned int refs = engine_refcnt;
 	unlock_engine();
-	FAIL("Attempted to uninit the engine with %u active instances", engine_refcnt);
+	FAIL(CL_EARG, "Attempted to uninit the engine with %u active instances", engine_refcnt);
     }
     free_engine_and_unlock();
     WIN();
@@ -167,25 +179,26 @@ typedef struct {
     void *scancb_ctx;
     void *callback2;
     LONG refcnt;
-    int scanmode;
+    unsigned int scanopts;
 } instance;
 
 int CLAMAPI Scan_CreateInstance(CClamAVScanner **ppScanner) {
     instance *inst = calloc(1, sizeof(*inst));
     if(!inst)
-	FAIL("CreateInstance: OOM");
+	FAIL(CL_EMEM, "CreateInstance: OOM");
     if(lock_engine()) {
 	free(inst);
-	FAIL("Failed to lock engine");
+	FAIL(CL_EMEM, "Failed to lock engine");
     }
     if(!engine) {
 	free(inst);
 	unlock_engine();
-	FAIL("Create instance called with no engine");
+	FAIL(CL_ENULLARG, "Create instance called with no engine");
     }
     engine_refcnt++;
     ResetEvent(engine_event);
     unlock_engine();
+    inst->scanopts = CL_SCAN_STDOPT;
     *ppScanner = (CClamAVScanner *)inst;
     WIN();
 }
@@ -194,13 +207,13 @@ int CLAMAPI Scan_DestroyInstance(CClamAVScanner *pScanner) {
     instance *inst = (instance *)pScanner;
     volatile LONG refcnt = InterlockedCompareExchange(&inst->refcnt, 0, 0);
     if(refcnt)
-	FAIL("Attemped to destroy an instance with active scanners");
+	FAIL(CL_EARG, "Attemped to destroy an instance with active scanners");
     free(pScanner);
     if(lock_engine())
-	FAIL("Failed to lock engine");
+	FAIL(CL_EMEM, "Failed to lock engine");
     if(!engine) {
 	unlock_engine();
-	FAIL("Destroy instance called with no engine");
+	FAIL(CL_ENULLARG, "Destroy instance called with no engine");
     }
     if(!--engine_refcnt)
 	SetEvent(engine_event);
@@ -210,140 +223,176 @@ int CLAMAPI Scan_DestroyInstance(CClamAVScanner *pScanner) {
 
 int CLAMAPI Scan_SetScanCallback(CClamAVScanner *pScanner, CLAM_SCAN_CALLBACK pfnCallback, void *pContext) {
     instance *inst = (instance *)pScanner;
+    InterlockedIncrement(&inst->refcnt);
     inst->scancb = pfnCallback;
     inst->scancb_ctx = pContext;
+    InterlockedDecrement(&inst->refcnt);
+    
     WIN();
 }
 
 int CLAMAPI Scan_SetOption(CClamAVScanner *pScanner, int option, void *value, unsigned long inputLength) {
     instance *inst = (instance *)pScanner;
+    unsigned int whichopt, newval;
+
+    InterlockedIncrement(&inst->refcnt);
     switch(option) {
-	case CLAM_OPTION_SCAN_MODE: {
-	    int newmode;
-	    if(inputLength != sizeof(int))
-		FAIL("Bad scanmode value size: %lu", inputLength);
-	    memcpy(&newmode, value, sizeof(int)); /* not sure about alignment */
-	    if(newmode != CLAM_SCAN_FULL && newmode != CLAM_SCAN_LIGHT)
-		FAIL("Bad scanmode: %d", newmode);
-	    inst->scanmode = newmode;
-	    WIN();
-	}
 	case CLAM_OPTION_SCAN_ARCHIVE:
-	case CLAM_OPTION_SCAN_PACKED:
-	case CLAM_OPTION_SCAN_EMAIL:
-	case CLAM_OPTION_SCAN_DEEP:
-	    /* make up my mind */
-	    WIN();
+	    whichopt = CL_SCAN_ARCHIVE;
+	    break;
+	case CLAM_OPTION_SCAN_MAIL:
+	    whichopt = CL_SCAN_MAIL;
+	    break;
+	case CLAM_OPTION_SCAN_OLE2:
+	    whichopt = CL_SCAN_OLE2;
+	    break;
+	case CLAM_OPTION_SCAN_HTML:
+	    whichopt = CL_SCAN_HTML;
+	    break;
+	case CLAM_OPTION_SCAN_PE:
+	    whichopt = CL_SCAN_PE;
+	    break;
+	case CLAM_OPTION_SCAN_PDF:
+	    whichopt = CL_SCAN_PDF;
+	    break;
+	case CLAM_OPTION_SCAN_ALGORITHMIC:
+	    whichopt = CL_SCAN_ALGORITHMIC;
+	    break;
+	case CLAM_OPTION_SCAN_ELF:
+	    whichopt = CL_SCAN_ELF;
+	    break;
 	default:
-	    FAIL("Unsupported option: %d", option);
+	    InterlockedDecrement(&inst->refcnt);
+	    FAIL(CL_EARG, "Unsupported set option: %d", option);
     }
+
+    newval = *(unsigned int *)value;
+    if(!newval)
+	inst->scanopts &= ~whichopt;
+    else
+	inst->scanopts |= whichopt;
+    InterlockedDecrement(&inst->refcnt);
+    WIN();
 }
 
 int CLAMAPI Scan_GetOption(CClamAVScanner *pScanner, int option, void *value, unsigned long inputLength, unsigned long *outLength) {
     instance *inst = (instance *)pScanner;
-    switch(option) {
-	case CLAM_OPTION_SCAN_MODE:
-	    *outLength = sizeof(int);
-	    if(inputLength < sizeof(int)) {
-		FAIL("Bad scanmode value size: inputLength");
-	    }
-	    memcpy(value, &inst->scanmode, sizeof(int));
-	    WIN();
+    unsigned int whichopt;
 
+    InterlockedIncrement(&inst->refcnt);
+    switch(option) {
+	case CLAM_OPTION_SCAN_ARCHIVE:
+	    whichopt = CL_SCAN_ARCHIVE;
+	    break;
+	case CLAM_OPTION_SCAN_MAIL:
+	    whichopt = CL_SCAN_MAIL;
+	    break;
+	case CLAM_OPTION_SCAN_OLE2:
+	    whichopt = CL_SCAN_OLE2;
+	    break;
+	case CLAM_OPTION_SCAN_HTML:
+	    whichopt = CL_SCAN_HTML;
+	    break;
+	case CLAM_OPTION_SCAN_PE:
+	    whichopt = CL_SCAN_PE;
+	    break;
+	case CLAM_OPTION_SCAN_PDF:
+	    whichopt = CL_SCAN_PDF;
+	    break;
+	case CLAM_OPTION_SCAN_ALGORITHMIC:
+	    whichopt = CL_SCAN_ALGORITHMIC;
+	    break;
+	case CLAM_OPTION_SCAN_ELF:
+	    whichopt = CL_SCAN_ELF;
+	    break;
 	default:
-	    FAIL("Unsupported option");
+	    InterlockedDecrement(&inst->refcnt);
+	    FAIL(CL_EARG, "Unsupported set option: %d", option);
     }
+
+    *(unsigned int *)value = (inst->scanopts & whichopt) != 0;
+    InterlockedDecrement(&inst->refcnt);
+    WIN();
 }
 
 #define CLAM_LIGHT_OPTS (CL_SCAN_STDOPT & ~(CL_SCAN_ARCHIVE | CL_SCAN_MAIL | CL_SCAN_ELF))
 #define MAX_VIRNAME_LEN 1024
 
-int CLAMAPI Scan_ScanObject(CClamAVScanner *pScanner, const wchar_t *pObjectPath, int objectType, int action, int impersonatePID, int *pScanStatus, PCLAM_SCAN_INFO_LIST *pInfoList) {
+int CLAMAPI Scan_ScanObject(CClamAVScanner *pScanner, const wchar_t *pObjectPath, int *pScanStatus, PCLAM_SCAN_INFO_LIST *pInfoList) {
     HANDLE fhdl;
     int res;
     instance *inst = (instance *)pScanner;
 
     InterlockedIncrement(&inst->refcnt);
 
-    if(objectType != CLAMAPI_OBJECT_TYPE_FILE) {
-	InterlockedDecrement(&inst->refcnt);
-	FAIL("Unsupported object type: %d", objectType);
-    }
-
     if((fhdl = CreateFileW(pObjectPath, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_FLAG_RANDOM_ACCESS, NULL)) == INVALID_HANDLE_VALUE) {
 	InterlockedDecrement(&inst->refcnt);
-	FAIL("open() failed");
+	FAIL(CL_EOPEN, "open() failed");
     }
 
-    res = Scan_ScanObjectByHandle(pScanner, &fhdl, objectType, action, impersonatePID, pScanStatus, pInfoList);
+    res = Scan_ScanObjectByHandle(pScanner, fhdl, pScanStatus, pInfoList);
 
     CloseHandle(fhdl);
     InterlockedDecrement(&inst->refcnt);
     return res;
 }
 
-int CLAMAPI Scan_ScanObjectByHandle(CClamAVScanner *pScanner, const void *pObject, int objectType, int action, int impersonatePID, int *pScanStatus, PCLAM_SCAN_INFO_LIST *pInfoList) {
+struct scan_ctx {
+    int entryfd;
+    instance *inst;
+};
+
+int CLAMAPI Scan_ScanObjectByHandle(CClamAVScanner *pScanner, HANDLE object, int *pScanStatus, PCLAM_SCAN_INFO_LIST *pInfoList) {
     instance *inst = (instance *)pScanner;
     HANDLE duphdl, self;
     char *virname;
     int fd, res;
-    CLAM_SCAN_INFO_LIST *infolist;
-    PCLAM_SCAN_INFO scaninfo;
+    struct scan_ctx sctx;
 
     InterlockedIncrement(&inst->refcnt);
 
-    if(objectType != CLAMAPI_OBJECT_TYPE_FILE) {
-	InterlockedDecrement(&inst->refcnt);
-	FAIL("Unsupported object type: %d", objectType);
-    }
-
-    infolist = calloc(1, sizeof(CLAM_SCAN_INFO_LIST) + sizeof(CLAM_SCAN_INFO) + MAX_VIRNAME_LEN);
-    if(!infolist) {
-	InterlockedDecrement(&inst->refcnt);
-	FAIL("ScanByHandle: OOM");
-    }
-
     self = GetCurrentProcess();
-    if(!DuplicateHandle(self, *(HANDLE *)pObject, self, &duphdl, GENERIC_READ, FALSE, 0)) {
+    if(!DuplicateHandle(self, object, self, &duphdl, GENERIC_READ, FALSE, 0)) {
 	InterlockedDecrement(&inst->refcnt);
-	free(infolist);
-	FAIL("Duplicate handle failed");
+	FAIL(CL_EDUP, "Duplicate handle failed");
     }
 
     if((fd = _open_osfhandle((intptr_t)duphdl, _O_RDONLY)) == -1) {
 	InterlockedDecrement(&inst->refcnt);
 	CloseHandle(duphdl);
-	free(infolist);
-	FAIL("open handle failed");
+	FAIL(CL_EOPEN, "Open handle failed");
     }
 
-    res = cl_scandesc(fd, &virname, NULL, engine, (inst->scanmode == CLAM_SCAN_FULL) ? CL_SCAN_STDOPT : CLAM_LIGHT_OPTS);
-
+    sctx.entryfd = fd;
+    sctx.inst = inst;
+    res = cl_scandesc_callback(fd, &virname, NULL, engine, inst->scanopts, &sctx);
+    InterlockedDecrement(&inst->refcnt);
     close(fd);
 
-    scaninfo = (PCLAM_SCAN_INFO)(infolist + 1);
-    infolist->cbCount = 1;
-    scaninfo->cbSize = sizeof(*scaninfo);
-    scaninfo->objectType = objectType;
-    scaninfo->pObjectPath = L"FIXME";
-    scaninfo->scanStatus = 3;
-
     if(res == CL_VIRUS) {
-	wchar_t *wvirname = (wchar_t *)(scaninfo + 1);
+	CLAM_SCAN_INFO_LIST *infolist = calloc(1, sizeof(CLAM_SCAN_INFO_LIST) + sizeof(CLAM_SCAN_INFO) + MAX_VIRNAME_LEN);
+	PCLAM_SCAN_INFO scaninfo;
+	wchar_t *wvirname;
 
+        if(!infolist)
+	    FAIL(CL_EMEM, "ScanByHandle: OOM");
+
+	scaninfo = (PCLAM_SCAN_INFO)(infolist + 1);
+	infolist->cbCount = 1;
+	scaninfo->cbSize = sizeof(*scaninfo);
+	scaninfo->scanPhase = SCAN_PHASE_FINAL;
+	scaninfo->errorCode = CLAMAPI_SUCCESS;
+	scaninfo->pThreatType = L"FIXME";
+	wvirname = (wchar_t *)(scaninfo + 1);
 	scaninfo->pThreatName = wvirname;
 	if(!MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, virname, -1, wvirname, MAX_VIRNAME_LEN))
 	    scaninfo->pThreatName = L"INFECTED";
 	logg("FOUND: %s\n", virname);
-    }
-    InterlockedDecrement(&inst->refcnt);
-    if(inst->scancb) {
-	int cb_act = 0;
-	inst->scancb(scaninfo, &cb_act, inst->scancb_ctx);
-	logg("scancb returned %d\n", cb_act);
-	free(infolist);
-    } else {
 	*pInfoList = infolist;
+	*pScanStatus = CLAM_INFECTED;
+    } else {
+        *pInfoList = NULL;
+	*pScanStatus = CLAM_CLEAN;
     }
     WIN();
 }
@@ -354,11 +403,68 @@ int CLAMAPI Scan_DeleteScanInfo(CClamAVScanner *pScanner, PCLAM_SCAN_INFO_LIST p
     WIN();
 }
 
+cl_error_t prescan_cb(int fd, void *context) {
+    struct scan_ctx *sctx = (struct scan_ctx *)context;
+    instance *inst = sctx->inst;
+    CLAM_SCAN_INFO si;
+    CLAM_ACTION act;
 
-int CLAMAPI Scan_SetPasswordCallback(CClamAVScanner *pScanner, CLAM_PASSWORD_CALLBACK pfnCallback, void *pContext) {
-    FAIL("I DON'T BELONG HERE");
+    logg("in prescan cb with %d %p\n", fd, context);
+    si.cbSize = sizeof(si);
+    si.flags = 0;
+    si.scanPhase = (fd == sctx->entryfd) ? SCAN_PHASE_INITIAL : SCAN_PHASE_PRESCAN;
+    si.errorCode = CLAMAPI_SUCCESS;
+    si.pThreatType = NULL;
+    si.pThreatName = NULL;
+    si.object = (HANDLE)_get_osfhandle(fd);
+    si.pInnerObjectPath = NULL;
+    inst->scancb(&si, &act, inst->scancb_ctx);
+    switch(act) {
+	case CLAM_ACTION_SKIP:
+	    logg("prescan cb result: SKIP\n");
+	    return CL_BREAK;
+	case CLAM_ACTION_ABORT:
+	    logg("prescan cb result: ABORT\n");
+	    return CL_VIRUS;
+	default:
+	    logg("prescan cb returned bogus value\n");
+	case CLAM_ACTION_CONTINUE:
+	    logg("prescan cb result: CONTINUE\n");
+	    return CL_CLEAN;
+    }
 }
 
-int CLAMAPI Scan_ScanObjectInMemory(CClamAVScanner *pScanner, const void *pObject, unsigned int objectSize, int objectType, int action, int impersonatePID, int *pScanStatus, PCLAM_SCAN_INFO_LIST *pInfoList) {
-    FAIL("I DON'T BELONG HERE");
+cl_error_t postscan_cb(int fd, int result, const char *virname, void *context) {
+    struct scan_ctx *sctx = (struct scan_ctx *)context;
+    instance *inst = sctx->inst;
+    CLAM_SCAN_INFO si;
+    CLAM_ACTION act;
+
+    logg("in prostscan cb with %d %d %s %p\n", fd, result, virname, context);
+    si.cbSize = sizeof(si);
+    si.flags = 0;
+    si.scanPhase = (fd == sctx->entryfd) ? SCAN_PHASE_FINAL : SCAN_PHASE_POSTSCAN;
+    si.errorCode = CLAMAPI_SUCCESS;
+    si.pThreatType = NULL;
+    si.pThreatName = (result == CL_VIRUS) ? L"Fixme" : NULL; /* FIXME */
+    si.object = (HANDLE)_get_osfhandle(fd);
+    si.pInnerObjectPath = NULL;
+    inst->scancb(&si, &act, inst->scancb_ctx);
+    switch(act) {
+	case CLAM_ACTION_SKIP:
+	    logg("postscan cb result: SKIP\n");
+	    return CL_BREAK;
+	case CLAM_ACTION_ABORT:
+	    logg("postscan cb result: ABORT\n");
+	    return CL_VIRUS;
+	default:
+	    logg("postscan cb returned bogus value\n");
+	case CLAM_ACTION_CONTINUE:
+	    logg("prescan cb result: CONTINUE\n");
+	    return CL_CLEAN;
+    }
+}
+
+CLAMAPI const wchar_t * Scan_GetErrorMsg(int errorCode) {
+    return L"w00t!"; /* FIXME */
 }

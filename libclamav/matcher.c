@@ -427,6 +427,13 @@ int cli_checkfp(unsigned char *digest, size_t size, cli_ctx *ctx)
     }
 #endif
 
+    if(ctx->virsize && !*ctx->virsize) {
+	if(ctx->virsize)
+	    *ctx->virsize = size;
+	if(ctx->virhash)
+	    strcpy(ctx->virhash, md5);
+    }
+
     return CL_VIRUS;
 }
 
