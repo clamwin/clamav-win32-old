@@ -2030,6 +2030,7 @@ int downloadmanager(const struct optstruct *opts, const char *hostname, const ch
     }
 
     mirman_write("mirrors.dat", &mdat);
+    cli_rmdirs(updtmpdir);
 
     if(updated) {
 	if(optget(opts, "HTTPProxyServer")->enabled) {
@@ -2071,7 +2072,6 @@ int downloadmanager(const struct optstruct *opts, const char *hostname, const ch
 		    free(cmd);
 		    if(newver)
 			free(newver);
-		    cli_rmdirs(updtmpdir);
 		    return 75;
 		}
 
@@ -2094,6 +2094,5 @@ int downloadmanager(const struct optstruct *opts, const char *hostname, const ch
     if(newver)
 	free(newver);
 
-    cli_rmdirs(updtmpdir);
     return 0;
 }

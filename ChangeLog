@@ -1,3 +1,26 @@
+Thu Jul 22 22:32:08 EEST 2010 (edwin)
+-------------------------------------
+ * libclamav/c++/bytecode2llvm.cpp: detect PaX and fallback to intepreter if
+ needed (bb #2092).
+ * libclamav/bytecode.c: selfcheck on startup (bb #2092).
+
+Thu Jul 22 16:36:32 CEST 2010 (tk)
+----------------------------------
+ * libclamav/mspack.c: fix write error
+
+Wed Jul 21 18:54:13 CEST 2010 (tk)
+----------------------------------
+ * sigtool/sigtool.c: fix build problem (bb#2133)
+
+Mon Jul 19 18:48:08 CEST 2010 (tk)
+----------------------------------
+ * sigtool/sigtool.c: add support for creating cdiffs with arbitrary
+		      long lines (bb#2014)
+
+Fri Jul 16 11:11:27 CEST 2010 (tk)
+----------------------------------
+ * freshclam: remove empty temporary directories on EXIT_n (bb#2116)
+
 Mon Jul 12 12:27:44 CEST 2010 (tk)
 ----------------------------------
  * libclamunrar/unrar.c: fix error path memory leaks (bb#2100)
