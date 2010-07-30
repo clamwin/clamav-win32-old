@@ -26,8 +26,7 @@
 #define LIBCLAMAV_LLVM "libclamav_llvm.dll"
 #endif
 
-static HMODULE llvm = NULL;
-
+/* no jit functions from bytecode_nojit.c */
 #define bytecode_init nojit_bytecode_init
 #define cli_bytecode_debug nojit_cli_bytecode_debug
 #define cli_bytecode_debug_printsrc nojit_cli_bytecode_debug_printsrc
@@ -37,6 +36,15 @@ static HMODULE llvm = NULL;
 #define cli_bytecode_printversion nojit_cli_bytecode_printversion
 #define cli_vm_execute_jit nojit_cli_vm_execute_jit
 #include <libclamav/bytecode_nojit.c>
+#undef bytecode_init
+#undef cli_bytecode_debug
+#undef cli_bytecode_debug_printsrc
+#undef cli_bytecode_done_jit
+#undef cli_bytecode_init_jit
+#undef cli_bytecode_prepare_jit
+#undef cli_bytecode_printversion
+#undef cli_vm_execute_jit
+/* end */
 
 #define JITCALL __cdecl
 
@@ -58,15 +66,6 @@ static imp_cli_bytecode_prepare_jit pf_cli_bytecode_prepare_jit = NULL;
 static imp_cli_bytecode_printversion pf_cli_bytecode_printversion = NULL;
 static imp_cli_vm_execute_jit pf_cli_vm_execute_jit = NULL;
 
-#undef bytecode_init
-#undef cli_bytecode_debug
-#undef cli_bytecode_debug_printsrc
-#undef cli_bytecode_done_jit
-#undef cli_bytecode_init_jit
-#undef cli_bytecode_prepare_jit
-#undef cli_bytecode_printversion
-#undef cli_vm_execute_jit
-
 int bytecode_init(void)
 {
     return pf_bytecode_init();
@@ -81,9 +80,9 @@ void cli_bytecode_debug_printsrc(const struct cli_bc_ctx *ctx)
     pf_cli_bytecode_debug_printsrc(ctx);
 }
 
-int cli_bytecode_done_jit(struct cli_all_bc *allbc)
+int cli_bytecode_done_jit(struct cli_all_bc *allbc, int partial)
 {
-    return pf_cli_bytecode_done_jit(allbc);
+    return pf_cli_bytecode_done_jit(allbc, partial);
 }
 
 int cli_bytecode_init_jit(struct cli_all_bc *allbc, unsigned dconfmask)
@@ -109,6 +108,8 @@ int cli_vm_execute_jit(const struct cli_all_bc *bcs, struct cli_bc_ctx *ctx, con
 #define Q(string) # string
 #define IMPORT_FUNC(x) \
     pf_##x = ( imp_##x ) GetProcAddress(llvm, Q(x)); if (!pf_##x) { break; }
+
+static HMODULE llvm = NULL;
 
 void jit_init(void)
 {
