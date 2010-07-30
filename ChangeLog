@@ -1,3 +1,59 @@
+Fri Jul 30 17:46:14 CEST 2010 (acab)
+------------------------------------
+ * libclamav/others.h: bump CLI_MAX_ALLOCATION by 5 MB (needed by lzma - bb#2124)
+
+Fri Jul 30 15:51:06 CEST 2010 (acab)
+------------------------------------
+ * libclamav, unit_tests: use cached PE metadata when matching icons (better fix for 
+	      bb#2064, partially reverts d932a6d)
+	      add some unit tests for ign2, ldb, idb
+
+Fri Jul 30 15:15:35 CEST 2010 (tk)
+----------------------------------
+ * freshclam: fix parsing of extended log entries
+
+Fri Jul 30 14:20:50 EEST 2010 (edwin)
+-------------------------------------
+ * libclamav/pdf.c: improve extraction of PDF objects (bb #1596, #1994, #2029).
+
+Thu Jul 29 16:56:00 CEST 2010 (acab)
+------------------------------------
+ * libclamav/matcher.c: make cli_lsig_eval use cached executable metadata rather
+			than parsing the file again
+
+Thu Jul 29 14:07:31 EEST 2010 (edwin)
+-------------------------------------
+ * libclamav: introduce BC_STARTUP bytecode that can turn off JIT (bb #2078, #2101)
+
+Thu Jul 29 03:54:45 CEST 2010 (acab)
+------------------------------------
+ * libclamav/scanners.c: use fmap in scan_embpe
+
+Thu Jul 29 02:40:16 CEST 2010 (acab)
+------------------------------------
+ * libclamav: use fmap in autoit
+
+Tue Jul 27 14:16:59 CEST 2010 (acab)
+------------------------------------
+ * clamav-milter: noisily fallback on default value if MaxFileSize is set
+		  to 0 (bb#2081)
+
+Mon Jul 26 13:16:07 EEST 2010 (edwin)
+-------------------------------------
+ * libclamav/phishcheck.c: don't phishcheck email addresses (bb #2067)
+
+Mon Jul 26 12:55:20 EEST 2010 (edwin)
+------------------------------------
+ * clamd/session.c: treat MULTISCAN as CONTSCAN on non-directories (bb #1869).
+
+Sat Jul 24 17:43:16 CEST 2010 (acab)
+------------------------------------
+ * win32: upgrade project files to vs10
+
+Fri Jul 23 22:32:18 EEST 2010 (edwin)
+-------------------------------------
+ * libclamav/bytecode_vm.c: fix use of uninitialized value (bb #2140).
+
 Thu Jul 22 22:32:08 EEST 2010 (edwin)
 -------------------------------------
  * libclamav/c++/bytecode2llvm.cpp: detect PaX and fallback to intepreter if
