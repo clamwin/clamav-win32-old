@@ -43,7 +43,7 @@ static HMODULE llvm = NULL;
 typedef int (JITCALL *imp_bytecode_init)(void);
 typedef void (JITCALL *imp_cli_bytecode_debug)(int, char **);
 typedef void (JITCALL *imp_cli_bytecode_debug_printsrc)(const struct cli_bc_ctx *);
-typedef int (JITCALL *imp_cli_bytecode_done_jit)(struct cli_all_bc *);
+typedef int (JITCALL *imp_cli_bytecode_done_jit)(struct cli_all_bc *allbc, int partial);
 typedef int (JITCALL *imp_cli_bytecode_init_jit)(struct cli_all_bc *, unsigned dconfmask);
 typedef int (JITCALL *imp_cli_bytecode_prepare_jit)(struct cli_all_bc *);
 typedef void (JITCALL *imp_cli_bytecode_printversion)(void);
