@@ -28,7 +28,17 @@
 #define F_OK    0   /* Test for existence */
 #endif
 
-#define sleep(x) Sleep(x * 1000)
+#ifndef __MINGW32__
+#define S_IWUSR     S_IWRITE
+#define S_IRUSR     S_IREAD
+#define S_IRWXU     S_IREAD | S_IWRITE
+
+#define S_ISREG(x) (((x) & S_IFMT) == S_IFREG)
+#define S_ISDIR(x) (((x) & S_IFMT) == S_IFDIR)
+#endif
+
+#define S_ISLNK(x)  (0)
+#define sleep(x)    Sleep(x * 1000)
 
 extern int ftruncate(int fd, off_t length);
 

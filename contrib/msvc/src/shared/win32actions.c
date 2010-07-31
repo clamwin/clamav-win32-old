@@ -20,6 +20,7 @@
 
 #include <platform.h>
 #include <osdeps.h>
+#include <unistd.h>
 
 #include "shared/optparser.h"
 #include "shared/output.h"

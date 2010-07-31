@@ -39,14 +39,6 @@
 
 #define _CRT_SECURE_NO_DEPRECATE 1
 
-/* <sys/stat.h> */
-#define S_IRWXU S_IREAD | S_IWRITE
-#define S_IWUSR S_IWRITE
-#define S_IRUSR S_IREAD
-#define S_ISREG(x) (((x) & S_IFMT) == S_IFREG)
-#define S_ISDIR(x) (((x) & S_IFMT) == S_IFDIR)
-#define S_ISLNK(x) (0)
-
 #endif /* _MSC_VER */
 
 #define WIN32_LEAN_AND_MEAN
