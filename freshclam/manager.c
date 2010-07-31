@@ -1127,11 +1127,10 @@ static int getfile(const char *srcfile, const char *destfile, const char *hostna
 	    char currdir[512];
 
 	if(getcwd(currdir, sizeof(currdir)))
-	    logg("!getfile: Can't create new file %s in %s\n", destfile, currdir);
+        logg("!getfile: Can't create new file %s in %s: %s\n", destfile, currdir, strerror(errno));
 	else
-	    logg("!getfile: Can't create new file %s in the current directory\n", destfile);
+        logg("!getfile: Can't create new file %s in the current directory: %s\n", destfile, strerror(errno));
 
-	logg("Hint: The database directory must be writable for UID %d or GID %d\n", getuid(), getgid());
 	closesocket(sd);
 	return 57;
     }
@@ -1843,8 +1842,7 @@ int downloadmanager(const struct optstruct *opts, const char *hostname, const ch
     strncpy(updtmpdir, pt, sizeof(updtmpdir));
     free(pt);
     if(mkdir(updtmpdir, 0755)) {
-	logg("!Can't create temporary directory %s\n", updtmpdir);
-	logg("Hint: The database directory must be writable for UID %d or GID %d\n", getuid(), getgid());
+	logg("!Can't create temporary directory %s: %s\n", updtmpdir, strerror(errno));
 	return 57;
     }
 
