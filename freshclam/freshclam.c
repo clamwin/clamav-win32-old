@@ -410,9 +410,7 @@ int main(int argc, char **argv)
 
     *updtmpdir = 0;
 
-#ifdef _WIN32
-    signal(SIGINT, sighandler);
-#else
+#ifndef _WIN32
     memset(&sigact, 0, sizeof(struct sigaction));
     sigact.sa_handler = sighandler;
     sigaction(SIGINT, &sigact, NULL);
@@ -558,7 +556,7 @@ BOOL WINAPI cw_stop_ctrl_handler(DWORD CtrlType)
     {
         SetConsoleCtrlHandler(cw_stop_ctrl_handler, FALSE);
         fprintf(stderr, "[freshclam] Control+C pressed...\n");
-        terminate = 1;
+	    exit(2);
     }
     return TRUE;
 }
