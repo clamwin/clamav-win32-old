@@ -21,38 +21,15 @@
 #ifndef _UNISTD_H
 #define _UNISTD_H
 
-#include <io.h>
-#include <sys/stat.h>
-
 #ifndef __GNUC__
-#define R_OK    4               /* Test for read permission */
-#define W_OK    2               /* Test for write permission */
-#define X_OK    0               /* Test for execute permission - 1 bombs msvcrt */
-#define F_OK    0               /* Test for existence */
+#define R_OK    4   /* Test for read permission */
+#define W_OK    2   /* Test for write permission */
+#define X_OK    0   /* Test for execute permission - 1 bombs msvcrt */
+#define F_OK    0   /* Test for existence */
 #endif
 
 #define sleep(x) Sleep(x * 1000)
-#define alarm(x)
-#define pause()
 
 extern int ftruncate(int fd, off_t length);
-
-#define chown(a, b, c) ((void) (0))
-
-#define getuid()  (0)
-#define geteuid() (0)
-#define getgid()  (0)
-#define setgid(x) (0)
-#define setuid(x) (0)
-
-struct sigaction { void *sa_handler; };
-
-#define sigprocmask(a, b, c)
-#define sigaction(a, b, c)
-#define sigfillset(x)
-#define sigemptyset(x)
-#define sigaddset(a, b)
-#define sigdelset(a, b)
-#define pthread_sigmask(a, b, c)
 
 #endif /* _UNISTD_H */

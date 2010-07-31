@@ -108,11 +108,6 @@ extern int cw_getaddrinfo(const char *node, const char *service,
 extern void cw_freeaddrinfo(struct addrinfo *res);
 extern const char *cw_gai_strerror(int errcode);
 
-#define S_IROTH S_IREAD
-#define S_ISLNK(x) (0)
-#define S_IRWXO S_IEXEC
-#define S_IRWXG S_IRWXU
-
 /* <stdio.h> / <stdarg.h> */
 /* Use snprintf and vsnprintf from gnulib, win32 crt has broken a snprintf */
 #undef snprintf

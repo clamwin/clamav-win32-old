@@ -33,11 +33,6 @@
 LIBCLAMAV_API extern uint32_t cw_platform;
 LIBCLAMAV_API extern helpers_t cw_helpers;
 
-/* Process execution */
-#define WIFSIGNALED(x) (x)
-#define WIFEXITED(x) (1)
-#define WTERMSIG(x) (x)
-
 extern int cw_movefile(const char *source, const char *dest, int reboot);
 extern int cw_movefileex(const char *source, const char *dest, DWORD flags);
 
@@ -47,9 +42,6 @@ extern int cw_movefileex(const char *source, const char *dest, DWORD flags);
 #define PlatformVersion     (cw_platform & 0x0000ffff)
 #define isWin9x()           (PlatformId == VER_PLATFORM_WIN32_WINDOWS)
 #define isOldOS()           (PlatformVersion <= 0x400)
-
-#define LODWORD(l)  ((DWORD)((uint64_t)(l) & 0xffffffff))
-#define HIDWORD(l)  ((DWORD)((uint64_t)(l) >> 32))
 
 static inline const char *cw_uncprefix(const char *filename)
 {

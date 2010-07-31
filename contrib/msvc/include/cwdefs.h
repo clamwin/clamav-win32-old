@@ -45,6 +45,7 @@
 #define S_IRUSR S_IREAD
 #define S_ISREG(x) (((x) & S_IFMT) == S_IFREG)
 #define S_ISDIR(x) (((x) & S_IFMT) == S_IFDIR)
+#define S_ISLNK(x) (0)
 
 #endif /* _MSC_VER */
 
