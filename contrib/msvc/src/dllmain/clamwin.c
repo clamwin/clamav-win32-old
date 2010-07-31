@@ -47,7 +47,7 @@ void CWFree(CWHandle cwh)
 int CWLoadDB_A(CWHandle cwh, const char *db)
 {
     int ret;
-    char *dbdir = db ? db : cl_retdbdir();
+    const char *dbdir = db ? db : cl_retdbdir();
     if ((ret = cl_load(dbdir, cwh->engine, &cwh->sigs, cwh->dboptions) != CL_SUCCESS))
         return ret;
     return cl_engine_compile(cwh->engine);
