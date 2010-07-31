@@ -25,7 +25,7 @@
 #undef CL_BCUNSIGNED
 
 /* enable debugging */
-#ifdef _DEBUG
+#if defined(_MSC_VER) && defined(_DEBUG)
 #define CL_DEBUG 1
 #endif
 
@@ -444,9 +444,7 @@
 #undef LT_OBJDIR
 
 /* disable assertions */
-#ifndef _MSC_VER
-#define NDEBUG
-#endif
+/* #undef NDEBUG */ /* NOTE: no undef */
 
 /* Define if dlsym() requires a leading underscore in symbol names. */
 #undef NEED_USCORE
@@ -510,7 +508,9 @@
 #define SUPPORT_IPv6 1
 
 /* enable memory pools */
+#ifndef _WIN64
 #define USE_MPOOL 1
+#endif
 
 /* use syslog */
 #undef USE_SYSLOG

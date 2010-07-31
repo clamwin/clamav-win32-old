@@ -27,62 +27,61 @@
 #endif
 
 /* no jit functions from bytecode_nojit.c */
-#define bytecode_init nojit_bytecode_init
-#define cli_bytecode_debug nojit_cli_bytecode_debug
-#define cli_bytecode_debug_printsrc nojit_cli_bytecode_debug_printsrc
-#define cli_bytecode_done_jit nojit_cli_bytecode_done_jit
-#define cli_bytecode_init_jit nojit_cli_bytecode_init_jit
 #define cli_bytecode_prepare_jit nojit_cli_bytecode_prepare_jit
-#define cli_bytecode_printversion nojit_cli_bytecode_printversion
 #define cli_vm_execute_jit nojit_cli_vm_execute_jit
+#define cli_bytecode_init_jit nojit_cli_bytecode_init_jit
+#define cli_bytecode_done_jit nojit_cli_bytecode_done_jit
+#define cli_bytecode_debug nojit_cli_bytecode_debug
+#define bytecode_init nojit_bytecode_init
+#define cli_bytecode_debug_printsrc nojit_cli_bytecode_debug_printsrc
+#define cli_bytecode_printversion nojit_cli_bytecode_printversion
+#define cli_printcxxver nojit_cli_printcxxver
+#define cli_detect_env_jit nojit_cli_detect_env_jit
 #include <libclamav/bytecode_nojit.c>
-#undef bytecode_init
-#undef cli_bytecode_debug
-#undef cli_bytecode_debug_printsrc
-#undef cli_bytecode_done_jit
-#undef cli_bytecode_init_jit
 #undef cli_bytecode_prepare_jit
-#undef cli_bytecode_printversion
 #undef cli_vm_execute_jit
+#undef cli_bytecode_init_jit
+#undef cli_bytecode_done_jit
+#undef cli_bytecode_debug
+#undef bytecode_init
+#undef cli_bytecode_debug_printsrc
+#undef cli_bytecode_printversion
+#undef cli_printcxxver
+#undef cli_detect_env_jit
 /* end */
 
 #define JITCALL __cdecl
 
-typedef int (JITCALL *imp_bytecode_init)(void);
-typedef void (JITCALL *imp_cli_bytecode_debug)(int, char **);
-typedef void (JITCALL *imp_cli_bytecode_debug_printsrc)(const struct cli_bc_ctx *);
-typedef int (JITCALL *imp_cli_bytecode_done_jit)(struct cli_all_bc *allbc, int partial);
-typedef int (JITCALL *imp_cli_bytecode_init_jit)(struct cli_all_bc *, unsigned dconfmask);
 typedef int (JITCALL *imp_cli_bytecode_prepare_jit)(struct cli_all_bc *);
-typedef void (JITCALL *imp_cli_bytecode_printversion)(void);
 typedef int (JITCALL *imp_cli_vm_execute_jit)(const struct cli_all_bc *, struct cli_bc_ctx *, const struct cli_bc_func *);
+typedef int (JITCALL *imp_cli_bytecode_init_jit)(struct cli_all_bc *, unsigned);
+typedef int (JITCALL *imp_cli_bytecode_done_jit)(struct cli_all_bc *, int);
+typedef void (JITCALL *imp_cli_bytecode_debug)(int, char **);
+typedef int (JITCALL *imp_bytecode_init)(void);
+typedef void (JITCALL *imp_cli_bytecode_debug_printsrc)(const struct cli_bc_ctx *);
+typedef void (JITCALL *imp_cli_bytecode_printversion)(void);
+typedef void (JITCALL *imp_cli_printcxxver)(void);
+typedef void (JITCALL *imp_cli_detect_env_jit)(struct cli_environment *);
 
-static imp_bytecode_init pf_bytecode_init = NULL;;
-static imp_cli_bytecode_debug pf_cli_bytecode_debug = NULL;
-static imp_cli_bytecode_debug_printsrc pf_cli_bytecode_debug_printsrc = NULL;
-static imp_cli_bytecode_done_jit pf_cli_bytecode_done_jit = NULL;
-static imp_cli_bytecode_init_jit pf_cli_bytecode_init_jit = NULL;
 static imp_cli_bytecode_prepare_jit pf_cli_bytecode_prepare_jit = NULL;
-static imp_cli_bytecode_printversion pf_cli_bytecode_printversion = NULL;
 static imp_cli_vm_execute_jit pf_cli_vm_execute_jit = NULL;
+static imp_cli_bytecode_init_jit pf_cli_bytecode_init_jit = NULL;
+static imp_cli_bytecode_done_jit pf_cli_bytecode_done_jit = NULL;
+static imp_cli_bytecode_debug pf_cli_bytecode_debug = NULL;
+static imp_bytecode_init pf_bytecode_init = NULL;;
+static imp_cli_bytecode_debug_printsrc pf_cli_bytecode_debug_printsrc = NULL;
+static imp_cli_bytecode_printversion pf_cli_bytecode_printversion = NULL;
+static imp_cli_printcxxver pf_cli_printcxxver = NULL;
+static imp_cli_detect_env_jit pf_cli_detect_env_jit = NULL;
 
-int bytecode_init(void)
+int cli_bytecode_prepare_jit(struct cli_all_bc *bcs)
 {
-    return pf_bytecode_init();
-}
-void cli_bytecode_debug(int argc, char **argv)
-{
-    pf_cli_bytecode_debug(argc, argv);
+    return pf_cli_bytecode_prepare_jit(bcs);
 }
 
-void cli_bytecode_debug_printsrc(const struct cli_bc_ctx *ctx)
+int cli_vm_execute_jit(const struct cli_all_bc *bcs, struct cli_bc_ctx *ctx, const struct cli_bc_func *func)
 {
-    pf_cli_bytecode_debug_printsrc(ctx);
-}
-
-int cli_bytecode_done_jit(struct cli_all_bc *allbc, int partial)
-{
-    return pf_cli_bytecode_done_jit(allbc, partial);
+    return pf_cli_vm_execute_jit(bcs, ctx, func);
 }
 
 int cli_bytecode_init_jit(struct cli_all_bc *allbc, unsigned dconfmask)
@@ -90,9 +89,24 @@ int cli_bytecode_init_jit(struct cli_all_bc *allbc, unsigned dconfmask)
     return pf_cli_bytecode_init_jit(allbc, dconfmask);
 }
 
-int cli_bytecode_prepare_jit(struct cli_all_bc *bcs)
+int cli_bytecode_done_jit(struct cli_all_bc *allbc, int partial)
 {
-    return pf_cli_bytecode_prepare_jit(bcs);
+    return pf_cli_bytecode_done_jit(allbc, partial);
+}
+
+void cli_bytecode_debug(int argc, char **argv)
+{
+    pf_cli_bytecode_debug(argc, argv);
+}
+
+int bytecode_init(void)
+{
+    return pf_bytecode_init();
+}
+
+void cli_bytecode_debug_printsrc(const struct cli_bc_ctx *ctx)
+{
+    pf_cli_bytecode_debug_printsrc(ctx);
 }
 
 void cli_bytecode_printversion(void)
@@ -100,9 +114,14 @@ void cli_bytecode_printversion(void)
     pf_cli_bytecode_printversion();
 }
 
-int cli_vm_execute_jit(const struct cli_all_bc *bcs, struct cli_bc_ctx *ctx, const struct cli_bc_func *func)
+void cli_printcxxver(void)
 {
-    return pf_cli_vm_execute_jit(bcs, ctx, func);
+    pf_cli_printcxxver();
+}
+
+void cli_detect_env_jit(struct cli_environment *env)
+{
+    pf_cli_detect_env_jit(env);
 }
 
 #define Q(string) # string
@@ -119,14 +138,18 @@ void jit_init(void)
     {
         if (!(llvm = LoadLibraryA(LIBCLAMAV_LLVM)))
             break;
-        IMPORT_FUNC(bytecode_init);
-        IMPORT_FUNC(cli_bytecode_debug);
-        IMPORT_FUNC(cli_bytecode_debug_printsrc);
-        IMPORT_FUNC(cli_bytecode_done_jit);
-        IMPORT_FUNC(cli_bytecode_init_jit);
+
         IMPORT_FUNC(cli_bytecode_prepare_jit);
-        IMPORT_FUNC(cli_bytecode_printversion);
         IMPORT_FUNC(cli_vm_execute_jit);
+        IMPORT_FUNC(cli_bytecode_init_jit);
+        IMPORT_FUNC(cli_bytecode_done_jit);
+        IMPORT_FUNC(cli_bytecode_debug);
+        IMPORT_FUNC(bytecode_init);
+        IMPORT_FUNC(cli_bytecode_debug_printsrc);
+        IMPORT_FUNC(cli_bytecode_printversion);
+        IMPORT_FUNC(cli_printcxxver);
+        IMPORT_FUNC(cli_detect_env_jit);
+
         have_clamjit = 1;
     }
     while (0);

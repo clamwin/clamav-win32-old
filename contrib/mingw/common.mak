@@ -4,7 +4,7 @@ msvc=$(top)/contrib/msvc
 CFLAGS=-I$(msvc) -I$(msvc)/include -I$(msvc)/gnulib
 CFLAGS+=-I$(top) -I$(top)/shared -I$(top)/libclamav -I$(top)/libclamav/nsis
 CFLAGS+=-I$(top)/win32/3rdparty/bzip2 -I$(top)/win32/3rdparty/pthreads -I$(top)/win32/3rdparty/zlib
-CFLAGS+=-DHAVE_CONFIG_H
+CFLAGS+=-DHAVE_CONFIG_H -DNDEBUG
 CFLAGS+=-Wall -Wextra -Wno-unused -Wno-sign-compare -Wno-switch -Wno-format -pipe
 CFLAGS+=-fno-strict-aliasing
 CFLAGS+=-O3 -mtune=generic -fomit-frame-pointer
@@ -20,7 +20,7 @@ LDFLAGS=-Wl,--enable-stdcall-fixup
 
 LLVM=-I$(top)/libclamav/c++ -I$(top)/libclamav/c++/llvm/include
 LLVM+=-I$(top)/libclamav/c++/llvm/lib/Target/X86 -I$(msvc)/include/llvmbuild
-LLVM+=-DNDEBUG -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS
+LLVM+=-D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS
 
 CC=$(MINGW32_CROSS_PREFIX)gcc
 CXX=$(MINGW32_CROSS_PREFIX)g++

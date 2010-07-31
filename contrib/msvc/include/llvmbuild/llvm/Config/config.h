@@ -468,7 +468,7 @@
 #ifdef _WIN64
 #define LLVM_HOSTTRIPLE "x86_64-pc-win32"
 #else
-#define LLVM_HOSTTRIPLE "i686-pc-win32"
+#define LLVM_HOSTTRIPLE "i386-pc-win32"
 #endif
 
 /* Installation directory for include files */

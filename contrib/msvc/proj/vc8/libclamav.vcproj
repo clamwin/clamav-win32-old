@@ -400,6 +400,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\..\libclamav\bytecode_detect.c"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\..\libclamav\bytecode_vm.c"
 				>
 			</File>
@@ -918,6 +922,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\..\libclamav\builtin_bytecodes.h"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\..\libclamav\bytecode.h"
 				>
 			</File>
@@ -927,6 +935,10 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\libclamav\bytecode_api_impl.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\bytecode_detect.h"
 				>
 			</File>
 			<File

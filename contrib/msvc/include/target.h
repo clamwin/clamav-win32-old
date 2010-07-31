@@ -5,9 +5,13 @@
 #endif
 
 #ifndef TARGET_ARCH_TYPE
-#define TARGET_ARCH_TYPE "x86"
+#ifdef _WIN64
+#define TARGET_ARCH_TYPE "x86_64"
+#else
+#define TARGET_ARCH_TYPE "i386"
+#endif
 #endif
 
 #ifndef TARGET_CPU_TYPE
-#define TARGET_CPU_TYPE "i686"
+#define TARGET_CPU_TYPE TARGET_ARCH_TYPE
 #endif

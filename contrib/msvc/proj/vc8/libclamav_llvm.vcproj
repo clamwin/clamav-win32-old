@@ -525,6 +525,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\..\libclamav\c++\detect.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\CodeGen\AsmPrinter\DIE.cpp"
 				>
 			</File>
