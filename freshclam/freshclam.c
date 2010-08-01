@@ -388,9 +388,6 @@ int main(int argc, char **argv)
 #endif
 
     /* change the current working directory */
-#ifdef _WIN32
-    NORMALIZE_PATH(dbdir, 1, return 50);
-#endif
     if(chdir(dbdir)) {
 	logg("Can't change dir to %s\n", dbdir);
 	optfree(opts);

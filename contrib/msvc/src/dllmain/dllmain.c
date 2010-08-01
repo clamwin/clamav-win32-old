@@ -392,7 +392,7 @@ BOOL APIENTRY DllMain(HANDLE hModule, DWORD reason, LPVOID lpReserved)
 #define KEY_WOW64_64KEY 0x0100
 #endif
 
-static int cw_getregvalue(const char *key, char *path, char *default_value)
+static int cw_getregvalue(const char *key, char *path)
 {
     HKEY hKey = NULL;
     DWORD dwType = 0;
@@ -400,21 +400,15 @@ static int cw_getregvalue(const char *key, char *path, char *default_value)
     unsigned char data[MAX_PATH];
     DWORD datalen = sizeof(data);
 
-    if (default_value)
-    {
-        strncpy(path, default_value, MAX_PATH - 1);
-        path[MAX_PATH - 1] = 0;
-    }
-
-    if (cw_iswow64()) flags |= KEY_WOW64_64KEY;
+    if (cw_iswow64())
+        flags |= KEY_WOW64_64KEY;
 
     /* First look in HKCU then in HKLM */
-    if (RegOpenKeyExA(HKEY_CURRENT_USER, DATADIRBASEKEY, 0, flags, &hKey) != ERROR_SUCCESS)
-        if (RegOpenKeyExA(HKEY_LOCAL_MACHINE, DATADIRBASEKEY, 0, flags, &hKey) != ERROR_SUCCESS)
-            return 0;
 
-    if ((RegQueryValueExA(hKey, key, NULL, &dwType, data, &datalen) == ERROR_SUCCESS) &&
-        datalen && ((dwType == REG_SZ) || dwType == REG_EXPAND_SZ))
+    if (((RegOpenKeyExA(HKEY_CURRENT_USER, DATADIRBASEKEY, 0, flags, &hKey) == ERROR_SUCCESS) || 
+         (RegOpenKeyExA(HKEY_LOCAL_MACHINE, DATADIRBASEKEY, 0, flags, &hKey) == ERROR_SUCCESS)) &&
+         ((RegQueryValueExA(hKey, key, NULL, &dwType, data, &datalen) == ERROR_SUCCESS) &&
+            datalen && ((dwType == REG_SZ) || dwType == REG_EXPAND_SZ)))
     {
         path[0] = 0;
         ExpandEnvironmentStrings((LPCSTR) data, path, MAX_PATH - 1);
@@ -422,8 +416,14 @@ static int cw_getregvalue(const char *key, char *path, char *default_value)
         RegCloseKey(hKey);
         return 1;
     }
-    RegCloseKey(hKey);
-    return 0;
+    else
+    {
+        char *normalized = cw_normalizepath(path);
+        strncpy(path, normalized, MAX_PATH);
+        free(normalized);
+        RegCloseKey(hKey);
+        return 0;
+    }
 }
 
 /* look at win32/compat/libclamav_main.c for more info */
@@ -452,11 +452,10 @@ const char *CONFDIR_MILTER = _CONFDIR_MILTER;
 
 void fix_paths()
 {
-    cw_getregvalue("DataDir", _DATADIR, NULL);
-    if (cw_getregvalue("ConfigDir", _CONFDIR, NULL))
-    {
-        snprintf(_CONFDIR_CLAMD, sizeof(_CONFDIR_CLAMD), "%s\\%s", _CONFDIR, "clamd.conf");
-        snprintf(_CONFDIR_FRESHCLAM, sizeof(_CONFDIR_FRESHCLAM), "%s\\%s", _CONFDIR, "freshclam.conf");
-        snprintf(_CONFDIR_MILTER, sizeof(_CONFDIR_MILTER), "%s\\%s", _CONFDIR, "clamav-milter.conf");
-    }
+    cw_getregvalue("DataDir", _DATADIR);
+    cw_getregvalue("ConfigDir", _CONFDIR);
+
+    snprintf(_CONFDIR_CLAMD, sizeof(_CONFDIR_CLAMD), "%s\\%s", _CONFDIR, "clamd.conf");
+    snprintf(_CONFDIR_FRESHCLAM, sizeof(_CONFDIR_FRESHCLAM), "%s\\%s", _CONFDIR, "freshclam.conf");
+    snprintf(_CONFDIR_MILTER, sizeof(_CONFDIR_MILTER), "%s\\%s", _CONFDIR, "clamav-milter.conf");
 }
