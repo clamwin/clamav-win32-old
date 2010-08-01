@@ -404,11 +404,12 @@ static int cw_getregvalue(const char *key, char *path)
         flags |= KEY_WOW64_64KEY;
 
     /* First look in HKCU then in HKLM */
+    if ((RegOpenKeyExA(HKEY_CURRENT_USER, DATADIRBASEKEY, 0, flags, &hKey) != ERROR_SUCCESS) &&
+        (RegOpenKeyExA(HKEY_LOCAL_MACHINE, DATADIRBASEKEY, 0, flags, &hKey) != ERROR_SUCCESS))
+        return 0;
 
-    if (((RegOpenKeyExA(HKEY_CURRENT_USER, DATADIRBASEKEY, 0, flags, &hKey) == ERROR_SUCCESS) || 
-         (RegOpenKeyExA(HKEY_LOCAL_MACHINE, DATADIRBASEKEY, 0, flags, &hKey) == ERROR_SUCCESS)) &&
-         ((RegQueryValueExA(hKey, key, NULL, &dwType, data, &datalen) == ERROR_SUCCESS) &&
-            datalen && ((dwType == REG_SZ) || dwType == REG_EXPAND_SZ)))
+    if ((RegQueryValueExA(hKey, key, NULL, &dwType, data, &datalen) == ERROR_SUCCESS) &&
+            datalen && ((dwType == REG_SZ) || dwType == REG_EXPAND_SZ))
     {
         path[0] = 0;
         ExpandEnvironmentStrings((LPCSTR) data, path, MAX_PATH - 1);
@@ -416,14 +417,9 @@ static int cw_getregvalue(const char *key, char *path)
         RegCloseKey(hKey);
         return 1;
     }
-    else
-    {
-        char *normalized = cw_normalizepath(path);
-        strncpy(path, normalized, MAX_PATH);
-        free(normalized);
-        RegCloseKey(hKey);
-        return 0;
-    }
+
+    RegCloseKey(hKey);
+    return 0;
 }
 
 /* look at win32/compat/libclamav_main.c for more info */
@@ -452,8 +448,27 @@ const char *CONFDIR_MILTER = _CONFDIR_MILTER;
 
 void fix_paths()
 {
-    cw_getregvalue("DataDir", _DATADIR);
-    cw_getregvalue("ConfigDir", _CONFDIR);
+    if (!cw_getregvalue("ConfigDir", _CONFDIR))
+    {
+        char dirname[MAX_PATH] = "";
+        char *lSlash;
+        if (!GetModuleFileNameA(NULL, dirname, MAX_PATH - 1))
+        {
+            fprintf(stderr, "Please don't launch the executable from a so long path\n");
+            abort();
+        }
+
+        if ((lSlash = strrchr(dirname, '\\')))
+            *lSlash = 0;
+
+        strncpy(_CONFDIR, dirname, MAX_PATH);
+    }
+
+    if (!cw_getregvalue("DataDir", _DATADIR))
+    {
+        strncpy(_DATADIR, _CONFDIR, MAX_PATH);
+        strncat(_DATADIR, "\\db", MAX_PATH);
+    }
 
     snprintf(_CONFDIR_CLAMD, sizeof(_CONFDIR_CLAMD), "%s\\%s", _CONFDIR, "clamd.conf");
     snprintf(_CONFDIR_FRESHCLAM, sizeof(_CONFDIR_FRESHCLAM), "%s\\%s", _CONFDIR, "freshclam.conf");
