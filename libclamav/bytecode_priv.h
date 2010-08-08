@@ -156,7 +156,18 @@ struct cli_bc_ctx {
     fmap_t *save_map;
     const char *virname;
     struct cli_bc_hooks hooks;
+    struct cli_exe_info exeinfo;
+    uint32_t lsigcnt[64];
+    uint32_t lsigoff[64];
+    uint32_t pdf_nobjs;
+    struct pdf_obj *pdf_objs;
+    uint32_t* pdf_flags;
+    uint32_t pdf_size;
+    uint32_t pdf_startoff;
+    unsigned pdf_phase;
+    int32_t pdf_dumpedid;
     const struct cli_exe_section *sections;
+    uint32_t resaddr;
     char *tempfile;
     void *ctx;
     unsigned written;

@@ -82,6 +82,7 @@ struct cli_all_bc {
 
 struct cli_pe_hook_data;
 struct cli_exe_section;
+struct pdf_obj;
 struct cli_bc_ctx *cli_bytecode_context_alloc(void);
 /* FIXME: we can't include others.h because others.h includes us...*/
 void cli_bytecode_context_setctx(struct cli_bc_ctx *ctx, void *cctx);
@@ -90,6 +91,7 @@ int cli_bytecode_context_setparam_int(struct cli_bc_ctx *ctx, unsigned i, uint64
 int cli_bytecode_context_setparam_ptr(struct cli_bc_ctx *ctx, unsigned i, void *data, unsigned datalen);
 int cli_bytecode_context_setfile(struct cli_bc_ctx *ctx, fmap_t *map);
 int cli_bytecode_context_setpe(struct cli_bc_ctx *ctx, const struct cli_pe_hook_data *data, const struct cli_exe_section *sections);
+int cli_bytecode_context_setpdf(struct cli_bc_ctx *ctx, unsigned phase, unsigned nobjs, struct pdf_obj *objs, uint32_t *pdf_flags, uint32_t pdfsize, uint32_t pdfstartoff);
 int cli_bytecode_context_clear(struct cli_bc_ctx *ctx);
 /* returns file descriptor, sets tempfile. Caller takes ownership, and is
  * responsible for freeing/unlinking */
@@ -115,7 +117,8 @@ void cli_bytecode_describe(const struct cli_bc *bc);
 /* Hooks */
 struct cli_exe_info;
 struct cli_ctx_tag;
-int cli_bytecode_runlsig(struct cli_ctx_tag *ctx, const struct cli_all_bc *bcs, unsigned bc_idx, const char **virname, const uint32_t* lsigcnt, const uint32_t *lsigsuboff, fmap_t *map);
+struct cli_target_info;
+int cli_bytecode_runlsig(struct cli_ctx_tag *ctx, struct cli_target_info *info, const struct cli_all_bc *bcs, unsigned bc_idx, const char **virname, const uint32_t* lsigcnt, const uint32_t *lsigsuboff, fmap_t *map);
 int cli_bytecode_runhook(struct cli_ctx_tag *cctx, const struct cl_engine *engine, struct cli_bc_ctx *ctx, unsigned id, fmap_t *map, const char **virname);
 
 #ifdef __cplusplus

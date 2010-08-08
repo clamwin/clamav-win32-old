@@ -215,7 +215,6 @@ static int cli_bytecode_context_reset(struct cli_bc_ctx *ctx)
 
 int cli_bytecode_context_clear(struct cli_bc_ctx *ctx)
 {
-    cli_ctx *cctx = (cli_ctx*)ctx->ctx;
     cli_bytecode_context_reset(ctx);
     memset(ctx, 0, sizeof(*ctx));
     return CL_SUCCESS;
@@ -1736,7 +1735,7 @@ static int calc_gepz(struct cli_bc *bc, struct cli_bc_func *func, uint16_t tid, 
 
 static int cli_bytecode_prepare_interpreter(struct cli_bc *bc)
 {
-    unsigned i, j, k, rc;
+    unsigned i, j, k;
     uint64_t *gmap;
     unsigned bcglobalid = cli_apicall_maxglobal - _FIRST_GLOBAL+2;
     bc->numGlobalBytes = 0;
@@ -2165,9 +2164,12 @@ static int set_mode(struct cl_engine *engine, enum bytecode_mode mode)
     }
     cli_dbgmsg("Bytecode: mode changed to %d\n", mode);
     if (engine->bytecode_mode == CL_BYTECODE_MODE_TEST) {
-	cli_errmsg("bytecode: in test mode but JIT/bytecode is about to be disabled: %d\n", mode);
-	engine->bytecode_mode = mode;
-	return -1;
+	if (mode == CL_BYTECODE_MODE_OFF || have_clamjit) {
+	    cli_errmsg("bytecode: in test mode but JIT/bytecode is about to be disabled: %d\n", mode);
+	    engine->bytecode_mode = mode;
+	    return -1;
+	}
+	return 0;
     }
     if (engine->bytecode_mode == CL_BYTECODE_MODE_JIT) {
 	cli_errmsg("bytecode: in JIT mode but JIT is about to be disabled: %d\n", mode);
@@ -2249,7 +2251,7 @@ static int run_builtin_or_loaded(struct cli_all_bc *bcs, uint8_t kind, const cha
 int cli_bytecode_prepare(struct cl_engine *engine, struct cli_all_bc *bcs, unsigned dconfmask)
 {
     unsigned i, interp = 0, jitok = 0, jitcount=0;
-    int rc1, rc2, rc;
+    int rc;
     struct cli_bc_ctx *ctx;
 
     cli_detect_environment(&bcs->env);
@@ -2398,11 +2400,15 @@ int cli_bytecode_context_setfile(struct cli_bc_ctx *ctx, fmap_t *map)
     return 0;
 }
 
-int cli_bytecode_runlsig(cli_ctx *cctx, const struct cli_all_bc *bcs, unsigned bc_idx, const char **virname, const uint32_t* lsigcnt, const uint32_t *lsigsuboff, fmap_t *map)
+int cli_bytecode_runlsig(cli_ctx *cctx, struct cli_target_info *tinfo,
+			 const struct cli_all_bc *bcs, unsigned bc_idx,
+			 const char **virname, const uint32_t* lsigcnt,
+			 const uint32_t *lsigsuboff, fmap_t *map)
 {
     int ret;
     struct cli_bc_ctx ctx;
     const struct cli_bc *bc = &bcs->all_bcs[bc_idx-1];
+    struct cli_pe_hook_data pehookdata;
 
     if (bc->hook_lsig_id) {
 	cli_dbgmsg("hook lsig id %d matched (bc %d)\n", bc->hook_lsig_id, bc->id);
@@ -2410,6 +2416,9 @@ int cli_bytecode_runlsig(cli_ctx *cctx, const struct cli_all_bc *bcs, unsigned b
 	 * executed, so that it has all the info for the hook */
 	if (cctx->hook_lsig_matches)
 	    cli_bitset_set(cctx->hook_lsig_matches, bc->hook_lsig_id-1);
+	/* save match counts */
+	memcpy(&ctx.lsigcnt, lsigcnt, 64*4);
+	memcpy(&ctx.lsigoff, lsigsuboff, 64*4);
 	return CL_SUCCESS;
     }
     memset(&ctx, 0, sizeof(ctx));
@@ -2418,6 +2427,16 @@ int cli_bytecode_runlsig(cli_ctx *cctx, const struct cli_all_bc *bcs, unsigned b
     ctx.hooks.match_offsets = lsigsuboff;
     cli_bytecode_context_setctx(&ctx, cctx);
     cli_bytecode_context_setfile(&ctx, map);
+    if (tinfo && tinfo->status == 1) {
+	ctx.sections = tinfo->exeinfo.section;
+	memset(&pehookdata, 0, sizeof(pehookdata));
+	pehookdata.offset = tinfo->exeinfo.offset;
+	pehookdata.ep = tinfo->exeinfo.ep;
+	pehookdata.nsections = tinfo->exeinfo.nsections;
+	pehookdata.hdr_size = tinfo->exeinfo.hdr_size;
+	ctx.hooks.pedata = &pehookdata;
+	ctx.resaddr = tinfo->exeinfo.res_addr;
+    }
 
     cli_dbgmsg("Running bytecode for logical signature match\n");
     ret = cli_bytecode_run(bcs, bc, &ctx);
@@ -2448,6 +2467,9 @@ int cli_bytecode_runhook(cli_ctx *cctx, const struct cl_engine *engine, struct c
 
     cli_bytecode_context_setfile(ctx, map);
     cli_dbgmsg("Bytecode executing hook id %u (%u hooks)\n", id, hooks_cnt);
+    /* restore match counts */
+    ctx->hooks.match_counts = ctx->lsigcnt;
+    ctx->hooks.match_offsets = ctx->lsigoff;
     for (i=0;i < hooks_cnt;i++) {
 	const struct cli_bc *bc = &engine->bcs.all_bcs[hooks[i]];
 	if (bc->lsig) {

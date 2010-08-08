@@ -51,6 +51,8 @@
 #include "regex/regex.h"
 #include "filtering.h"
 #include "perflogging.h"
+#include "bytecode_priv.h"
+#include "bytecode_api_impl.h"
 
 #ifdef HAVE__INTERNAL__SHA_COLLECT
 #include "sha256.h"
@@ -455,6 +457,46 @@ static int matchicon(cli_ctx *ctx, struct cli_exe_info *exeinfo, const char *grp
     return cli_scanicon(&iconset, exeinfo->res_addr, ctx, exeinfo->section, exeinfo->nsections, exeinfo->hdr_size);
 }
 
+int32_t cli_bcapi_matchicon(struct cli_bc_ctx *ctx , const uint8_t* grp1, int32_t grp1len,
+			    const uint8_t* grp2, int32_t grp2len)
+{
+    int ret;
+    char group1[128], group2[128];
+    const char **oldvirname;
+    struct cli_exe_info info;
+
+    if (!ctx->hooks.pedata->ep) {
+	cli_dbgmsg("bytecode: matchicon only works with PE files\n");
+	return -1;
+    }
+    if (grp1len > sizeof(group1)-1 ||
+	grp2len > sizeof(group2)-1)
+	return -1;
+    oldvirname = ((cli_ctx*)ctx->ctx)->virname;
+    ((cli_ctx*)ctx->ctx)->virname = NULL;
+    memcpy(group1, grp1, grp1len);
+    memcpy(group2, grp2, grp2len);
+    group1[grp1len] = 0;
+    group2[grp2len] = 0;
+    memset(&info, 0, sizeof(info));
+    if (ctx->bc->kind == BC_PE_UNPACKER) {
+	if(le16_to_host(ctx->hooks.pedata->file_hdr.Characteristics) & 0x2000 ||
+	   !ctx->hooks.pedata->dirs[2].Size)
+	    info.res_addr = 0;
+	else
+	    info.res_addr = le32_to_host(ctx->hooks.pedata->dirs[2].VirtualAddress);
+    } else
+	info.res_addr = ctx->resaddr; /* from target_info */
+    info.section = (struct cli_exe_section*)ctx->sections;
+    info.nsections = ctx->hooks.pedata->nsections;
+    info.hdr_size = ctx->hooks.pedata->hdr_size;
+    cli_dbgmsg("bytecode matchicon %s %s\n", group1, group2);
+    ret = matchicon(ctx->ctx, &info, group1[0] ? group1 : NULL,
+		    group2[0] ? group2 : NULL);
+    ((cli_ctx*)ctx->ctx)->virname = oldvirname;
+    return ret;
+}
+
 
 int cli_scandesc(int desc, cli_ctx *ctx, cli_file_t ftype, uint8_t ftonly, struct cli_matched_type **ftoffset, unsigned int acmode, struct cli_ac_result **acres)
 {
@@ -501,19 +543,22 @@ int cli_lsig_eval(cli_ctx *ctx, struct cli_matcher *root, struct cli_ac_data *ac
 		if(!target_info || target_info->status != 1)
 		    continue;
 		if(matchicon(ctx, &target_info->exeinfo, root->ac_lsigtable[i]->tdb.icongrp1, root->ac_lsigtable[i]->tdb.icongrp2) == CL_VIRUS) {
-		    if(ctx->virname)
-			*ctx->virname = root->ac_lsigtable[i]->virname;
-		    return CL_VIRUS;
-		} else {
-		    continue;
+		    if(!root->ac_lsigtable[i]->bc_idx) {
+			if(ctx->virname)
+			    *ctx->virname = root->ac_lsigtable[i]->virname;
+			return CL_VIRUS;
+		    } else if(cli_bytecode_runlsig(ctx, target_info, &ctx->engine->bcs, root->ac_lsigtable[i]->bc_idx, ctx->virname, acdata->lsigcnt[i], acdata->lsigsuboff[i], map) == CL_VIRUS) {
+			return CL_VIRUS;
+		    }
 		}
+		continue;
 	    }
 	    if(!root->ac_lsigtable[i]->bc_idx) {
 		if(ctx->virname)
 		    *ctx->virname = root->ac_lsigtable[i]->virname;
 		return CL_VIRUS;
 	    }
-	    if(cli_bytecode_runlsig(ctx, &ctx->engine->bcs, root->ac_lsigtable[i]->bc_idx, ctx->virname, acdata->lsigcnt[i], acdata->lsigsuboff[i], map) == CL_VIRUS) {
+	    if(cli_bytecode_runlsig(ctx, target_info, &ctx->engine->bcs, root->ac_lsigtable[i]->bc_idx, ctx->virname, acdata->lsigcnt[i], acdata->lsigsuboff[i], map) == CL_VIRUS) {
 		return CL_VIRUS;
 	    }
 	}
