@@ -251,6 +251,6 @@ cli_bytecode_destroy                @360 NONAME
 cli_bytecode_done                   @361 NONAME
 cli_bytecode_init                   @362 NONAME
 cli_bytecode_load                   @363 NONAME
-cli_bytecode_prepare                @364 NONAME
+cli_bytecode_prepare2               @364 NONAME
 cli_bytecode_printversion           @365 NONAME
 cli_bytecode_run                    @366 NONAME
