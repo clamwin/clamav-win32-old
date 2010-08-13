@@ -165,6 +165,8 @@ const wchar_t *CWStrError_W(int clerror)
         return L"Can't verify database integrity";
     case CL_EUNPACK:
         return L"Can't unpack some data";
+    case CL_EUSERABORT:
+        return L"Aborted by user";
 
     /* I/O and memory errors */
     case CL_EOPEN:
