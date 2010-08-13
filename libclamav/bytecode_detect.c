@@ -30,6 +30,7 @@
 #include "others.h"
 #include <string.h>
 #include <stdio.h>
+#include <errno.h>
 
 #ifdef HAVE_UNAME_SYSCALL
 #include <sys/utsname.h>
@@ -95,7 +96,7 @@ static int detect_PaX(void)
 	}
     }
     fclose(f);
-    return 0;
+    return pax;
 }
 
 static int detect_SELinux(void)
@@ -104,10 +105,19 @@ static int detect_SELinux(void)
     int selinux = 0;
     int enforce = 0;
     FILE *f = fopen("/proc/filesystems", "r");
-    if (!f)
-	return 0;
+    if (!f) {
+	f = fopen("/selinux/enforce", "r");
+        if (!f && errno == EACCES)
+		return 2;
+	if (f) {
+	    if (fscanf(f, "%d", &enforce) == 1)
+		selinux = 2;
+	    fclose(f);
+	}
+	return selinux;
+    }
     while (fgets(line, sizeof(line), f)) {
-	if (strstr(line, " selinuxfs\n")) {
+	if (strstr(line, "selinuxfs\n")) {
 	    selinux = 1;
 	    break;
 	}
@@ -122,8 +132,8 @@ static int detect_SELinux(void)
 	    selinux = 2;
 	if (enforce == -1)
 	    selinux = 0;
+	fclose(f);
     }
-    fclose(f);
     return selinux;
 }
 

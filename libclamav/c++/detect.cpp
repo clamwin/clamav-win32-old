@@ -81,7 +81,8 @@ void cli_detect_env_jit(struct cli_environment *env)
 	    break;
 	case Triple::ppc:
 	    earch = arch_ppc32;
-	    if (env->arch != earch) conflicts = true;
+	    if (env->arch != earch &&
+		env->arch != arch_ppc64) conflicts = true;
 	    break;
 	case Triple::ppc64:
 	    earch = arch_ppc64;
@@ -91,11 +92,19 @@ void cli_detect_env_jit(struct cli_environment *env)
 	    break;
 	case Triple::x86:
 	    earch = arch_i386;
-	    if (env->arch != earch) conflicts = true;
+	    if (env->arch != earch) {
+		/* bb #2153 */
+		if (env->os_category != os_darwin || env->arch != arch_x86_64)
+		    conflicts = true;
+	    }
 	    break;
 	case Triple::x86_64:
 	    earch = arch_x86_64;
-	    if (env->arch != earch) conflicts = true;
+	    if (env->arch != earch) {
+		/* bb #2153 */
+		if (env->os_category != os_darwin || env->arch != arch_i386)
+		    conflicts = true;
+	    }
 	    break;
 	default:
 	    earch = arch_unknown;
@@ -125,7 +134,12 @@ void cli_detect_env_jit(struct cli_environment *env)
 	CASE_OS(OpenBSD, os_bsd);
 	CASE_OS(Psp, os_unknown);
 	CASE_OS(Solaris, os_solaris);
-	CASE_OS(Win32, os_win32);
+	case Triple::Win32:
+	     env->os = llvm_os_Win32;
+	     if (env->os_category != os_win32 &&
+		 env->os_category != os_win64)
+		 warn_assumptions("Operating System", env->os_category, Triple::Win32);
+	     break;
 	CASE_OS(Haiku, os_unknown);
     }
 

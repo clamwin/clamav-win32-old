@@ -2248,7 +2248,7 @@ static int run_builtin_or_loaded(struct cli_all_bc *bcs, uint8_t kind, const cha
     return rc;
 }
 
-int cli_bytecode_prepare(struct cl_engine *engine, struct cli_all_bc *bcs, unsigned dconfmask)
+int cli_bytecode_prepare2(struct cl_engine *engine, struct cli_all_bc *bcs, unsigned dconfmask)
 {
     unsigned i, interp = 0, jitok = 0, jitcount=0;
     int rc;
@@ -2322,8 +2322,10 @@ int cli_bytecode_prepare(struct cl_engine *engine, struct cli_all_bc *bcs, unsig
     }
     cli_bytecode_context_destroy(ctx);
 
+
     if (engine->bytecode_mode != CL_BYTECODE_MODE_INTERPRETER &&
 	engine->bytecode_mode != CL_BYTECODE_MODE_OFF) {
+	selfcheck(1, bcs->engine);
 	rc = cli_bytecode_prepare_jit(bcs);
 	if (rc == CL_SUCCESS) {
 	    jitok = 1;

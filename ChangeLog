@@ -1,3 +1,43 @@
+Fri Aug 13 13:57:04 EEST 2010 (edwin)
+--------------------------------------
+ * libclamav/bytecode_detect.c: prevent fclose(NULL) on SELinux (bb #2200)
+
+Thu Aug 12 18:49:37 CEST 2010 (tk)
+----------------------------------
+ * V 0.96.2
+
+Thu Aug 12 13:18:24 CEST 2010 (tk)
+----------------------------------
+ * contrib: add safe_clamd from Luca (bb#2026)
+
+Wed Aug 11 13:39:11 EEST 2010 (edwin)
+-------------------------------------
+ * freshclam: uses private symbol which changed proto, change name to prevent crash (bb #2187)
+
+Wed Aug 11 12:32:37 CEST 2010 (acab)
+------------------------------------
+ * libclamav: fix callback_sigload
+
+Tue Aug 10 14:01:27 CEST 2010 (tk)
+----------------------------------
+ * clamdscan: fix parsing of virus names in extended mode and --stream (bb#2184)
+
+Mon Aug  9 19:46:58 EEST 2010 (edwin)
+-------------------------------------
+ * libclamav/c++/detect.cpp: Mac OS X can run 64-bit apps on 32-bit kernel (bb #2153).
+
+Mon Aug  9 16:49:44 CEST 2010 (tk)
+----------------------------------
+ * libclamav/others.h: bump f-level
+
+Mon Aug  9 13:21:31 CEST 2010 (tk)
+----------------------------------
+ * sigtool/sigtool.c: fix handling of --datadir (bb#2180)
+
+Mon Aug  9 13:02:26 CEST 2010 (tk)
+----------------------------------
+ * libclamav/matcher-ac.c: improve offset handling (bb#2170)
+
 Sun Aug  8 15:59:41 CEST 2010 (acab)
 ------------------------------------
  * libclamav/7z/Archive/7z/7zDecode.c: shut up a warning (bb#2172)
