@@ -158,14 +158,17 @@ void jit_init(void)
     {
         if (llvm) FreeLibrary(llvm);
         llvm = NULL;
-        pf_bytecode_init = nojit_bytecode_init;
-        pf_cli_bytecode_debug = nojit_cli_bytecode_debug;
-        pf_cli_bytecode_debug_printsrc = nojit_cli_bytecode_debug_printsrc;
-        pf_cli_bytecode_done_jit = nojit_cli_bytecode_done_jit;
-        pf_cli_bytecode_init_jit = nojit_cli_bytecode_init_jit;
+
         pf_cli_bytecode_prepare_jit = nojit_cli_bytecode_prepare_jit;
-        pf_cli_bytecode_printversion = nojit_cli_bytecode_printversion;
         pf_cli_vm_execute_jit = nojit_cli_vm_execute_jit;
+        pf_cli_bytecode_init_jit = nojit_cli_bytecode_init_jit;
+        pf_cli_bytecode_done_jit = nojit_cli_bytecode_done_jit;
+        pf_cli_bytecode_debug = nojit_cli_bytecode_debug;
+        pf_bytecode_init = nojit_bytecode_init;
+        pf_cli_bytecode_debug_printsrc = nojit_cli_bytecode_debug_printsrc;
+        pf_cli_bytecode_printversion = nojit_cli_bytecode_printversion;
+        pf_cli_printcxxver = nojit_cli_printcxxver;
+        pf_cli_detect_env_jit = nojit_cli_detect_env_jit;
     }
 }
 
