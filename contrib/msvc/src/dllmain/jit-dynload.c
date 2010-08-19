@@ -60,7 +60,7 @@ typedef void (JITCALL *imp_cli_bytecode_debug)(int, char **);
 typedef int (JITCALL *imp_bytecode_init)(void);
 typedef void (JITCALL *imp_cli_bytecode_debug_printsrc)(const struct cli_bc_ctx *);
 typedef void (JITCALL *imp_cli_bytecode_printversion)(void);
-typedef void (JITCALL *imp_cli_printcxxver)(void);
+typedef void (JITCALL *imp_cli_printcxxver)();
 typedef void (JITCALL *imp_cli_detect_env_jit)(struct cli_environment *);
 
 static imp_cli_bytecode_prepare_jit pf_cli_bytecode_prepare_jit = NULL;
@@ -114,7 +114,7 @@ void cli_bytecode_printversion(void)
     pf_cli_bytecode_printversion();
 }
 
-void cli_printcxxver(void)
+void cli_printcxxver()
 {
     pf_cli_printcxxver();
 }

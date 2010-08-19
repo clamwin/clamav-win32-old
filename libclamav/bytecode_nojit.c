@@ -74,7 +74,7 @@ void cli_bytecode_printversion(void) {
   printf("LLVM not compiled in\n");
 }
 int have_clamjit=0;
-void cli_printcxxver(void)
+void cli_printcxxver()
 {
     /* Empty */
 }
