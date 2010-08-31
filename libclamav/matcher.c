@@ -42,6 +42,7 @@
 #include "elf.h"
 #include "execs.h"
 #include "special.h"
+#include "scanners.h"
 #include "str.h"
 #include "cltypes.h"
 #include "default.h"
@@ -384,7 +385,6 @@ int cli_checkfp(unsigned char *digest, size_t size, cli_ctx *ctx)
 	char md5[33];
 	unsigned int i;
 	const char *virname;
-	const struct cli_md5m_patt *patt = NULL;
 
 #ifdef _WIN32
     if (!cw_sigcheck(ctx, 1))
@@ -469,8 +469,8 @@ int32_t cli_bcapi_matchicon(struct cli_bc_ctx *ctx , const uint8_t* grp1, int32_
 	cli_dbgmsg("bytecode: matchicon only works with PE files\n");
 	return -1;
     }
-    if (grp1len > sizeof(group1)-1 ||
-	grp2len > sizeof(group2)-1)
+    if ((size_t) grp1len > sizeof(group1)-1 ||
+	(size_t) grp2len > sizeof(group2)-1)
 	return -1;
     oldvirname = ((cli_ctx*)ctx->ctx)->virname;
     ((cli_ctx*)ctx->ctx)->virname = NULL;
@@ -537,6 +537,12 @@ int cli_lsig_eval(cli_ctx *ctx, struct cli_matcher *root, struct cli_ac_data *ac
 		    continue;
 		if(root->ac_lsigtable[i]->tdb.nos && (root->ac_lsigtable[i]->tdb.nos[0] > target_info->exeinfo.nsections || root->ac_lsigtable[i]->tdb.nos[1] < target_info->exeinfo.nsections))
 		    continue;
+	    }
+
+	    if(root->ac_lsigtable[i]->tdb.handlertype) {
+		if(cli_magic_scandesc_type(map->fd, ctx, root->ac_lsigtable[i]->tdb.handlertype[0]) == CL_VIRUS)
+		    return CL_VIRUS;
+		continue;
 	    }
 
 	    if(root->ac_lsigtable[i]->tdb.icongrp1 || root->ac_lsigtable[i]->tdb.icongrp2) {
@@ -651,13 +657,6 @@ int cli_fmap_scandesc(cli_ctx *ctx, cli_file_t ftype, uint8_t ftonly, struct cli
 	if(ctx->scanned)
 	    *ctx->scanned += bytes / CL_COUNT_PRECISION;
 
-    if (ctx->engine->cb_progress &&
-        ((ret = ctx->engine->cb_progress(map->fd, bytes, ctx->engine->cb_progress_ctx)) != CL_CLEAN)) {
-		if(info.exeinfo.section)
-		    free(info.exeinfo.section);
-		return ret;
-	}
-
 	if(troot) {
 	    ret = matcher_run(troot, buff, bytes, ctx->virname, &tdata, offset, &info, ftype, ftoffset, acmode, acres, map, bm_offmode ? &toff : NULL);
 
@@ -719,7 +718,6 @@ int cli_fmap_scandesc(cli_ctx *ctx, cli_file_t ftype, uint8_t ftonly, struct cli
 	return CL_VIRUS;
 
     if(!ftonly && ctx->engine->md5_hdb) {
-	    const struct cli_md5m_patt *patt;
 	if(!refhash) {
 	    cli_md5_final(digest, &md5ctx);
 	    refhash = digest;

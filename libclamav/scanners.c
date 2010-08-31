@@ -1735,17 +1735,6 @@ static int cli_scanraw(cli_ctx *ctx, cli_file_t type, uint8_t typercg, cli_file_
 
     if(ret >= CL_TYPENO) {
 	ctx->recursion++;
-
-/*
-	if(type == CL_TYPE_TEXT_ASCII) {
-	    lseek(desc, 0, SEEK_SET);
-
-	    nret = cli_scandesc(desc, ctx, 0, ret, 1, NULL);
-	    if(nret == CL_VIRUS)
-		cli_dbgmsg("%s found in descriptor %d when scanning file type %u\n", *ctx->virname, desc, ret);
-	}
-*/
-
 	if(nret != CL_VIRUS) {
 	    lastzip = lastrar = 0xdeadbeef;
 	    fpt = ftoffset;
@@ -1935,10 +1924,10 @@ static void emax_reached(cli_ctx *ctx) {
 extern int cw_sigcheck(cli_ctx *ctx, int checkfp);
 #endif
 
-int cli_magic_scandesc(int desc, cli_ctx *ctx)
+int magic_scandesc(int desc, cli_ctx *ctx, cli_file_t type)
 {
 	int ret = CL_CLEAN, ret2 = CL_CLEAN;
-	cli_file_t type, dettype = 0;
+	cli_file_t dettype = 0;
 	struct stat sb;
 	uint8_t typercg = 1;
 	cli_file_t current_container_type = ctx->container_type;
@@ -2040,7 +2029,8 @@ int cli_magic_scandesc(int desc, cli_ctx *ctx)
 	ret_from_magicscan(ret);
     }
 
-    type = cli_filetype2(*ctx->fmap, ctx->engine); /* FIXMEFMAP: port to fmap */
+    if(type == CL_TYPE_ANY)
+	type = cli_filetype2(*ctx->fmap, ctx->engine); /* FIXMEFMAP: port to fmap */
     if(type == CL_TYPE_ERROR) {
 	cli_dbgmsg("cli_magic_scandesc: cli_filetype2 returned CL_TYPE_ERROR\n");
 	funmap(*ctx->fmap);
@@ -2326,22 +2316,10 @@ int cli_magic_scandesc(int desc, cli_ctx *ctx)
 	    typercg = 0;
 	}
     }
-#ifdef _WIN32
-#if 0
-    if (!cw_sigcheck(ctx, 0)) {
-        ctx->recursion--;
-        funmap(*ctx->fmap);
-        ctx->fmap--;
-        cli_bitset_free(ctx->hook_lsig_matches);
-        ctx->hook_lsig_matches = old_hook_lsig_matches;
-        cache_add(hash, hashed_size, ctx);
-        ret_from_magicscan(CL_CLEAN);
-    }
-#endif
-#endif
+
     /* CL_TYPE_HTML: raw HTML files are not scanned, unless safety measure activated via DCONF */
     if(type != CL_TYPE_IGNORED && (type != CL_TYPE_HTML || !(DCONF_DOC & DOC_CONF_HTML_SKIPRAW)) && !ctx->engine->sdb) {
-	if((ret2 = cli_scanraw(ctx, type, typercg, &dettype, hash)) == CL_VIRUS) {
+	if(cli_scanraw(ctx, type, typercg, &dettype, hash) == CL_VIRUS) {
 	    ret =  cli_checkfp(hash, hashed_size, ctx);
 	    funmap(*ctx->fmap);
 	    ctx->fmap--;
@@ -2350,14 +2328,6 @@ int cli_magic_scandesc(int desc, cli_ctx *ctx)
 	    ret_from_magicscan(ret);
 	}
     }
-
-	if (ret2 == CL_BREAK) {
-	    funmap(*ctx->fmap);
-	    ctx->fmap--;
-	    cli_bitset_free(ctx->hook_lsig_matches);
-	    ctx->hook_lsig_matches = old_hook_lsig_matches;
-	    ret_from_magicscan(CL_BREAK);
-	}
 
     ctx->recursion++;
     lseek(desc, 0, SEEK_SET);
@@ -2406,6 +2376,16 @@ int cli_magic_scandesc(int desc, cli_ctx *ctx)
 	default:
 	    ret_from_magicscan(ret);
     }
+}
+
+int cli_magic_scandesc(int desc, cli_ctx *ctx)
+{
+    return magic_scandesc(desc, ctx, CL_TYPE_ANY);
+}
+
+int cli_magic_scandesc_type(int desc, cli_ctx *ctx, cli_file_t type)
+{
+    return magic_scandesc(desc, ctx, type);
 }
 
 int cli_scandesc_stats(int desc, const char **virname, char *virhash, unsigned int *virsize, unsigned long int *scanned, const struct cl_engine *engine, unsigned int scanoptions)

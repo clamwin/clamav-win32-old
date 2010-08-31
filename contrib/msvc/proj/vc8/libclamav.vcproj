@@ -1563,7 +1563,19 @@
 					>
 				</File>
 				<File
-					RelativePath="..\..\..\..\win32\3rdparty\zlib\gzio.c"
+					RelativePath="..\..\..\..\win32\3rdparty\zlib\gzclose.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\win32\3rdparty\zlib\gzlib.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\win32\3rdparty\zlib\gzread.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\win32\3rdparty\zlib\gzwrite.c"
 					>
 				</File>
 				<File
