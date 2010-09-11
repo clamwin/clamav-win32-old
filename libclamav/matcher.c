@@ -361,6 +361,7 @@ static void targetinfo(struct cli_target_info *info, unsigned int target, fmap_t
 
     memset(info, 0, sizeof(struct cli_target_info));
     info->fsize = map->len;
+    cli_hashset_init_noalloc(&info->exeinfo.vinfo);
 
     if(target == 1)
 	einfo = cli_peheader;
@@ -479,7 +480,7 @@ int32_t cli_bcapi_matchicon(struct cli_bc_ctx *ctx , const uint8_t* grp1, int32_
     group1[grp1len] = 0;
     group2[grp2len] = 0;
     memset(&info, 0, sizeof(info));
-    if (ctx->bc->kind == BC_PE_UNPACKER) {
+    if (ctx->bc->kind == BC_PE_UNPACKER || ctx->bc->kind == BC_PE_ALL) {
 	if(le16_to_host(ctx->hooks.pedata->file_hdr.Characteristics) & 0x2000 ||
 	   !ctx->hooks.pedata->dirs[2].Size)
 	    info.res_addr = 0;
@@ -621,6 +622,7 @@ int cli_fmap_scandesc(cli_ctx *ctx, cli_file_t ftype, uint8_t ftonly, struct cli
 	if((ret = cli_ac_initdata(&gdata, groot->ac_partsigs, groot->ac_lsigs, groot->ac_reloff_num, CLI_DEFAULT_AC_TRACKLEN)) || (ret = cli_ac_caloff(groot, &gdata, &info))) {
 	    if(info.exeinfo.section)
 		free(info.exeinfo.section);
+	    cli_hashset_destroy(&info.exeinfo.vinfo);
 	    return ret;
 	}
 
@@ -630,6 +632,7 @@ int cli_fmap_scandesc(cli_ctx *ctx, cli_file_t ftype, uint8_t ftonly, struct cli
 		cli_ac_freedata(&gdata);
 	    if(info.exeinfo.section)
 		free(info.exeinfo.section);
+	    cli_hashset_destroy(&info.exeinfo.vinfo);
 	    return ret;
 	}
 	if(troot->bm_offmode) {
@@ -640,6 +643,7 @@ int cli_fmap_scandesc(cli_ctx *ctx, cli_file_t ftype, uint8_t ftonly, struct cli
 		    cli_ac_freedata(&tdata);
 		    if(info.exeinfo.section)
 			free(info.exeinfo.section);
+		    cli_hashset_destroy(&info.exeinfo.vinfo);
 		    return ret;
 		}
 		bm_offmode = 1;
@@ -668,6 +672,7 @@ int cli_fmap_scandesc(cli_ctx *ctx, cli_file_t ftype, uint8_t ftonly, struct cli
 		    cli_bm_freeoff(&toff);
 		if(info.exeinfo.section)
 		    free(info.exeinfo.section);
+		cli_hashset_destroy(&info.exeinfo.vinfo);
 		return ret;
 	    }
 	}
@@ -684,6 +689,7 @@ int cli_fmap_scandesc(cli_ctx *ctx, cli_file_t ftype, uint8_t ftonly, struct cli
 		}
 		if(info.exeinfo.section)
 		    free(info.exeinfo.section);
+		cli_hashset_destroy(&info.exeinfo.vinfo);
 		return ret;
 	    } else if((acmode & AC_SCAN_FT) && ret >= CL_TYPENO) {
 		if(ret > type)
@@ -713,6 +719,7 @@ int cli_fmap_scandesc(cli_ctx *ctx, cli_file_t ftype, uint8_t ftonly, struct cli
 
     if(info.exeinfo.section)
 	free(info.exeinfo.section);
+    cli_hashset_destroy(&info.exeinfo.vinfo);
 
     if(ret == CL_VIRUS)
 	return CL_VIRUS;

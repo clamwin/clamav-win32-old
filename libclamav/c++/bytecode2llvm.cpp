@@ -201,6 +201,11 @@ static int64_t rtlib_sra_i64(int64_t a, int32_t b)
     return CLI_SRS(a, b);//CLI_./..
 }
 
+static void rtlib_bzero(void *s, size_t n)
+{
+    memset(s, 0, n);
+}
+
 // Resolve integer libcalls, but nothing else.
 static void* noUnknownFunctions(const std::string& name) {
     void *addr =
@@ -213,6 +218,7 @@ static void* noUnknownFunctions(const std::string& name) {
 	.Case("__ashrdi3", (void*)(intptr_t)rtlib_sra_i64)
 	.Case("__ashldi3", (void*)(intptr_t)rtlib_shl_i64)
 	.Case("__lshrdi3", (void*)(intptr_t)rtlib_srl_i64)
+	.Case("__bzero", (void*)(intptr_t)rtlib_bzero)
 	.Case("memmove", (void*)(intptr_t)memmove)
 	.Case("memcpy", (void*)(intptr_t)memcpy)
 	.Case("memset", (void*)(intptr_t)memset)
@@ -1642,11 +1648,15 @@ int cli_vm_execute_jit(const struct cli_all_bc *bcs, struct cli_bc_ctx *ctx,
 	0
     };
 
-    if ((ret = pthread_create(&thread, NULL, bytecode_watchdog, &w))) {
-	errs() << "Bytecode: failed to create new thread!";
-	errs() << cli_strerror(ret, buf, sizeof(buf));
-	errs() << "\n";
-	return CL_EBYTECODE;
+    if (ctx->bytecode_timeout) {
+	/* only spawn if timeout is set.
+	 * we don't set timeout for selfcheck (see bb #2235) */
+	if ((ret = pthread_create(&thread, NULL, bytecode_watchdog, &w))) {
+	    errs() << "Bytecode: failed to create new thread!";
+	    errs() << cli_strerror(ret, buf, sizeof(buf));
+	    errs() << "\n";
+	    return CL_EBYTECODE;
+	}
     }
 
     ret = bytecode_execute((intptr_t)code, ctx);
@@ -1654,7 +1664,9 @@ int cli_vm_execute_jit(const struct cli_all_bc *bcs, struct cli_bc_ctx *ctx,
     w.finished = 1;
     pthread_cond_signal(&w.cond);
     pthread_mutex_unlock(&w.mutex);
-    pthread_join(thread, NULL);
+    if (ctx->bytecode_timeout) {
+	pthread_join(thread, NULL);
+    }
 
     if (cli_debug_flag) {
 	gettimeofday(&tv1, NULL);

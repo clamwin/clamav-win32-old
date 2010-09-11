@@ -1,3 +1,36 @@
+Fri Sep 10 22:10:33 EEST 2010 (edwin)
+-------------------------------------
+ * libclamav/pdf.c, pe.c, bytecode*: Fix bytecode virusname reporting (bb #2255)
+
+Fri Sep 10 10:52:45 CEST 2010 (acab)
+------------------------------------
+ * clamav-milter/netcode.c: fix error path fd leak when connection succeeds
+			    but ping fails (bb#2259)
+
+Thu Sep  9 22:07:13 EEST 2010 (edwin)
+-------------------------------------
+ * libclamav/c++/bytecode2llvm.cpp: fix __bzero call on darwin 10.
+
+Thu Sep  9 12:30:34 EEST 2010 (edwin)
+-------------------------------------
+ * libclamav/bytecode.c: properly skip bytecodes with long lines.
+
+Wed Sep  8 00:00:18 CEST 2010 (acab)
+------------------------------------
+ * unit_tests: add VI unit tests
+
+Tue Sep  7 16:55:43 CEST 2010 (tk)
+----------------------------------
+ * libclamav: versioninfo hashset was not properly cached (bb#2065)
+
+Thu Sep  2 21:21:58 EEST 2010 (edwin)
+-------------------------------------
+ * libclamav/c++/bytecode2llvm.cpp: fix hung clamd on FreeBSD (bb #2235)
+
+Thu Sep  2 15:38:22 EEST 2010 (edwin)
+-------------------------------------
+ * libclamav/pe.c: add BC_PE_ALL hook (bb #2237)
+
 Wed Sep  1 10:03:26 EEST 2010 (edwin)
 -------------------------------------
  * libclamav/c++/{bytecode2llvm,ClamBCRTChecks}.cpp: avoid false 'Verification error' messages (bb #2239)

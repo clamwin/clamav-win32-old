@@ -1109,6 +1109,34 @@ int cli_scanpe(cli_ctx *ctx)
 	}
     }
 
+    pedata.nsections = nsections;
+    pedata.ep = ep;
+    pedata.offset = 0;
+    memcpy(&pedata.file_hdr, &file_hdr, sizeof(file_hdr));
+    memcpy(&pedata.opt32, &pe_opt.opt32, sizeof(pe_opt.opt32));
+    memcpy(&pedata.opt64, &pe_opt.opt64, sizeof(pe_opt.opt64));
+    memcpy(&pedata.dirs, dirs, sizeof(pedata.dirs));
+    pedata.e_lfanew = e_lfanew;
+    pedata.overlays = overlays;
+    pedata.overlays_sz = fsize - overlays;
+    pedata.hdr_size = hdr_size;
+
+    /* Bytecode BC_PE_ALL hook */
+    bc_ctx = cli_bytecode_context_alloc();
+    if (!bc_ctx) {
+	cli_errmsg("cli_scanpe: can't allocate memory for bc_ctx\n");
+	return CL_EMEM;
+    }
+    cli_bytecode_context_setpe(bc_ctx, &pedata, exe_sections);
+    cli_bytecode_context_setctx(bc_ctx, ctx);
+    ret = cli_bytecode_runhook(ctx, ctx->engine, bc_ctx, BC_PE_ALL, map, ctx->virname);
+    if (ret == CL_VIRUS || ret == CL_BREAK) {
+	free(exe_sections);
+	cli_bytecode_context_destroy(bc_ctx);
+	return ret == CL_VIRUS ? CL_VIRUS : CL_CLEAN;
+    }
+    cli_bytecode_context_destroy(bc_ctx);
+
     /* Attempt to detect some popular polymorphic viruses */
 
     /* W32.Parite.B */
@@ -2243,28 +2271,18 @@ int cli_scanpe(cli_ctx *ctx)
 
     /* to be continued ... */
 
-    /* Bytecode */
+    /* Bytecode BC_PE_UNPACKER hook */
     bc_ctx = cli_bytecode_context_alloc();
     if (!bc_ctx) {
 	cli_errmsg("cli_scanpe: can't allocate memory for bc_ctx\n");
 	return CL_EMEM;
     }
-    pedata.nsections = nsections;
-    pedata.ep = ep;
-    pedata.offset = 0;
-    memcpy(&pedata.file_hdr, &file_hdr, sizeof(file_hdr));
-    memcpy(&pedata.opt32, &pe_opt.opt32, sizeof(pe_opt.opt32));
-    memcpy(&pedata.opt64, &pe_opt.opt64, sizeof(pe_opt.opt64));
-    memcpy(&pedata.dirs, dirs, sizeof(pedata.dirs));
-    pedata.e_lfanew = e_lfanew;
-    pedata.overlays = overlays;
-    pedata.overlays_sz = fsize - overlays;
-    pedata.hdr_size = hdr_size;
     cli_bytecode_context_setpe(bc_ctx, &pedata, exe_sections);
     cli_bytecode_context_setctx(bc_ctx, ctx);
     ret = cli_bytecode_runhook(ctx, ctx->engine, bc_ctx, BC_PE_UNPACKER, map, ctx->virname);
     switch (ret) {
 	case CL_VIRUS:
+	    free(exe_sections);
 	    cli_bytecode_context_destroy(bc_ctx);
 	    return CL_VIRUS;
 	case CL_SUCCESS:
@@ -2443,7 +2461,7 @@ int cli_peheader(fmap_t *map, struct cli_exe_info *peinfo)
     else
 	peinfo->res_addr = EC32(dirs[2].VirtualAddress);
 
-    while(dirs[2].Size && peinfo->vinfo) {
+    while(dirs[2].Size) {
 	struct vinfo_list vlist;
 	uint8_t *vptr, *baseptr;
     	uint32_t rva, res_sz;
@@ -2452,7 +2470,7 @@ int cli_peheader(fmap_t *map, struct cli_exe_info *peinfo)
 	memset(&vlist, 0, sizeof(vlist));
     	findres(0x10, 0xffffffff, EC32(dirs[2].VirtualAddress), map, peinfo->section, peinfo->nsections, hdr_size, versioninfo_cb, &vlist);
 	if(!vlist.count) break; /* No version_information */
-	if(cli_hashset_init(peinfo->vinfo, 32, 80)) {
+	if(cli_hashset_init(&peinfo->vinfo, 32, 80)) {
 	    cli_errmsg("cli_peheader: Unable to init vinfo hashset\n");
 	    free(section_hdr);
 	    free(peinfo->section);
@@ -2577,9 +2595,9 @@ int cli_peheader(fmap_t *map, struct cli_exe_info *peinfo)
 				continue;
 			    }
 
-			    if(cli_hashset_addkey(peinfo->vinfo, (uint32_t)(vptr - baseptr + 6))) {
+			    if(cli_hashset_addkey(&peinfo->vinfo, (uint32_t)(vptr - baseptr + 6))) {
 				cli_errmsg("cli_peheader: Unable to add rva to vinfo hashset\n");
-				cli_hashset_destroy(peinfo->vinfo);
+				cli_hashset_destroy(&peinfo->vinfo);
 				free(section_hdr);
 				free(peinfo->section);
 				peinfo->section = NULL;

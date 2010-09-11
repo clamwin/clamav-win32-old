@@ -130,7 +130,6 @@ static int cli_bytecode_context_reset(struct cli_bc_ctx *ctx)
 
     if (ctx->outfd) {
 	cli_ctx *cctx = ctx->ctx;
-	cli_bcapi_extract_new(ctx, -1);
 	if (ctx->outfd)
 	    close(ctx->outfd);
 	if (ctx->tempfile && (!cctx || !cctx->engine->keeptmp)) {
@@ -1392,7 +1391,8 @@ enum parse_state {
     PARSE_BC_LSIG,
     PARSE_MD_OPT_HEADER,
     PARSE_FUNC_HEADER,
-    PARSE_BB
+    PARSE_BB,
+    PARSE_SKIP
 };
 
 int cli_bytecode_load(struct cli_bc *bc, FILE *f, struct cli_dbio *dbio, int trust)
@@ -1417,9 +1417,16 @@ int cli_bytecode_load(struct cli_bc *bc, FILE *f, struct cli_dbio *dbio, int tru
     }
     cli_chomp(firstbuf);
     rc = parseHeader(bc, (unsigned char*)firstbuf, &linelength);
+    state = PARSE_BC_LSIG;
     if (rc == CL_BREAK) {
+	const char *len = strchr(firstbuf, ':');
 	bc->state = bc_skip;
-	return CL_SUCCESS;
+	if (!linelength) {
+	    linelength = len ? atoi(len+1) : 4096;
+	}
+	cli_dbgmsg("line: %d\n", linelength);
+	state = PARSE_SKIP;
+	rc = CL_SUCCESS;
     }
     if (rc != CL_SUCCESS) {
 	cli_errmsg("Error at bytecode line %u\n", row);
@@ -1430,7 +1437,6 @@ int cli_bytecode_load(struct cli_bc *bc, FILE *f, struct cli_dbio *dbio, int tru
 	cli_errmsg("Out of memory allocating line of length %u\n", linelength);
 	return CL_EMEM;
     }
-    state = PARSE_BC_LSIG;
     while (cli_dbgets(buffer, linelength, f, dbio) && !end) {
 	cli_chomp(buffer);
 	row++;
@@ -1439,8 +1445,8 @@ int cli_bytecode_load(struct cli_bc *bc, FILE *f, struct cli_dbio *dbio, int tru
 		rc = parseLSig(bc, buffer);
 		if (rc == CL_BREAK) /* skip */ {
 		    bc->state = bc_skip;
-		    free(buffer);
-		    return CL_SUCCESS;
+		    state = PARSE_SKIP;
+		    continue;
 		}
 		if (rc != CL_SUCCESS) {
 		    cli_errmsg("Error at bytecode line %u\n", row);
@@ -1462,8 +1468,8 @@ int cli_bytecode_load(struct cli_bc *bc, FILE *f, struct cli_dbio *dbio, int tru
 		rc = parseApis(bc, (unsigned char*)buffer);
 		if (rc == CL_BREAK) /* skip */ {
 		    bc->state = bc_skip;
-		    free(buffer);
-		    return CL_SUCCESS;
+		    state = PARSE_SKIP;
+		    continue;
 		}
 		if (rc != CL_SUCCESS) {
 		    cli_errmsg("Error at bytecode line %u\n", row);
@@ -1476,8 +1482,8 @@ int cli_bytecode_load(struct cli_bc *bc, FILE *f, struct cli_dbio *dbio, int tru
 		rc = parseGlobals(bc, (unsigned char*)buffer);
 		if (rc == CL_BREAK) /* skip */ {
 		    bc->state = bc_skip;
-		    free(buffer);
-		    return CL_SUCCESS;
+		    state = PARSE_SKIP;
+		    continue;
 		}
 		if (rc != CL_SUCCESS) {
 		    cli_errmsg("Error at bytecode line %u\n", row);
@@ -1531,6 +1537,14 @@ int cli_bytecode_load(struct cli_bc *bc, FILE *f, struct cli_dbio *dbio, int tru
 		    current_func++;
 		}
 		break;
+	    case PARSE_SKIP:
+		/* stop at S (source code), readdb.c knows how to skip this one
+		 * */
+		if (buffer[0] == 'S')
+		    end = 1;
+		/* noop parse, but we need to use dbgets with dynamic buffer,
+		 * otherwise we get 'Line too long for provided buffer' */
+		break;
 	}
     }
     free(buffer);
@@ -1545,6 +1559,7 @@ int cli_bytecode_load(struct cli_bc *bc, FILE *f, struct cli_dbio *dbio, int tru
 
 int cli_bytecode_run(const struct cli_all_bc *bcs, const struct cli_bc *bc, struct cli_bc_ctx *ctx)
 {
+    int ret;
     struct cli_bc_inst inst;
     struct cli_bc_func func;
     if (!ctx || !ctx->bc || !ctx->func)
@@ -1578,10 +1593,16 @@ int cli_bytecode_run(const struct cli_all_bc *bcs, const struct cli_bc *bc, stru
 	inst.u.ops.ops = ctx->operands;
 	inst.u.ops.opsizes = ctx->opsizes;
 	cli_dbgmsg("Bytecode: executing in interpeter mode\n");
-	return cli_vm_execute(ctx->bc, ctx, &func, &inst);
+	ret = cli_vm_execute(ctx->bc, ctx, &func, &inst);
+    } else {
+	cli_dbgmsg("Bytecode: executing in JIT mode\n");
+	ret = cli_vm_execute_jit(bcs, ctx, &bc->funcs[ctx->funcid]);
     }
-    cli_dbgmsg("Bytecode: executing in JIT mode\n");
-    return cli_vm_execute_jit(bcs, ctx, &bc->funcs[ctx->funcid]);
+    /* need to be called here to catch any extracted but not yet scanned files
+     */
+    if (ctx->outfd)
+	cli_bcapi_extract_new(ctx, -1);
+    return ret;
 }
 
 uint64_t cli_bytecode_context_getresult_int(struct cli_bc_ctx *ctx)
@@ -2107,6 +2128,7 @@ static int run_selfcheck(struct cli_all_bc *bcs)
     cli_bytecode_context_setfuncid(ctx, bc, 0);
 
     cli_dbgmsg("bytecode self test running\n");
+    ctx->bytecode_timeout = 0;
     rc = cli_bytecode_run(bcs, bc, ctx);
     cli_bytecode_context_destroy(ctx);
     if (rc != CL_SUCCESS) {
@@ -2412,17 +2434,6 @@ int cli_bytecode_runlsig(cli_ctx *cctx, struct cli_target_info *tinfo,
     const struct cli_bc *bc = &bcs->all_bcs[bc_idx-1];
     struct cli_pe_hook_data pehookdata;
 
-    if (bc->hook_lsig_id) {
-	cli_dbgmsg("hook lsig id %d matched (bc %d)\n", bc->hook_lsig_id, bc->id);
-	/* this is a bytecode for a hook, defer running it until hook is
-	 * executed, so that it has all the info for the hook */
-	if (cctx->hook_lsig_matches)
-	    cli_bitset_set(cctx->hook_lsig_matches, bc->hook_lsig_id-1);
-	/* save match counts */
-	memcpy(&ctx.lsigcnt, lsigcnt, 64*4);
-	memcpy(&ctx.lsigoff, lsigsuboff, 64*4);
-	return CL_SUCCESS;
-    }
     memset(&ctx, 0, sizeof(ctx));
     cli_bytecode_context_setfuncid(&ctx, bc, 0);
     ctx.hooks.match_counts = lsigcnt;
@@ -2439,6 +2450,17 @@ int cli_bytecode_runlsig(cli_ctx *cctx, struct cli_target_info *tinfo,
 	ctx.hooks.pedata = &pehookdata;
 	ctx.resaddr = tinfo->exeinfo.res_addr;
     }
+    if (bc->hook_lsig_id) {
+	cli_dbgmsg("hook lsig id %d matched (bc %d)\n", bc->hook_lsig_id, bc->id);
+	/* this is a bytecode for a hook, defer running it until hook is
+	 * executed, so that it has all the info for the hook */
+	if (cctx->hook_lsig_matches)
+	    cli_bitset_set(cctx->hook_lsig_matches, bc->hook_lsig_id-1);
+	/* save match counts */
+	memcpy(&ctx.lsigcnt, lsigcnt, 64*4);
+	memcpy(&ctx.lsigoff, lsigsuboff, 64*4);
+	return CL_SUCCESS;
+    }
 
     cli_dbgmsg("Running bytecode for logical signature match\n");
     ret = cli_bytecode_run(bcs, bc, &ctx);
@@ -2447,11 +2469,16 @@ int cli_bytecode_runlsig(cli_ctx *cctx, struct cli_target_info *tinfo,
 	return CL_SUCCESS;
     }
     if (ctx.virname) {
+	int rc;
 	cli_dbgmsg("Bytecode found virus: %s\n", ctx.virname);
 	if (virname)
 	    *virname = ctx.virname;
+	if (!strncmp(*virname, "BC.Heuristics", 13))
+	    rc = cli_found_possibly_unwanted(cctx);
+	else
+	    rc = CL_VIRUS;
 	cli_bytecode_context_clear(&ctx);
-	return CL_VIRUS;
+	return rc;
     }
     ret = cli_bytecode_context_getresult_int(&ctx);
     cli_dbgmsg("Bytecode %u returned code: %u\n", bc->id, ret);
@@ -2465,7 +2492,7 @@ int cli_bytecode_runhook(cli_ctx *cctx, const struct cl_engine *engine, struct c
     const unsigned *hooks = engine->hooks[id - _BC_START_HOOKS];
     unsigned i, hooks_cnt = engine->hooks_cnt[id - _BC_START_HOOKS];
     int ret;
-    unsigned executed = 0;
+    unsigned executed = 0, breakflag = 0;
 
     cli_bytecode_context_setfile(ctx, map);
     cli_dbgmsg("Bytecode executing hook id %u (%u hooks)\n", id, hooks_cnt);
@@ -2497,6 +2524,10 @@ int cli_bytecode_runhook(cli_ctx *cctx, const struct cl_engine *engine, struct c
 	ret = cli_bytecode_context_getresult_int(ctx);
 	/* TODO: use prefix here */
 	cli_dbgmsg("Bytecode %u returned %u\n", bc->id, ret);
+	if (ret == 0xcea5e) {
+	    cli_dbgmsg("Bytecode set BREAK flag in hook!\n");
+	    breakflag = 1;
+	}
 	if (!ret) {
 	    char *tempfile;
 	    int fd = cli_bytecode_context_getresult_file(ctx, &tempfile);
@@ -2534,7 +2565,7 @@ int cli_bytecode_runhook(cli_ctx *cctx, const struct cl_engine *engine, struct c
 	cli_dbgmsg("Bytecode: executed %u bytecodes for this hook\n", executed);
     else
 	cli_dbgmsg("Bytecode: no logical signature matched, no bytecode executed\n");
-    return CL_CLEAN;
+    return breakflag ? CL_BREAK : CL_CLEAN;
 }
 
 int cli_bytecode_context_setpe(struct cli_bc_ctx *ctx, const struct cli_pe_hook_data *data, const struct cli_exe_section *sections)
@@ -2609,6 +2640,15 @@ void cli_bytecode_describe(const struct cli_bc *bc)
 	    puts("files matching logical signature");
 	    break;
 	case BC_PE_UNPACKER:
+	    if (bc->lsig)
+		puts("PE files matching logical signature (unpacked)");
+	    else
+		puts("all PE files! (unpacked)");
+	    break;
+	case BC_PDF:
+	    puts("PDF files");
+	    break;
+	case BC_PE_ALL:
 	    if (bc->lsig)
 		puts("PE files matching logical signature");
 	    else
