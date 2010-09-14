@@ -56,6 +56,14 @@ static inline int cw_open(const char *filename, int oflag, ...)
 }
 #define open cw_open
 
+extern const char *cw_get_currentfile(void);
+extern void cw_set_currentfile(const char *filename);
+static inline int safe_open(const char *filename, int oflag)
+{
+    cw_set_currentfile(filename);
+    return cw_open(filename, oflag);
+}
+
 /* FIXME: check if this function works as expected */
 static inline ssize_t pread(int fd, void *buf, size_t count, off_t offset)
 {

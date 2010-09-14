@@ -1,7 +1,7 @@
 /*
  * Clamav Native Windows Port: dllmain
  *
- * Copyright (c) 2005-2008 Gianluigi Tiesi <sherpya@netfarm.it>
+ * Copyright (c) 2005-2010 Gianluigi Tiesi <sherpya@netfarm.it>
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -23,6 +23,36 @@
 
 uint32_t cw_platform = 0;
 helpers_t cw_helpers;
+
+#ifdef _MSC_VER
+#define HAVE_DECLSPEC_THREAD
+#endif
+
+#ifdef HAVE_DECLSPEC_THREAD
+static __declspec(thread) const char *__currentfile = NULL;
+const char *cw_get_currentfile(void)
+{
+    return __currentfile;
+}
+void cw_set_currentfile(const char *filename)
+{
+    __currentfile = filename;
+}
+#else
+static pthread_key_t __currentfile_ptr = NULL;
+const char *cw_get_currentfile(void)
+{
+    return pthread_getspecific(__currentfile_ptr);
+}
+void cw_set_currentfile(const char *filename)
+{
+    pthread_setspecific(__currentfile_ptr, filename);
+}
+void key_free(void *filename)
+{
+    free(filename);
+}
+#endif
 
 extern void jit_init(void);
 extern void jit_uninit(void);
@@ -126,17 +156,8 @@ static void dynLoad(void)
     memset(&cw_helpers.ws2, 0, sizeof(ws2_32_t));
     memset(&cw_helpers.wt, 0, sizeof(wintrust_t));
 
-    cw_helpers.k32.hLib = LoadLibraryA("kernel32.dll");
-    cw_helpers.av32.hLib = LoadLibraryA("advapi32.dll");
-    cw_helpers.psapi.hLib = LoadLibraryA("psapi.dll");
-
-    cw_helpers.ws2.hLib = LoadLibraryA("wship6.dll");
-    if (!cw_helpers.ws2.hLib)
-        cw_helpers.ws2.hLib = LoadLibraryA("ws2_32.dll");
-
-    cw_helpers.wt.hLib = LoadLibraryA("wintrust.dll");
-
     /* kernel 32*/
+    cw_helpers.k32.hLib = LoadLibraryA("kernel32.dll");
     if (cw_helpers.k32.hLib) /* Unlikely */
     {
         /* Win2k + */
@@ -170,6 +191,7 @@ static void dynLoad(void)
     }
 
     /* advapi32 */
+    cw_helpers.av32.hLib = LoadLibraryA("advapi32.dll");
     if (cw_helpers.av32.hLib) /* Unlikely */
     {
         /* Win2k + */
@@ -181,7 +203,18 @@ static void dynLoad(void)
         IMPORT_FUNC_OR_FAIL(av32, AdjustTokenPrivileges);
     }
 
+    /* ws2_32 ipv6 */
+    if (!(cw_helpers.ws2.hLib = LoadLibraryA("wship6.dll")))
+        cw_helpers.ws2.hLib = LoadLibraryA("ws2_32.dll");
+    if (cw_helpers.ws2.hLib)
+    {
+        cw_helpers.ws2.ok = TRUE;
+        IMPORT_FUNC_OR_FAIL(ws2, getaddrinfo);
+        IMPORT_FUNC_OR_FAIL(ws2, freeaddrinfo);
+    }
+
     /* psapi */
+    cw_helpers.psapi.hLib = LoadLibraryA("psapi.dll");
     if (cw_helpers.psapi.hLib)
     {
         cw_helpers.psapi.ok = TRUE;
@@ -194,18 +227,18 @@ static void dynLoad(void)
         IMPORT_FUNC_OR_FAIL(psapi, GetMappedFileNameW);
     }
 
-    /* ws2_32 ipv6 */
-    if (cw_helpers.ws2.hLib)
-    {
-        cw_helpers.ws2.ok = TRUE;
-        IMPORT_FUNC_OR_FAIL(ws2, getaddrinfo);
-        IMPORT_FUNC_OR_FAIL(ws2, freeaddrinfo);
-    }
-
-    /* wintrust */
-    if (cw_helpers.wt.hLib)
+    /* wintrust / mscat32 /  */
+    cw_helpers.wt.hLib = cw_helpers.wt.hLib_wt = LoadLibraryA("wintrust.dll");
+    while (cw_helpers.wt.hLib)
     {
         cw_helpers.wt.ok = TRUE;
+        IMPORT_FUNC_OR_FAIL(wt, WinVerifyTrust);
+
+        /* WinVerifyTrust is mandatory */
+        if (!cw_helpers.wt.ok)
+            break;
+
+        /* try import cat stuff from wintrust dll */
         IMPORT_FUNC_OR_FAIL(wt, CryptCATAdminAddCatalog);
         IMPORT_FUNC_OR_FAIL(wt, CryptCATAdminEnumCatalogFromHash);
         IMPORT_FUNC_OR_FAIL(wt, CryptCATAdminAcquireContext);
@@ -213,7 +246,23 @@ static void dynLoad(void)
         IMPORT_FUNC_OR_FAIL(wt, CryptCATAdminReleaseCatalogContext);
         IMPORT_FUNC_OR_FAIL(wt, CryptCATAdminCalcHashFromFileHandle);
         IMPORT_FUNC_OR_FAIL(wt, CryptCATCatalogInfoFromContext);
-        IMPORT_FUNC_OR_FAIL(wt, WinVerifyTrust);
+
+        /* if ok I can avoid loading mscat32 */
+        if (cw_helpers.wt.ok)
+            break;
+
+        cw_helpers.wt.ok = TRUE;
+        cw_helpers.wt.hLib = cw_helpers.wt.hLib_mscat32 = LoadLibraryA("mscat32.dll");
+
+        /* try importing from mscat32 */
+        IMPORT_FUNC_OR_FAIL(wt, CryptCATAdminAddCatalog);
+        IMPORT_FUNC_OR_FAIL(wt, CryptCATAdminEnumCatalogFromHash);
+        IMPORT_FUNC_OR_FAIL(wt, CryptCATAdminAcquireContext);
+        IMPORT_FUNC_OR_FAIL(wt, CryptCATAdminReleaseContext);
+        IMPORT_FUNC_OR_FAIL(wt, CryptCATAdminReleaseCatalogContext);
+        IMPORT_FUNC_OR_FAIL(wt, CryptCATAdminCalcHashFromFileHandle);
+        IMPORT_FUNC_OR_FAIL(wt, CryptCATCatalogInfoFromContext);
+        break;
     }
 
     /* DynLoad jit */
@@ -226,10 +275,20 @@ static void dynUnLoad(void)
 {
     if (cw_helpers.wt.hCatAdmin)
         cw_helpers.wt.CryptCATAdminReleaseContext(cw_helpers.wt.hCatAdmin, 0);
-    if (cw_helpers.wt.hLib) FreeLibrary(cw_helpers.wt.hLib);
-    if (cw_helpers.k32.hLib) FreeLibrary(cw_helpers.k32.hLib);
-    if (cw_helpers.av32.hLib) FreeLibrary(cw_helpers.av32.hLib);
-    if (cw_helpers.psapi.hLib) FreeLibrary(cw_helpers.psapi.hLib);
+    if (cw_helpers.wt.hLib_wt)
+        FreeLibrary(cw_helpers.wt.hLib_wt);
+    if (cw_helpers.wt.hLib_mscat32)
+        FreeLibrary(cw_helpers.wt.hLib);
+
+    if (cw_helpers.k32.hLib)
+        FreeLibrary(cw_helpers.k32.hLib);
+    if (cw_helpers.av32.hLib)
+        FreeLibrary(cw_helpers.av32.hLib);
+    if (cw_helpers.ws2.hLib)
+        FreeLibrary(cw_helpers.ws2.hLib);
+    if (cw_helpers.psapi.hLib)
+        FreeLibrary(cw_helpers.psapi.hLib);
+
     jit_uninit();
 }
 
@@ -367,18 +426,30 @@ BOOL APIENTRY DllMain(HANDLE hModule, DWORD reason, LPVOID lpReserved)
     switch (reason)
     {
         case DLL_PROCESS_ATTACH:
-        {
             pthread_win32_process_attach_np();
-            DisableThreadLibraryCalls((HMODULE) hModule);
             cwi_processattach();
             _set_invalid_parameter_handler(clamavInvalidParameterHandler);
             fix_paths();
             break;
-        }
+#ifdef HAVE_DECLSPEC_THREAD
         case DLL_THREAD_ATTACH:
             return pthread_win32_thread_attach_np();
         case DLL_THREAD_DETACH:
             return pthread_win32_thread_detach_np();
+#else
+        case DLL_THREAD_ATTACH:
+        {
+            const char **filename;
+            filename = malloc(sizeof(*filename));
+            pthread_key_create(&__currentfile_ptr, key_free);
+            pthread_setspecific(__currentfile_ptr, NULL);
+            return pthread_win32_thread_attach_np();
+        }
+        case DLL_THREAD_DETACH:
+            if (__currentfile_ptr)
+                pthread_key_delete(__currentfile_ptr);
+            return pthread_win32_thread_detach_np();
+#endif
         case DLL_PROCESS_DETACH:
             pthread_win32_thread_detach_np();
             pthread_win32_process_detach_np();

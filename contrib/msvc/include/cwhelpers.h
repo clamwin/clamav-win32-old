@@ -1,7 +1,7 @@
 /*
  * Clamav Native Windows Port: memory related stuff
  *
- * Copyright (c) 2005-2008 Gianluigi Tiesi <sherpya@netfarm.it>
+ * Copyright (c) 2005-2010 Gianluigi Tiesi <sherpya@netfarm.it>
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -160,6 +160,8 @@ typedef struct _wintrust_t
 {
     BOOL ok;
     HINSTANCE hLib;
+    HINSTANCE hLib_wt;
+    HINSTANCE hLib_mscat32;
     HCATADMIN hCatAdmin;
     imp_CryptCATAdminAddCatalog CryptCATAdminAddCatalog;
     imp_CryptCATAdminEnumCatalogFromHash CryptCATAdminEnumCatalogFromHash;

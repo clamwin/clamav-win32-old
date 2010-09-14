@@ -75,39 +75,10 @@ typedef struct _WINTRUST_DATA
 #define TRUST_E_NOSIGNATURE 0x800B0100L
 #endif
 
-static int cw_getfnfromhandle(void *mem, wchar_t *filename)
-{
-    wchar_t szTemp[512] = L"";
-    wchar_t szDrive[3] = L" :";
-    wchar_t szName[MAX_PATH + 1];
-    wchar_t *p = szTemp;
-    wchar_t flname[MAX_PATH + 1];
-
-    if (!cw_helpers.psapi.GetMappedFileNameW(GetCurrentProcess(), mem, flname, MAX_PATH))
-        return 0;
-
-    if (!GetLogicalDriveStringsW(sizeof(szTemp) - 1, szTemp))
-        return 0;
-
-    do
-    {
-        size_t len;
-        *szDrive = *p;
-        if (QueryDosDeviceW(szDrive, szName, MAX_PATH) && ((len = wcslen(szName)) < MAX_PATH)
-            && !wcsnicmp(flname, szName, len))
-        {
-            wcsncpy(filename, szDrive, MAX_PATH);
-            wcsncat(filename, flname + len, MAX_PATH - 1 - wcslen(filename));
-            return 1;
-        }
-        while (*p++) {}
-    } while (*p);
-    return 0;
-}
-
 static int sigcheck(cli_ctx *ctx, int checkfp)
 {
     fmap_t *map = *ctx->fmap;
+    const char *scanning = cw_get_currentfile();
     LONG lstatus;
     LONG lsigned = TRUST_E_NOSIGNATURE;
     HCATINFO *phCatInfo = NULL;
@@ -115,40 +86,47 @@ static int sigcheck(cli_ctx *ctx, int checkfp)
     WINTRUST_CATALOG_INFO wtci;
     WINTRUST_DATA wtd;
     BYTE bHash[20];
-    /*
+
     int i;
     wchar_t mTag[41];
-    */
-    wchar_t filename[MAX_PATH + 1];
+
+    wchar_t *filename = NULL;
     GUID pgActionID = WINTRUST_ACTION_GENERIC_VERIFY_V2;
     DWORD cbHash = sizeof(bHash);
 
-    while (ctx->container_type == CL_TYPE_ANY)
+    while (scanning && ctx->container_type == CL_TYPE_ANY)
     {
 
         if (!cw_helpers.wt.CryptCATAdminCalcHashFromFileHandle(map->fh, &cbHash, bHash, 0))
         {
-            /* cli_errmsg("sigcheck: CryptCATAdminCalcHashFromFileHandle() failed: %d\n", GetLastError()); */
+            cli_dbgmsg("sigcheck: CryptCATAdminCalcHashFromFileHandle() failed: %d\n", GetLastError());
             break;
         }
 
-        if (!cw_getfnfromhandle(map->data, filename))
+        if (!(filename = cw_mb2wc(scanning)))
+        {
+            cli_errmsg("sigcheck: out of memory for unicode filename\n");
             break;
+        }
 
-        /*
         for (i = 0; i < sizeof(bHash); i++)
             _snwprintf(&mTag[i * 2], 2, L"%02X", bHash[i]);
         mTag[i * 2] = 0;
-        */
+
+        if (!(phCatInfo = cw_helpers.wt.CryptCATAdminEnumCatalogFromHash(cw_helpers.wt.hCatAdmin, bHash, cbHash, 0, NULL)))
+        {
+            DWORD err = GetLastError();
+            if (err != ERROR_NOT_FOUND)
+                cli_errmsg("sigcheck: CryptCATAdminEnumCatalogFromHash() failed: %d\n", GetLastError());
+            break;
+        }
 
         memset(&sCatInfo, 0, sizeof(sCatInfo));
         sCatInfo.cbStruct = sizeof(sCatInfo);
 
-        if (!(phCatInfo = cw_helpers.wt.CryptCATAdminEnumCatalogFromHash(cw_helpers.wt.hCatAdmin, bHash, cbHash, 0, NULL)))
-            break;
-
         lstatus = cw_helpers.wt.CryptCATCatalogInfoFromContext(phCatInfo, &sCatInfo, 0);
         cw_helpers.wt.CryptCATAdminReleaseCatalogContext(cw_helpers.wt.hCatAdmin, phCatInfo, 0);
+
         if (!lstatus)
         {
             cli_errmsg("sigcheck: CryptCATCatalogInfoFromContext() failed\n");
@@ -159,7 +137,7 @@ static int sigcheck(cli_ctx *ctx, int checkfp)
         wtci.cbStruct = sizeof(wtci);
         wtci.cbCalculatedFileHash = sizeof(bHash);
         wtci.pbCalculatedFileHash = bHash;
-        /* wtci.pcwszMemberTag = mTag; */
+        wtci.pcwszMemberTag = mTag;
         wtci.pcwszCatalogFilePath = sCatInfo.wszCatalogFile;
         wtci.pcwszMemberFilePath = filename;
 
@@ -171,16 +149,20 @@ static int sigcheck(cli_ctx *ctx, int checkfp)
         wtd.pCatalog = &wtci;
 
         lsigned = cw_helpers.wt.WinVerifyTrust(0, &pgActionID, (LPVOID) &wtd);
+        cli_dbgmsg("sigcheck: WinVerifyTrust 0x%08x\n", lsigned);
 
         wtd.dwStateAction = WTD_STATEACTION_CLOSE;
         lstatus = cw_helpers.wt.WinVerifyTrust(0, &pgActionID, (LPVOID) &wtd);
-
         break;
     }
 
-      if (checkfp && (lsigned == ERROR_SUCCESS))
-		fwprintf(stderr, L"%s: [%S] FALSE POSITIVE FOUND\n", filename, *ctx->virname);
+    if (checkfp && (lsigned == ERROR_SUCCESS))
+        fprintf(stderr, "%s: [%s] FALSE POSITIVE FOUND\n", scanning, *ctx->virname);
 
+    if (filename)
+        free(filename);
+
+    cw_set_currentfile(NULL);
     return lsigned;
 }
 
@@ -199,7 +181,7 @@ int cw_sigcheck(cli_ctx *ctx, int checkfp)
 
 int cw_sig_init(void)
 {
-    if (!(cw_helpers.wt.ok && cw_helpers.psapi.ok))
+    if (!cw_helpers.wt.ok)
         return 1;
 
     if (!cw_helpers.wt.CryptCATAdminAcquireContext(&cw_helpers.wt.hCatAdmin, NULL, 0))
@@ -208,6 +190,7 @@ int cw_sig_init(void)
         return 1;
     }
 
+    cli_dbgmsg("sigcheck: Engine enabled\n");
     pf_sigcheck = sigcheck;
     return 0;
 }

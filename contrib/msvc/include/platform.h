@@ -1,7 +1,7 @@
 /*
  * Clamav Native Windows Port: platform specific helpers
  *
- * Copyright (c) 2005-2008 Gianluigi Tiesi <sherpya@netfarm.it>
+ * Copyright (c) 2005-2010 Gianluigi Tiesi <sherpya@netfarm.it>
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -61,6 +61,10 @@ extern int cw_installservice(const char *name, const char *dname, const char *de
 extern int cw_uninstallservice(const char *name, int verbose);
 extern int cw_init(void);
 
+/* wintrust check to avoid FP */
+typedef struct cli_ctx_tag _cli_ctx;
+extern int cw_sigcheck(_cli_ctx *ctx, int checkfp);
+
 /* ctrl + c handler */
 extern BOOL WINAPI cw_stop_ctrl_handler(DWORD CtrlType);
 
@@ -78,7 +82,6 @@ extern int cw_unlink(const char *pathname);
 #define unlink          cw_unlink
 #define cli_unlink      cw_unlink
 #define cli_rmdirs      cw_rmdirs
-#define safe_open       cw_open
 
 /* errno remap */
 #define strerror cw_strerror

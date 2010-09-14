@@ -377,10 +377,6 @@ static void targetinfo(struct cli_target_info *info, unsigned int target, fmap_t
 	info->status = 1;
 }
 
-#ifdef _WIN32
-extern int cw_sigcheck(cli_ctx *ctx, int checkfp);
-#endif
-
 int cli_checkfp(unsigned char *digest, size_t size, cli_ctx *ctx)
 {
 	char md5[33];

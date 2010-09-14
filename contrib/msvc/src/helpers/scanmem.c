@@ -1,7 +1,7 @@
 /*
  * Clamav Native Windows Port: scanner for in-memory modules/exe
  *
- * Copyright (c) 2005-2008 Gianluigi Tiesi <sherpya@netfarm.it>
+ * Copyright (c) 2005-2010 Gianluigi Tiesi <sherpya@netfarm.it>
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -602,7 +602,7 @@ int cw_scanfile(const char *filename, scanmem_data *scan_data)
 
     logg("*Scanning %s\n", filename);
 
-    if ((fd = open(filename, O_RDONLY|O_BINARY)) == -1)
+    if ((fd = safe_open(filename, O_RDONLY|O_BINARY)) == -1)
     {
         logg("^Can't open file %s, %s\n", filename, strerror(errno));
         return -1;

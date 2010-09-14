@@ -79,13 +79,15 @@ CWStrError_W
 cw_async_noalert            @50 NONAME
 cw_leerrno                  @51 NONAME
 cw_wseterrno                @52 NONAME
+cw_get_currentfile          @53 NONAME
+cw_set_currentfile          @54 NONAME
 
 ; stdcall vision of exports is different between
 ; msvc and mingw, and why not? mingw64 is different from both :)
 ; using NONAME here will probably not work depending of binutils version
-cw_stop_ctrl_handler                            @53
-_cw_stop_ctrl_handler@4 = cw_stop_ctrl_handler  @54
-cw_stop_ctrl_handler@4  = cw_stop_ctrl_handler  @55
+cw_stop_ctrl_handler                            @57
+_cw_stop_ctrl_handler@4 = cw_stop_ctrl_handler  @58
+cw_stop_ctrl_handler@4  = cw_stop_ctrl_handler  @59
 
 cw_platform                 @60 NONAME DATA
 cw_helpers                  @61 NONAME DATA

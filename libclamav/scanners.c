@@ -1920,10 +1920,6 @@ static void emax_reached(cli_ctx *ctx) {
     return retcode;										\
     } while(0)
 
-#ifdef _WIN32
-extern int cw_sigcheck(cli_ctx *ctx, int checkfp);
-#endif
-
 int magic_scandesc(int desc, cli_ctx *ctx, cli_file_t type)
 {
 	int ret = CL_CLEAN, ret2 = CL_CLEAN;
