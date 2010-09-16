@@ -25,6 +25,14 @@
 
 #include <pshpack8.h>
 
+typedef struct WINTRUST_FILE_INFO_
+{
+    DWORD cbStruct;
+    LPCWSTR pcwszFilePath;
+    HANDLE hFile;
+    GUID *pgKnownSubject;
+} WINTRUST_FILE_INFO, *PWINTRUCT_FILE_INFO;
+
 typedef struct WINTRUST_CATALOG_INFO_
 {
     DWORD cbStruct;
@@ -65,11 +73,15 @@ typedef struct _WINTRUST_DATA
 #include <poppack.h>
 
 #define WINTRUST_ACTION_GENERIC_VERIFY_V2 { 0xaac56b, 0xcd44, 0x11d0, { 0x8c, 0xc2, 0x0, 0xc0, 0x4f, 0xc2, 0x95, 0xee } }
-#define WTD_UI_ALL 1
-#define WTD_UI_NONE 2
-#define WTD_STATEACTION_VERIFY 1
-#define WTD_STATEACTION_CLOSE 2
-#define WTD_CHOICE_CATALOG 2
+#define WTD_UI_ALL              1
+#define WTD_UI_NONE             2
+#define WTD_STATEACTION_VERIFY  1
+#define WTD_STATEACTION_CLOSE   2
+#define WTD_CHOICE_FILE         1
+#define WTD_CHOICE_CATALOG      2
+
+#define WTD_REVOKE_NONE         0
+#define WTD_REVOKE_WHOLECHAIN   1
 
 #ifndef TRUST_E_NOSIGNATURE
 #define TRUST_E_NOSIGNATURE 0x800B0100L
@@ -83,6 +95,7 @@ static int sigcheck(cli_ctx *ctx, int checkfp)
     LONG lsigned = TRUST_E_NOSIGNATURE;
     HCATINFO *phCatInfo = NULL;
     CATALOG_INFO sCatInfo;
+    WINTRUST_FILE_INFO wtfi;
     WINTRUST_CATALOG_INFO wtci;
     WINTRUST_DATA wtd;
     BYTE bHash[20];
@@ -113,40 +126,58 @@ static int sigcheck(cli_ctx *ctx, int checkfp)
             _snwprintf(&mTag[i * 2], 2, L"%02X", bHash[i]);
         mTag[i * 2] = 0;
 
-        if (!(phCatInfo = cw_helpers.wt.CryptCATAdminEnumCatalogFromHash(cw_helpers.wt.hCatAdmin, bHash, cbHash, 0, NULL)))
-        {
-            DWORD err = GetLastError();
-            if (err != ERROR_NOT_FOUND)
-                cli_errmsg("sigcheck: CryptCATAdminEnumCatalogFromHash() failed: %d\n", GetLastError());
-            break;
-        }
-
-        memset(&sCatInfo, 0, sizeof(sCatInfo));
-        sCatInfo.cbStruct = sizeof(sCatInfo);
-
-        lstatus = cw_helpers.wt.CryptCATCatalogInfoFromContext(phCatInfo, &sCatInfo, 0);
-        cw_helpers.wt.CryptCATAdminReleaseCatalogContext(cw_helpers.wt.hCatAdmin, phCatInfo, 0);
-
-        if (!lstatus)
-        {
-            cli_errmsg("sigcheck: CryptCATCatalogInfoFromContext() failed\n");
-            break;
-        }
-
-        memset(&wtci, 0, sizeof(wtci));
-        wtci.cbStruct = sizeof(wtci);
-        wtci.cbCalculatedFileHash = sizeof(bHash);
-        wtci.pbCalculatedFileHash = bHash;
-        wtci.pcwszMemberTag = mTag;
-        wtci.pcwszCatalogFilePath = sCatInfo.wszCatalogFile;
-        wtci.pcwszMemberFilePath = filename;
-
         memset(&wtd, 0, sizeof(wtd));
         wtd.cbStruct = sizeof(wtd);
         wtd.dwStateAction = WTD_STATEACTION_VERIFY;
+        wtd.fdwRevocationChecks = WTD_REVOKE_WHOLECHAIN;
         wtd.dwUIChoice = WTD_UI_NONE;
-        wtd.dwUnionChoice = WTD_CHOICE_CATALOG;
-        wtd.pCatalog = &wtci;
+
+        phCatInfo = cw_helpers.wt.CryptCATAdminEnumCatalogFromHash(cw_helpers.wt.hCatAdmin, bHash, cbHash, 0, NULL);
+
+        if (phCatInfo)
+        {
+            memset(&sCatInfo, 0, sizeof(sCatInfo));
+            sCatInfo.cbStruct = sizeof(sCatInfo);
+
+            lstatus = cw_helpers.wt.CryptCATCatalogInfoFromContext(phCatInfo, &sCatInfo, 0);
+            cw_helpers.wt.CryptCATAdminReleaseCatalogContext(cw_helpers.wt.hCatAdmin, phCatInfo, 0);
+
+            if (!lstatus)
+            {
+                cli_errmsg("sigcheck: CryptCATCatalogInfoFromContext() failed\n");
+                break;
+            }
+
+            memset(&wtci, 0, sizeof(wtci));
+            wtci.cbStruct = sizeof(wtci);
+            wtci.cbCalculatedFileHash = sizeof(bHash);
+            wtci.pbCalculatedFileHash = bHash;
+            wtci.pcwszMemberTag = mTag;
+            wtci.pcwszCatalogFilePath = sCatInfo.wszCatalogFile;
+            wtci.pcwszMemberFilePath = filename;
+
+            wtd.dwUnionChoice = WTD_CHOICE_CATALOG;
+            wtd.pCatalog = &wtci;
+        }
+        else
+        {
+            DWORD err = GetLastError();
+            if (err != ERROR_NOT_FOUND)
+            {
+                cli_errmsg("sigcheck: CryptCATAdminEnumCatalogFromHash() failed: %d\n", GetLastError());
+                break;
+            }
+
+            cli_dbgmsg("sigcheck: hash not found in catalog trying embedded signature\n");
+
+            memset(&wtfi, 0, sizeof(wtfi));
+            wtfi.cbStruct = sizeof(wtfi);
+            wtfi.pcwszFilePath = filename;
+            wtfi.hFile = map->fh;
+
+            wtd.dwUnionChoice = WTD_CHOICE_FILE;
+            wtd.pFile = &wtfi;
+        }
 
         lsigned = cw_helpers.wt.WinVerifyTrust(0, &pgActionID, (LPVOID) &wtd);
         cli_dbgmsg("sigcheck: WinVerifyTrust 0x%08x\n", lsigned);
