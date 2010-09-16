@@ -38,6 +38,8 @@ void cw_set_currentfile(const char *filename)
 {
     __currentfile = filename;
 }
+#define tlskey_init()
+#define tlskey_uninit()
 #else
 static pthread_key_t __currentfile_ptr = NULL;
 const char *cw_get_currentfile(void)
@@ -48,10 +50,8 @@ void cw_set_currentfile(const char *filename)
 {
     pthread_setspecific(__currentfile_ptr, filename);
 }
-void key_free(void *filename)
-{
-    free(filename);
-}
+#define tlskey_init() { pthread_key_create(&__currentfile_ptr, NULL); pthread_setspecific(__currentfile_ptr, NULL); }
+#define tlskey_uninit() { if (__currentfile_ptr) pthread_key_delete(__currentfile_ptr); }
 #endif
 
 extern void jit_init(void);
@@ -430,31 +430,20 @@ BOOL APIENTRY DllMain(HANDLE hModule, DWORD reason, LPVOID lpReserved)
             cwi_processattach();
             _set_invalid_parameter_handler(clamavInvalidParameterHandler);
             fix_paths();
+            tlskey_init();
             break;
-#ifdef HAVE_DECLSPEC_THREAD
         case DLL_THREAD_ATTACH:
+            tlskey_init();
             return pthread_win32_thread_attach_np();
         case DLL_THREAD_DETACH:
+            tlskey_uninit();
             return pthread_win32_thread_detach_np();
-#else
-        case DLL_THREAD_ATTACH:
-        {
-            const char **filename;
-            filename = malloc(sizeof(*filename));
-            pthread_key_create(&__currentfile_ptr, key_free);
-            pthread_setspecific(__currentfile_ptr, NULL);
-            return pthread_win32_thread_attach_np();
-        }
-        case DLL_THREAD_DETACH:
-            if (__currentfile_ptr)
-                pthread_key_delete(__currentfile_ptr);
-            return pthread_win32_thread_detach_np();
-#endif
         case DLL_PROCESS_DETACH:
             pthread_win32_thread_detach_np();
             pthread_win32_process_detach_np();
             WSACleanup();
             dynUnLoad();
+            tlskey_uninit();
     }
     return TRUE;
 }

@@ -63,11 +63,16 @@ profiler_OBJECTS+=$(msvc)/tools/profiler-rc.o
 profiler.exe: libclamav.dll $(profiler_OBJECTS)
 	$(CC) $(LDFLAGS) $^ -o $@ libclamav.dll.a -lwinmm
 
-exeScanner_OBJECTS+=$(msvc)/tools/exeScanner-rc.o
+exeScanner_OBJECTS=$(msvc)/tools/exeScanner-rc.o
 exeScanner.exe: $(exeScanner_OBJECTS) $(msvc)/tools/exeScanner_app.c $(msvc)/src/helpers/exeScanner.c
 	$(CC) $(CFLAGS) -DEXESCANNER_STANDALONE $(LDFLAGS) $(msvc)/tools/exeScanner_app.c $(msvc)/src/helpers/exeScanner.c $(exeScanner_OBJECTS) -o $@
 
+sigcheck_OBJECTS=$(msvc)/tools/sigcheck_app.o
+sigcheck_OBJECTS+=$(msvc)/tools/sigcheck-rc.o
+sigcheck.exe: $(sigcheck_OBJECTS)
+	$(CC) $(CFLAGS) $(LDFLAGS) $(sigcheck_OBJECTS) -o $@ libclamav.dll.a
+
 clean:
 	@-rm -f *.exe $(clamd_OBJECTS) $(clamdscan_OBJECTS) $(clamscan_OBJECTS) $(freshclam_OBJECTS) $(sigtool_OBJECTS) $(clambc_OBJECTS) $(shared_OBJECTS)
-	@-rm -f $(profiler_OBJECTS) $(exeScanner_OBJECTS)
+	@-rm -f $(profiler_OBJECTS) $(exeScanner_OBJECTS) $(sigcheck_OBJECTS)
 	@echo Object files removed

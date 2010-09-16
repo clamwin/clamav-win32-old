@@ -31,7 +31,7 @@ RANLIB=$(MINGW32_CROSS_PREFIX)ranlib
 
 CLAMAV_PROGRAMS=clamd.exe clamdscan.exe clamscan.exe freshclam.exe sigtool.exe clambc.exe
 CLAMAV_LIBS=libclamunrar.dll libclamunrar_iface.dll
-CLAMAV_TOOLS=profiler.exe exeScanner.exe
+CLAMAV_TOOLS=profiler.exe exeScanner.exe sigcheck.exe
 
 %.o: %.c
 	$(CC) $(CFLAGS) -Wno-pointer-sign $(DEFINES) -c -o $@ $<
