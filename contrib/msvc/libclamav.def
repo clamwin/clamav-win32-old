@@ -45,7 +45,6 @@ cl_strerror
 
 ; ClamWin specific
 cw_init
-cw_sigcheck
 cw_normalizepath
 cw_stat
 cw_rmdirs
@@ -81,6 +80,7 @@ cw_leerrno                  @51 NONAME
 cw_wseterrno                @52 NONAME
 cw_get_currentfile          @53 NONAME
 cw_set_currentfile          @54 NONAME
+cw_sigcheck                 @55 NONAME
 
 ; stdcall vision of exports is different between
 ; msvc and mingw, and why not? mingw64 is different from both :)
