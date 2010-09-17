@@ -52,6 +52,10 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    cl_init(CL_INIT_DEFAULT);
+    cw_fsredirection(FALSE);
+    cl_debug();
+
     if ((fd = safe_open(argv[1], O_RDONLY|O_BINARY)) == -1)
     {
         perror("open");
@@ -72,9 +76,6 @@ int main(int argc, char *argv[])
         fprintf(stderr, "fmap failed\n");
         return 1;
     }
-
-    cl_init(CL_INIT_DEFAULT);
-    cl_debug();
 
     result = cw_sigcheck(&ctx, 0);
     if (result)
