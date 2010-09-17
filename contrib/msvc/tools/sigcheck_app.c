@@ -4,13 +4,6 @@
 #include <others.h>
 #undef main
 
-#define TRUST_E_BAD_DIGEST          0x80096010
-#define CRYPT_E_SECURITY_SETTINGS   0x80092026
-#define TRUST_E_PROVIDER_UNKNOWN    0x800b0001
-#define TRUST_E_SUBJECT_NOT_TRUSTED 0x800b0004
-#define TRUST_E_NOSIGNATURE         0x800b0100
-#define TRUST_E_EXPLICIT_DISTRUST   0x800b0111
-
 void formatmessage(int code)
 {
     char *message;

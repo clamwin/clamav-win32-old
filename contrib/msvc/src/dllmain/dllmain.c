@@ -38,20 +38,29 @@ void cw_set_currentfile(const char *filename)
 {
     __currentfile = filename;
 }
-#define tlskey_init()
-#define tlskey_uninit()
+#define tls_alloc()
+#define tls_free()
 #else
-static pthread_key_t __currentfile_ptr = NULL;
+static DWORD __currentfile_idx = TLS_OUT_OF_INDEXES;
 const char *cw_get_currentfile(void)
 {
-    return pthread_getspecific(__currentfile_ptr);
+    assert(__currentfile_idx != TLS_OUT_OF_INDEXES);
+    return TlsGetValue(__currentfile_idx);
 }
 void cw_set_currentfile(const char *filename)
 {
-    pthread_setspecific(__currentfile_ptr, filename);
+    assert(__currentfile_idx != TLS_OUT_OF_INDEXES);
+    TlsSetValue(__currentfile_idx, filename);
 }
-#define tlskey_init() { pthread_key_create(&__currentfile_ptr, NULL); pthread_setspecific(__currentfile_ptr, NULL); }
-#define tlskey_uninit() { if (__currentfile_ptr) pthread_key_delete(__currentfile_ptr); }
+static inline int tls_alloc(void)
+{
+    return ((__currentfile_idx = TlsAlloc()) != TLS_OUT_OF_INDEXES);
+}
+static inline void tls_free(void)
+{
+    assert(__currentfile_idx != TLS_OUT_OF_INDEXES);
+    TlsFree(__currentfile_idx);
+}
 #endif
 
 extern void jit_init(void);
@@ -430,20 +439,18 @@ BOOL APIENTRY DllMain(HANDLE hModule, DWORD reason, LPVOID lpReserved)
             cwi_processattach();
             _set_invalid_parameter_handler(clamavInvalidParameterHandler);
             fix_paths();
-            tlskey_init();
+            tls_alloc();
             break;
         case DLL_THREAD_ATTACH:
-            tlskey_init();
             return pthread_win32_thread_attach_np();
         case DLL_THREAD_DETACH:
-            tlskey_uninit();
             return pthread_win32_thread_detach_np();
         case DLL_PROCESS_DETACH:
+            tls_free();
             pthread_win32_thread_detach_np();
             pthread_win32_process_detach_np();
             WSACleanup();
             dynUnLoad();
-            tlskey_uninit();
     }
     return TRUE;
 }
