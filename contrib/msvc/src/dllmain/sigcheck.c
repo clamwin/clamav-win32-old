@@ -129,7 +129,7 @@ static int sigcheck(cli_ctx *ctx, int checkfp)
         memset(&wtd, 0, sizeof(wtd));
         wtd.cbStruct = sizeof(wtd);
         wtd.dwStateAction = WTD_STATEACTION_VERIFY;
-        wtd.fdwRevocationChecks = WTD_REVOKE_WHOLECHAIN;
+        wtd.fdwRevocationChecks = isWin9x() ? WTD_REVOKE_NONE : WTD_REVOKE_WHOLECHAIN;
         wtd.dwUIChoice = WTD_UI_NONE;
 
         phCatInfo = cw_helpers.wt.CryptCATAdminEnumCatalogFromHash(cw_helpers.wt.hCatAdmin, bHash, cbHash, 0, NULL);

@@ -14,6 +14,8 @@ const char *fmtfallback(int code)
             return "CRYPT_E_SECURITY_SETTINGS";
         case 0x800b0001:
             return "TRUST_E_PROVIDER_UNKNOWN";
+        case 0x800b0003:
+            return "TRUST_E_SUBJECT_FORM_UNKNOWN";
         case 0x800b0004:
             return "TRUST_E_SUBJECT_NOT_TRUSTED";
         case 0x800b0100:
@@ -76,7 +78,7 @@ int main(int argc, char *argv[])
 
     result = cw_sigcheck(&ctx, 0);
     if (result)
-        printf("LE: 0x%08x\n", GetLastError());
+        printf("LE: 0x%08x ", GetLastError());
     formatmessage(result);
     
     funmap(*ctx.fmap);
