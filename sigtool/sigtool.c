@@ -263,25 +263,6 @@ static int utf16decode(const struct optstruct *opts)
     return 0;
 }
 
-static unsigned int countlines(const char *filename)
-{
-	FILE *fh;
-	char buff[1024];
-	unsigned int lines = 0;
-
-
-    if((fh = fopen(filename, "r")) == NULL)
-	return 0;
-
-    while(fgets(buff, sizeof(buff), fh)) {
-	if(buff[0] == '#') continue;
-	lines++;
-    }
-
-    fclose(fh);
-    return lines;
-}
-
 static char *getdsig(const char *host, const char *user, const unsigned char *data, unsigned int datalen, unsigned short mode)
 {
 	char buff[512], cmd[128], pass[30], *pt;
@@ -1213,6 +1194,7 @@ static int listdb(const char *filename, const regex_t *regex)
 {
 	FILE *fh;
 	char *buffer, *pt, *start, *dir;
+	const char *dbname, *pathsep = PATHSEP;
 	unsigned int line = 0;
 
 
@@ -1272,13 +1254,21 @@ static int listdb(const char *filename, const regex_t *regex)
 	return 0;
     }
 
+    if(!(dbname = strrchr(filename, *pathsep))) {
+	mprintf("!listdb: Invalid filename %s\n", filename);
+	fclose(fh);
+	free(buffer);
+	return -1;
+    }
+    dbname++;
+
     if(cli_strbcasestr(filename, ".db")) { /* old style database */
 
 	while(fgets(buffer, FILEBUFF, fh)) {
 	    if(regex) {
 		cli_chomp(buffer);
 		if(!cli_regexec(regex, buffer, 0, NULL, 0))
-		    mprintf("%s\n", buffer);
+		    mprintf("[%s] %s\n", dbname, buffer);
 		continue;
 	    }
 	    line++;
@@ -1305,7 +1295,7 @@ static int listdb(const char *filename, const regex_t *regex)
 	    cli_chomp(buffer);
 	    if(regex) {
 		if(!cli_regexec(regex, buffer, 0, NULL, 0))
-		    mprintf("%s\n", buffer);
+		    mprintf("[%s] %s\n", dbname, buffer);
 		continue;
 	    }
 	    line++;
@@ -1331,7 +1321,7 @@ static int listdb(const char *filename, const regex_t *regex)
 	    cli_chomp(buffer);
 	    if(regex) {
 		if(!cli_regexec(regex, buffer, 0, NULL, 0))
-		    mprintf("%s\n", buffer);
+		    mprintf("[%s] %s\n", dbname, buffer);
 		continue;
 	    }
 	    line++;
@@ -2290,6 +2280,14 @@ static int decodesig(char *sig, int fd)
 	char *pt;
 	const char *tokens[68];
 	int tokens_count, subsigs, i, bc = 0;
+
+    if(*sig == '[') {
+	if(!(pt = strchr(sig, ']'))) {
+	    mprintf("!decodesig: Invalid input\n");
+	    return -1;
+	}
+	sig = &pt[2];
+    }
 
     if(strchr(sig, ';')) { /* lsig */
         tokens_count = cli_strtokenize(sig, ';', 67 + 1, (const char **) tokens);

@@ -1,3 +1,28 @@
+Mon Sep 20 17:09:37 CEST 2010 (tk)
+----------------------------------
+ * V 0.96.3
+
+Mon Sep 20 14:16:59 CEST 2010 (acab)
+------------------------------------
+ * libclamav/nsis/bzlib.cld sys: port upstream fixes for CVE-2010-0405,
+				 check for buggy bzip2 (bb#2230, bb#2231)
+
+Mon Sep 20 14:50:34 EEST 2010 (edwin)
+-------------------------------------
+ * libclamav/pdf.c: Add missing boundscheck to pdf code (bb #2226)
+
+Thu Sep 16 14:37:15 CEST 2010 (tk)
+----------------------------------
+ * clamconf: print information about 3rd party databases
+
+Wed Sep 15 19:00:15 CEST 2010 (tk)
+----------------------------------
+ * sigtool/sigtool.c: print db names in --find-sigs
+
+Wed Sep 15 13:19:12 EEST 2010 (edwin)
+-------------------------------------
+ * libclamav/c++/bytecode2llvm.cpp: workaround crash due to gcc stack alignment requirements (bb #2270)
+
 Fri Sep 10 22:10:33 EEST 2010 (edwin)
 -------------------------------------
  * libclamav/pdf.c, pe.c, bytecode*: Fix bytecode virusname reporting (bb #2255)
