@@ -218,11 +218,17 @@ libclamav_llvm_SOURCES=$(addprefix $(top)/libclamav/c++/,ClamBCRTChecks.cpp \
 	llvm/lib/Target/X86/X86Subtarget.cpp \
 	llvm/lib/Target/X86/X86TargetMachine.cpp \
 	llvm/lib/Target/X86/X86TargetObjectFile.cpp \
+	llvm/lib/Transforms/IPO/ConstantMerge.cpp \
+	llvm/lib/Transforms/IPO/GlobalDCE.cpp \
+	llvm/lib/Transforms/IPO/GlobalOpt.cpp \
+	llvm/lib/Transforms/Scalar/ADCE.cpp \
 	llvm/lib/Transforms/Scalar/CodeGenPrepare.cpp \
 	llvm/lib/Transforms/Scalar/DCE.cpp \
 	llvm/lib/Transforms/Scalar/GEPSplitter.cpp \
 	llvm/lib/Transforms/Scalar/GVN.cpp \
 	llvm/lib/Transforms/Scalar/LoopStrengthReduce.cpp \
+	llvm/lib/Transforms/Scalar/SCCP.cpp \
+	llvm/lib/Transforms/Scalar/SimplifyCFGPass.cpp \
 	llvm/lib/Transforms/Utils/AddrModeMatcher.cpp \
 	llvm/lib/Transforms/Utils/BasicBlockUtils.cpp \
 	llvm/lib/Transforms/Utils/BreakCriticalEdges.cpp \

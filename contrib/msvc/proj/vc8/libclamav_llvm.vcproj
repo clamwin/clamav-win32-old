@@ -365,6 +365,10 @@
 			Name="Source Files"
 			>
 			<File
+				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Transforms\Scalar\ADCE.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Transforms\Utils\AddrModeMatcher.cpp"
 				>
 			</File>
@@ -482,6 +486,10 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Analysis\ConstantFolding.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Transforms\IPO\ConstantMerge.cpp"
 				>
 			</File>
 			<File
@@ -626,6 +634,14 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Transforms\Scalar\GEPSplitter.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Transforms\IPO\GlobalDCE.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Transforms\IPO\GlobalOpt.cpp"
 				>
 			</File>
 			<File
@@ -1093,6 +1109,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Transforms\Scalar\SCCP.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\CodeGen\ScheduleDAG.cpp"
 				>
 			</File>
@@ -1154,6 +1174,10 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Transforms\Utils\SimplifyCFG.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Transforms\Scalar\SimplifyCFGPass.cpp"
 				>
 			</File>
 			<File
