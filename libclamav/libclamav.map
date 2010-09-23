@@ -143,6 +143,7 @@ CLAMAV_PRIVATE {
     cli_versig;
     cli_versig2;
     cli_filecopy;
+    cli_filetype2;
     cli_ftw;
     cli_unlink;
     cli_writen;
