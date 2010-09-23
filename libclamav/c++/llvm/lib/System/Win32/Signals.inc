@@ -258,7 +258,6 @@ static LONG WINAPI LLVMUnhandledExceptionFilter(LPEXCEPTION_POINTERS ep) {
       else
         fprintf(stderr, ", %s", symbol->Name);
 
-#if defined(_MSC_VER) && defined(_DEBUG)
       // Print the source file and line number information.
       IMAGEHLP_LINE line;
       memset(&line, 0, sizeof(line));
@@ -269,7 +268,6 @@ static LONG WINAPI LLVMUnhandledExceptionFilter(LPEXCEPTION_POINTERS ep) {
           fprintf(stderr, "+%04lu byte(s)", dwDisp);
       }
 
-#endif
       fputc('\n', stderr);
     }
 

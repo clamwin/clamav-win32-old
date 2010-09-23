@@ -104,9 +104,15 @@ inline bool isPowerOf2_64(uint64_t Value) {
 /// ByteSwap_16 - This function returns a byte-swapped representation of the
 /// 16-bit argument, Value.
 inline uint16_t ByteSwap_16(uint16_t Value) {
+#if defined(_MSC_VER) && !defined(_DEBUG)
+  // The DLL version of the runtime lacks these functions (bug!?), but in a
+  // release build they're replaced with BSWAP instructions anyway.
+  return _byteswap_ushort(Value);
+#else
   uint16_t Hi = Value << 8;
   uint16_t Lo = Value >> 8;
   return Hi | Lo;
+#endif
 }
 
 /// ByteSwap_32 - This function returns a byte-swapped representation of the
@@ -114,6 +120,8 @@ inline uint16_t ByteSwap_16(uint16_t Value) {
 inline uint32_t ByteSwap_32(uint32_t Value) {
 #if (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 3)) && !defined(__ICC)
   return __builtin_bswap32(Value);
+#elif defined(_MSC_VER) && !defined(_DEBUG)
+  return _byteswap_ulong(Value);
 #else
   uint32_t Byte0 = Value & 0x000000FF;
   uint32_t Byte1 = Value & 0x0000FF00;
@@ -128,6 +136,8 @@ inline uint32_t ByteSwap_32(uint32_t Value) {
 inline uint64_t ByteSwap_64(uint64_t Value) {
 #if (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 3)) && !defined(__ICC)
   return __builtin_bswap64(Value);
+#elif defined(_MSC_VER) && !defined(_DEBUG)
+  return _byteswap_uint64(Value);
 #else
   uint64_t Hi = ByteSwap_32(uint32_t(Value));
   uint32_t Lo = ByteSwap_32(uint32_t(Value >> 32));

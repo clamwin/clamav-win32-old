@@ -40,6 +40,13 @@ typedef signed __int16 int16_t;
 typedef unsigned __int8 uint8_t;
 typedef signed __int8 int8_t;
 
+#if defined(_WIN64) && !defined(_DEBUG)
+// argggg, it looks like a bug in vs2005
+// on win64 rel I get:
+// stdlib.h(477) : error C2365: '_byteswap_ushort' : redefinition; previous definition was 'formerly unknown identifier'
+#include <stdlib.h>
+#endif
+
 #ifdef  _WIN64
 typedef __int64 ssize_t;
 #else
