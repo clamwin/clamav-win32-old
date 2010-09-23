@@ -50,7 +50,7 @@ const char *cw_get_currentfile(void)
 void cw_set_currentfile(const char *filename)
 {
     assert(__currentfile_idx != TLS_OUT_OF_INDEXES);
-    TlsSetValue(__currentfile_idx, filename);
+    TlsSetValue(__currentfile_idx, (LPVOID) filename);
 }
 static inline int tls_alloc(void)
 {
