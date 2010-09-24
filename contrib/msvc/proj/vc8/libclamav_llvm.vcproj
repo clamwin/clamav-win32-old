@@ -362,6 +362,19 @@
 			</File>
 		</Filter>
 		<Filter
+			Name="Header Files"
+			Filter="h;hpp;hxx;hm;inl;inc;xsd"
+			>
+			<File
+				RelativePath="..\..\include\llvmbuild\llvm\Config\config.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\llvmbuild\llvm\System\DataTypes.h"
+				>
+			</File>
+		</Filter>
+		<Filter
 			Name="Source Files"
 			>
 			<File
