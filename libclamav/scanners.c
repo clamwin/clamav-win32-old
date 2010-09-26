@@ -2059,6 +2059,14 @@ int magic_scandesc(int desc, cli_ctx *ctx, cli_file_t type)
 	lseek(desc, 0, SEEK_SET); /* FIXMEFMAP: remove ? */
     }
 
+    if(ret == CL_BREAK) {
+        funmap(*ctx->fmap);
+        ctx->fmap--;
+        cli_bitset_free(ctx->hook_lsig_matches);
+        ctx->hook_lsig_matches = old_hook_lsig_matches;
+        ret_from_magicscan(ret);
+    }
+
     ctx->recursion++;
     switch(type) {
 	case CL_TYPE_IGNORED:

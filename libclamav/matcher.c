@@ -657,6 +657,9 @@ int cli_fmap_scandesc(cli_ctx *ctx, cli_file_t ftype, uint8_t ftonly, struct cli
 	if(ctx->scanned)
 	    *ctx->scanned += bytes / CL_COUNT_PRECISION;
 
+    if (ctx->engine->cb_progress && !ctx->engine->cb_progress(map->fd, bytes, ctx->engine->cb_progress_ctx))
+        return CL_BREAK;
+
 	if(troot) {
 	    ret = matcher_run(troot, buff, bytes, ctx->virname, &tdata, offset, &info, ftype, ftoffset, acmode, acres, map, bm_offmode ? &toff : NULL);
 
