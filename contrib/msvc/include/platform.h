@@ -54,7 +54,6 @@
 
 /* cw */
 extern char *cw_normalizepath(const char *path);
-extern size_t cw_heapcompact(void);
 extern BOOL cw_fsredirection(BOOL value);
 extern void cw_registerservice(const char *name);
 extern int cw_installservice(const char *name, const char *dname, const char *desc);

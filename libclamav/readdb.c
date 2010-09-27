@@ -3040,9 +3040,6 @@ int cl_engine_free(struct cl_engine *engine)
     if(engine->mempool) mpool_destroy(engine->mempool);
 #endif
     free(engine);
-#ifdef _WIN32
-    cw_heapcompact();
-#endif
     return CL_SUCCESS;
 }
 

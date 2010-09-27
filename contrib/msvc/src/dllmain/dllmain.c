@@ -411,17 +411,6 @@ BOOL cw_fsredirection(BOOL value)
     return result;
 }
 
-size_t cw_heapcompact(void)
-{
-    size_t lcommit = 0;
-    if (!isWin9x())
-    {
-        if (!(lcommit = HeapCompact(GetProcessHeap(), 0)))
-            fprintf(stderr, "[DllMain] Error calling HeapCompact() (%d)\n", GetLastError());
-    }
-    return lcommit;
-}
-
 extern int cw_sig_init(void);
 int cw_init(void)
 {
