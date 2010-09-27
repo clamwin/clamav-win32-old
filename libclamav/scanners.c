@@ -1922,7 +1922,7 @@ static void emax_reached(cli_ctx *ctx) {
 
 int magic_scandesc(int desc, cli_ctx *ctx, cli_file_t type)
 {
-	int ret = CL_CLEAN, ret2 = CL_CLEAN;
+	int ret = CL_CLEAN;
 	cli_file_t dettype = 0;
 	struct stat sb;
 	uint8_t typercg = 1;
@@ -2057,14 +2057,6 @@ int magic_scandesc(int desc, cli_ctx *ctx, cli_file_t type)
 	    ret_from_magicscan(ret);
 	}
 	lseek(desc, 0, SEEK_SET); /* FIXMEFMAP: remove ? */
-    }
-
-    if(ret == CL_BREAK) {
-        funmap(*ctx->fmap);
-        ctx->fmap--;
-        cli_bitset_free(ctx->hook_lsig_matches);
-        ctx->hook_lsig_matches = old_hook_lsig_matches;
-        ret_from_magicscan(ret);
     }
 
     ctx->recursion++;
