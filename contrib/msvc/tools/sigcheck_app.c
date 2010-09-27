@@ -53,7 +53,7 @@ int main(int argc, char *argv[])
     }
 
     cl_init(CL_INIT_DEFAULT);
-    cw_fsredirection(FALSE);
+    cw_disablefsredir();
     cl_debug();
 
     if ((fd = safe_open(argv[1], O_RDONLY|O_BINARY)) == -1)

@@ -24,44 +24,8 @@
 uint32_t cw_platform = 0;
 helpers_t cw_helpers;
 
-#ifdef _MSC_VER
-#define HAVE_DECLSPEC_THREAD
-#endif
-
-#ifdef HAVE_DECLSPEC_THREAD
-static __declspec(thread) const char *__currentfile = NULL;
-const char *cw_get_currentfile(void)
-{
-    return __currentfile;
-}
-void cw_set_currentfile(const char *filename)
-{
-    __currentfile = filename;
-}
-#define tls_alloc()
-#define tls_free()
-#else
-static DWORD __currentfile_idx = TLS_OUT_OF_INDEXES;
-const char *cw_get_currentfile(void)
-{
-    assert(__currentfile_idx != TLS_OUT_OF_INDEXES);
-    return TlsGetValue(__currentfile_idx);
-}
-void cw_set_currentfile(const char *filename)
-{
-    assert(__currentfile_idx != TLS_OUT_OF_INDEXES);
-    TlsSetValue(__currentfile_idx, (LPVOID) filename);
-}
-static inline int tls_alloc(void)
-{
-    return ((__currentfile_idx = TlsAlloc()) != TLS_OUT_OF_INDEXES);
-}
-static inline void tls_free(void)
-{
-    assert(__currentfile_idx != TLS_OUT_OF_INDEXES);
-    TlsFree(__currentfile_idx);
-}
-#endif
+extern void tls_alloc(void);
+extern void tls_free(void);
 
 extern void jit_init(void);
 extern void jit_uninit(void);
@@ -139,6 +103,25 @@ BOOL WINAPI cUnregisterWaitEx(HANDLE WaitHandle, HANDLE CompletionEvent)
     return TRUE;
 }
 
+BOOL cw_iswow64(void)
+{
+    BOOL bIsWow64 = FALSE;
+
+    if (!cw_helpers.k32.wow64)
+        return FALSE;
+
+    if (cw_helpers.k32.IsWow64Process(GetCurrentProcess(), &bIsWow64))
+        return bIsWow64;
+
+    fprintf(stderr, "[dllmain] IsWow64Process() failed %d\n", GetLastError());
+    return FALSE;
+}
+
+static BOOL WINAPI Wow64NullRedirFunc(PVOID *state)
+{
+    return TRUE;
+}
+
 #define Q(string) # string
 
 #define IMPORT_FUNC(m, x) \
@@ -177,6 +160,12 @@ static void dynLoad(void)
         IMPORT_FUNC_OR_DISABLE(k32, IsWow64Process, wow64);
         IMPORT_FUNC_OR_DISABLE(k32, Wow64DisableWow64FsRedirection, wow64);
         IMPORT_FUNC_OR_DISABLE(k32, Wow64RevertWow64FsRedirection, wow64);
+
+        if (!cw_iswow64())
+        {
+            cw_helpers.k32.Wow64DisableWow64FsRedirection = Wow64NullRedirFunc;
+            cw_helpers.k32.Wow64RevertWow64FsRedirection = Wow64NullRedirFunc;
+        }
 
         cw_helpers.k32.tpool = TRUE;
         IMPORT_FUNC_OR_DISABLE(k32, RegisterWaitForSingleObject, tpool);
@@ -377,38 +366,6 @@ void cw_async_noalert(void)
 
     if (setsockopt(INVALID_SOCKET, SOL_SOCKET, SO_OPENTYPE, (char *) &sockopt, sizeof(sockopt)) < 0)
         fprintf(stderr, "[DllMain] Error setting sockets in synchronous non-alert mode (%d)\n", WSAGetLastError());
-}
-
-BOOL cw_iswow64(void)
-{
-    BOOL bIsWow64 = FALSE;
-
-    if (!cw_helpers.k32.wow64)
-        return FALSE;
-
-    if (cw_helpers.k32.IsWow64Process(GetCurrentProcess(), &bIsWow64))
-        return bIsWow64;
-
-    fprintf(stderr, "[dllmain] IsWow64Process() failed %d\n", GetLastError());
-    return FALSE;
-}
-
-BOOL cw_fsredirection(BOOL value)
-{
-    static PVOID oldValue = NULL;
-    BOOL result = FALSE;
-
-    if (!cw_iswow64()) return TRUE;
-
-    if (value)
-        result = cw_helpers.k32.Wow64RevertWow64FsRedirection(&oldValue);
-    else
-        result = cw_helpers.k32.Wow64DisableWow64FsRedirection(&oldValue);
-
-    if (!result)
-        fprintf(stderr, "[dllmain] Unable to enabe/disable fs redirection %d\n", GetLastError());
-
-    return result;
 }
 
 extern int cw_sig_init(void);

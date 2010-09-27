@@ -54,11 +54,13 @@
 
 /* cw */
 extern char *cw_normalizepath(const char *path);
-extern BOOL cw_fsredirection(BOOL value);
 extern void cw_registerservice(const char *name);
 extern int cw_installservice(const char *name, const char *dname, const char *desc);
 extern int cw_uninstallservice(const char *name, int verbose);
 extern int cw_init(void);
+
+extern BOOL cw_disablefsredir(void);
+extern BOOL cw_revertfsredir(void);
 
 /* wintrust check to avoid FP */
 typedef struct cli_ctx_tag _cli_ctx;

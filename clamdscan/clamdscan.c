@@ -139,10 +139,6 @@ int main(int argc, char **argv)
     sigaction(SIGPIPE, &sigact, NULL);
 #endif
 
-#ifdef _WIN32
-    cw_fsredirection(FALSE);
-#endif
-
     time(&starttime);
     /* ctime() does \n, but I need it once more */
 

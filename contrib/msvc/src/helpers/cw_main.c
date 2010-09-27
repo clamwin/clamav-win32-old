@@ -31,7 +31,6 @@ extern int cw_main(int argc, char *argv[]);
 #undef main
 int main(int argc, char* argv[])
 {
-
 #if defined(_MSC_VER) && !defined(_DEBUG) /* Avoid bypassing calls to Debugger */
     SetErrorMode(SEM_NOGPFAULTERRORBOX);
     SetUnhandledExceptionFilter(CrashHandlerExceptionFilter);
@@ -42,5 +41,7 @@ int main(int argc, char* argv[])
     if (!SetConsoleCtrlHandler(cw_stop_ctrl_handler, TRUE))
         fprintf(stderr, "[cw_main] Cannot install Console Ctrl Handler (%d)\n", GetLastError());
 
+    cw_disablefsredir();
+    atexit(cw_revertfsredir);
     return cw_main(argc, argv);
 }

@@ -761,12 +761,12 @@ int scanmem(struct cl_engine *engine, const struct optstruct *opts, int options)
     if (!isWin9x() && !EnablePrivilege(SE_DEBUG_NAME, SE_PRIVILEGE_ENABLED))
         logg("---Please login as an Administrator to scan System processes loaded in computer memory---\n");
 
-    cw_fsredirection(TRUE);
+    cw_revertfsredir();
     if (cw_helpers.k32.ok)
         walkmodules_th(scanmem_cb, (void *) &data);
     else
         walkmodules_psapi(scanmem_cb, (void *) &data);
-    cw_fsredirection(FALSE);
+    cw_disablefsredir();
     free_cache(&data.files);
 
     logg("\n *** Scanned %lu processes - %lu modules ***\n", data.processes, data.modules);

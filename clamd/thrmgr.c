@@ -615,7 +615,7 @@ static void *thrmgr_worker(void *arg)
 	struct timespec timeout;
 
 #ifdef _WIN32
-    cw_fsredirection(FALSE);
+    cw_disablefsredir();
 #endif
 
 	/* loop looking for work */
@@ -675,6 +675,9 @@ static void *thrmgr_worker(void *arg)
 		logg("!Fatal: mutex unlock failed\n");
 		exit(-2);
 	}
+#ifdef _WIN32
+    cw_revertfsredir();
+#endif
 	return NULL;
 }
 

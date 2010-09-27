@@ -49,7 +49,8 @@ cw_normalizepath
 cw_stat
 cw_rmdirs
 cw_iswow64
-cw_fsredirection
+cw_disablefsredir
+cw_revertfsredir
 cw_movefile
 cw_movefileex
 cw_unlink
