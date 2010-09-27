@@ -22,9 +22,10 @@
 #include <pthread.h>
 #include <others.h>
 
-#ifdef _MSC_VER
-#define HAVE_DECLSPEC_THREAD
-#endif
+// __declspec(thread) are not happy with python, maybe different crt?
+//#ifdef _MSC_VER
+//#define HAVE_DECLSPEC_THREAD
+//#endif
 
 #ifdef HAVE_DECLSPEC_THREAD
 static __declspec(thread) const char *__currentfile = NULL;
