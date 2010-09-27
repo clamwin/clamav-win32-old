@@ -1920,7 +1920,7 @@ static void emax_reached(cli_ctx *ctx) {
     return retcode;										\
     } while(0)
 
-int magic_scandesc(int desc, cli_ctx *ctx, cli_file_t type)
+static int magic_scandesc(int desc, cli_ctx *ctx, cli_file_t type)
 {
 	int ret = CL_CLEAN;
 	cli_file_t dettype = 0;
