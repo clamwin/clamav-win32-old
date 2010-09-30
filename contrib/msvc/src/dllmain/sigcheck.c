@@ -144,7 +144,7 @@ static int sigcheck(cli_ctx *ctx, int checkfp)
 
             if (!lstatus)
             {
-                cli_errmsg("sigcheck: CryptCATCatalogInfoFromContext() failed\n");
+                cli_errmsg("sigcheck: CryptCATCatalogInfoFromContext() failed: %d\n", GetLastError());
                 break;
             }
 
@@ -217,7 +217,7 @@ int cw_sig_init(void)
 
     if (!cw_helpers.wt.CryptCATAdminAcquireContext(&cw_helpers.wt.hCatAdmin, NULL, 0))
     {
-        cli_errmsg("sigcheck: CryptCATAdminAcquireContext() failed\n");
+        cli_errmsg("sigcheck: CryptCATAdminAcquireContext() failed: %d\n", GetLastError());
         return 1;
     }
 
