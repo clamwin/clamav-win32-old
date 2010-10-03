@@ -38,6 +38,7 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/Verifier.h"
+#include "llvm/AutoUpgrade.h"
 #include "llvm/CallingConv.h"
 #include "llvm/DerivedTypes.h"
 #include "llvm/Function.h"
@@ -134,7 +135,25 @@ struct cli_bcengine {
 extern "C" BCAPI uint8_t cli_debug_flag;
 namespace {
 
+#ifdef LLVM28
+#define llvm_report_error(x) report_fatal_error(x)
+#define llvm_install_error_handler(x) install_fatal_error_handler(x)
+#define DwarfExceptionHandling JITExceptionHandling
+#define SetCurrentDebugLocation(x) SetCurrentDebugLocation(DebugLoc::getFromDILocation(x))
+#define DEFINEPASS(passname) passname() : FunctionPass(ID)
+#else
+#define DEFINEPASS(passname) passname() : FunctionPass(&ID)
+#endif
+
 static sys::ThreadLocal<const jmp_buf> ExceptionReturn;
+
+static void UpgradeCall(CallInst *&C, Function *Intr)
+{
+    Function *New;
+    if (!UpgradeIntrinsicFunction(Intr, New) || New == Intr)
+	return;
+    UpgradeIntrinsicCall(C, New);
+}
 
 void do_shutdown() {
     llvm_shutdown();
@@ -252,6 +271,33 @@ public:
     }
 };
 
+class TimerWrapper {
+private:
+    Timer *t;
+public:
+    TimerWrapper(const std::string &name) {
+	t = 0;
+#ifdef TIMING
+	t = new Timer(name);
+#endif
+    }
+    ~TimerWrapper()
+    {
+	if (t)
+	    delete t;
+    }
+    void startTimer()
+    {
+	if (t)
+	    t->startTimer();
+    }
+    void stopTimer()
+    {
+	if (t)
+	    t->stopTimer();
+    }
+};
+
 class LLVMTypeMapper {
 private:
     std::vector<PATypeHolder> TypeMap;
@@ -276,8 +322,8 @@ private:
 	llvm_unreachable("getStatic");
     }
 public:
-    Timer pmTimer;
-    Timer irgenTimer;
+    TimerWrapper pmTimer;
+    TimerWrapper irgenTimer;
 
     LLVMTypeMapper(LLVMContext &Context, const struct cli_bc_type *types,
 		   unsigned count, const Type *Hidden=0) : Context(Context), numTypes(count),
@@ -399,8 +445,7 @@ class RuntimeLimits : public FunctionPass {
 
 public:
     static char ID;
-    RuntimeLimits() : FunctionPass(&ID) {}
-
+    DEFINEPASS(RuntimeLimits) {}
 
     virtual bool runOnFunction(Function &F) {
 	BBSetTy BackedgeTargets;
@@ -538,13 +583,12 @@ public:
 };
 char RuntimeLimits::ID;
 
-// SimplifyCFG, ADCE, etc. won't remove a br i1 false ... they turn it into
 // select i1 false ... which instcombine would simplify but we don't run
 // instcombine.
 class BrSimplifier : public FunctionPass {
 public:
     static char ID;
-    BrSimplifier() : FunctionPass(&ID) {}
+    DEFINEPASS(BrSimplifier) {}
 
     virtual bool runOnFunction(Function &F) {
 	bool Changed = false;
@@ -615,7 +659,7 @@ public:
 };
 char SimpleGlobalDCE::ID;
 */
-class VISIBILITY_HIDDEN LLVMCodegen {
+class LLVMCodegen {
 private:
     const struct cli_bc *bc;
     Module *M;
@@ -918,11 +962,12 @@ public:
 	    StoreInst *SI = 0;
 	    for (Value::use_iterator I=VI->use_begin(),
 		 E=VI->use_end(); I != E; ++I) {
-		if (StoreInst *S = dyn_cast<StoreInst>(I)) {
+		Value *I_V = *I;
+		if (StoreInst *S = dyn_cast<StoreInst>(I_V)) {
 		    if (SI)
 			return V;
 		    SI = S;
-		} else if (!isa<LoadInst>(I))
+		} else if (!isa<LoadInst>(I_V))
 		    return V;
 	    }
 	    V = SI->getOperand(0);
@@ -941,9 +986,7 @@ public:
 
    Function* generate() {
         PrettyStackTraceString CrashInfo("Generate LLVM IR functions");
-#ifdef TIMING
 	apiMap.irgenTimer.startTimer();
-#endif
 	TypeMap = new LLVMTypeMapper(Context, bc->types + 4, bc->num_types - 5);
 	for (unsigned i=0;i<bc->dbgnode_cnt;i++) {
 	    mdnodes.push_back(convertMDNode(i));
@@ -1383,6 +1426,7 @@ public:
 								ConstantInt::get(Type::getInt32Ty(Context), 1));
 			    c->setTailCall(true);
 			    c->setDoesNotThrow();
+			    UpgradeCall(c, CF->FMemset);
 			    break;
 			}
 			case OP_BC_MEMCPY:
@@ -1396,6 +1440,7 @@ public:
 								ConstantInt::get(Type::getInt32Ty(Context), 1));
 			    c->setTailCall(true);
 			    c->setDoesNotThrow();
+			    UpgradeCall(c, CF->FMemcpy);
 			    break;
 			}
 			case OP_BC_MEMMOVE:
@@ -1409,6 +1454,7 @@ public:
 								ConstantInt::get(Type::getInt32Ty(Context), 1));
 			    c->setTailCall(true);
 			    c->setDoesNotThrow();
+			    UpgradeCall(c, CF->FMemmove);
 			    break;
 			}
 			case OP_BC_MEMCMP:
@@ -1496,10 +1542,8 @@ public:
 	    }
 	    delete [] Values;
 	    delete [] BB;
-#ifdef TIMING
 	    apiMap.irgenTimer.stopTimer();
 	    apiMap.pmTimer.startTimer();
-#endif
 	    if (bc->trusted) {
 		PM.doInitialization();
 		PM.run(*F);
@@ -1510,10 +1554,8 @@ public:
 		PMUnsigned.run(*F);
 		PMUnsigned.doFinalization();
 	    }
-#ifdef TIMING
 	    apiMap.pmTimer.stopTimer();
 	    apiMap.irgenTimer.startTimer();
-#endif
 	}
 
 	for (unsigned j=0;j<bc->num_func;j++) {
@@ -1559,9 +1601,7 @@ public:
 			DEBUG(errs() << "Code generation finished\n");*/
 
 //		compiledFunctions[func] = code;
-#ifdef TIMING
 	apiMap.irgenTimer.stopTimer();
-#endif
 	return F;
     }
 };
@@ -1966,31 +2006,23 @@ int cli_bytecode_prepare_jit(struct cli_all_bc *bcs)
 	PM.add(createGlobalOptimizerPass());
 	PM.add(createConstantMergePass());
 	PM.add(new RuntimeLimits());
-	Timer pmTimer2("Transform passes");
-#ifdef TIMING
+	TimerWrapper pmTimer2("Transform passes");
 	pmTimer2.startTimer();
-#endif
 	PM.run(*M);
-#ifdef TIMING
 	pmTimer2.stopTimer();
-#endif
 	DEBUG(M->dump());
 
 	{
 	    PrettyStackTraceString CrashInfo2("Native machine codegen");
-	    Timer codegenTimer("Native codegen");
-#ifdef TIMING
+	    TimerWrapper codegenTimer("Native codegen");
 	    codegenTimer.startTimer();
-#endif
 	    // compile all functions now, not lazily!
 	    for (Module::iterator I = M->begin(), E = M->end(); I != E; ++I) {
 		Function *Fn = &*I;
 		if (!Fn->isDeclaration())
 		    EE->getPointerToFunction(Fn);
 	    }
-#ifdef TIMING
 	    codegenTimer.stopTimer();
-#endif
 	}
 
 	for (unsigned i=0;i<bcs->count;i++) {
@@ -2143,9 +2175,12 @@ void cli_bytecode_debug_printsrc(const struct cli_bc_ctx *ctx)
 
     int line = (int)ctx->line ? (int)ctx->line : -1;
     int col = (int)ctx->col ? (int)ctx->col : -1;
+#ifndef LLVM28
+    //TODO: print this ourselves, instead of using SMDiagnostic
     SMDiagnostic diag(ctx->file, line, col,
 		 "", std::string(lines->linev[ctx->line-1], lines->linev[ctx->line]-1));
     diag.Print("[trace]", errs());
+#endif
 }
 
 int have_clamjit=1;

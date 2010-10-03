@@ -46,7 +46,37 @@ fi
 AC_CHECK_GNU_MAKE
 GMAKE="$llvm_cv_gnu_make_command"
 AC_SUBST([GMAKE])
-AC_CONFIG_SUBDIRS([llvm])
+
+llvmconfig=
+AC_ARG_WITH([system-llvm], AC_HELP_STRING([-with-system-llvm],
+[Use system llvm instead of built-in, requires full path to llvm-config]),
+[case "$withval" in
+  yes)
+    AC_MSG_ERROR([--with-system-llvm needs full path to llvm-config])
+    ;;
+  no) ;;
+  *)
+    llvmconfig="$withval"
+    llvmver=`$llvmconfig --version`
+    if test "$llvmver" != "2.8" -a "$llvmver" != "2.8svn" -a "$llvmver" != "2.8rc"; then
+	AC_MSG_ERROR([LLVM 2.8 or 2.8svn required, but "$llvmver" found])
+    fi
+    AC_SUBST(LLVMCONFIG_CXXFLAGS, [`$llvmconfig --cxxflags`])
+    AC_SUBST(LLVMCONFIG_LDFLAGS, [`$llvmconfig --ldflags`])
+    AC_SUBST(LLVMCONFIG_LIBS, [`$llvmconfig --libs jit nativecodegen scalaropts ipo`])
+    AC_SUBST(LLVMCONFIG_LIBFILES, [`$llvmconfig --libfiles jit nativecodegen scalaropts ipo`])
+    AC_MSG_NOTICE([Using external LLVM])
+    AC_MSG_NOTICE([CXXFLAGS from llvm-config: $LLVMCONFIG_CXXFLAGS])
+    AC_MSG_NOTICE([LDFLAGS from llvm-config: $LLVMCONFIG_LDFLAGS])
+    AC_MSG_NOTICE([LIBS from llvm-config: $LLVMCONFIG_LIBS])
+    ;;
+  esac
+])
+
+if test "x$llvmconfig" = "x"; then
+    AC_CONFIG_SUBDIRS([llvm])
+fi
+
 AC_ARG_ENABLE([llvm],AC_HELP_STRING([-enable-llvm],
 				    [Enable 'llvm' JIT/verifier support @<:@default=auto@:>@]),
 				    [enable_llvm=$enableval], [enable_llvm="auto"])
@@ -72,9 +102,7 @@ if test "$enable_alltargets" = "yes"; then
 else
     new_args="$ac_configure_args --enable-targets=host-only --enable-bindings=none --enable-libffi=no --without-llvmgcc --without-llvmgxx"
 fi
-echo "$new_args"
 ac_configure_args=`echo $new_args | sed -e 's/-Werror //g'`
-echo "$ac_configure_args"
 
 if test "$enable_llvm" = "auto"; then
     dnl Do some sanity checks, and don't automatically build on platforms
@@ -84,7 +112,7 @@ if test "$enable_llvm" = "auto"; then
     gxx_version=`${CXX} -dumpversion` ||
     AC_MSG_ERROR([Unable to get GNU C++ compiler version])
     case "${gxx_version}" in
-     [[023]].*)
+     [[03]].*)
 	AC_MSG_ERROR([C++ compiler too old (${gxx_version})])
         ;;
      4.1.[[1]]*)
@@ -190,6 +218,8 @@ AC_MSG_CHECKING([optional compiler flags])
 CXX_FLAG_CHECK(NO_VARIADIC_MACROS, [-Wno-variadic-macros])
 CXX_FLAG_CHECK(NO_MISSING_FIELD_INITIALIZERS, [-Wno-missing-field-initializers])
 AC_MSG_RESULT([$NO_VARIADIC_MACROS $NO_MISSING_FIELD_INITIALIZERS])
+
+AM_CONDITIONAL(BUILD_EXTERNAL_LLVM, [test -n "$llvmconfig"])
 
 AC_OUTPUT([
     Makefile

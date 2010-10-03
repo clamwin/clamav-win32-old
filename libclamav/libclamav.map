@@ -182,6 +182,7 @@ CLAMAV_PRIVATE {
     cli_bytecode_describe;
     cli_printcxxver;
     cli_detect_environment;
+    cli_disasm_one;
   local:
     *;
 };
