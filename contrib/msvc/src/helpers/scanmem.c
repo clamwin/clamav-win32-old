@@ -106,9 +106,7 @@ typedef struct _cb_data_t
     const char *filename;
     size_t size, count;
     int oldvalue;
-
     int fd;
-    int condition;
 } cb_data_t;
 
 typedef struct _scanmem_data_t
