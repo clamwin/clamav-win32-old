@@ -752,7 +752,6 @@ int scanmem(struct cl_engine *engine, const struct optstruct *opts, int options)
     if (optget(opts, "show-progress")->enabled)
     {
         memset(&cbdata, 0, sizeof(cb_data_t));
-        cbdata.condition = CL_CLEAN;
         cl_engine_set_clcb_progress(data.engine, scancallback, &cbdata);
     }
 

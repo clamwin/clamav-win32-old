@@ -74,9 +74,7 @@ typedef struct _cb_data_t
     const char *filename;
     size_t size, count;
     int oldvalue;
-
     int fd;
-    int condition;
 } cb_data_t;
 
 static cb_data_t cbdata;
@@ -107,7 +105,7 @@ cl_error_t scancallback(int desc, int bytes, void *context)
         }
     }
 
-    return cbctx->condition;
+    return 1;
 }
 
 void scanfile(const char *filename, struct cl_engine *engine, const struct optstruct *opts, unsigned int options)
@@ -528,7 +526,6 @@ int scanmanager(const struct optstruct *opts)
     /* setup callback */
     if(optget(opts, "show-progress")->enabled) {
         memset(&cbdata, 0, sizeof(cb_data_t));
-        cbdata.condition = CL_CLEAN;
         cl_engine_set_clcb_progress(engine, scancallback, &cbdata);
     }
 
