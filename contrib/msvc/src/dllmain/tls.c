@@ -110,7 +110,7 @@ BOOL cw_disablefsredir(void)
         return FALSE;
     }
 
-    state = malloc(sizeof(PVOID));
+    state = calloc(1, sizeof(PVOID));
     TlsSetValue(__fsredir_idx, state);
     return cw_helpers.k32.Wow64DisableWow64FsRedirection(state);
 }
