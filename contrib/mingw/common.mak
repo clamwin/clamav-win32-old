@@ -9,13 +9,6 @@ CFLAGS+=-Wall -Wextra -Wno-unused -Wno-sign-compare -Wno-switch -Wno-format -pip
 CFLAGS+=-fno-strict-aliasing
 CFLAGS+=-O3 -mtune=generic -fomit-frame-pointer
 
-ifneq (,$(findstring 64,$(MSYSTEM)))
-# defines clashes in various includes
-CFLAGS+=-D_TIMESPEC_DEFINED -D_TIMEZONE_DEFINED
-else
-CFLAGS+=-march=i686
-endif
-
 LDFLAGS=-Wl,--enable-stdcall-fixup
 
 LLVM=-I$(top)/libclamav/c++ -I$(top)/libclamav/c++/llvm/include
@@ -28,6 +21,12 @@ WINDRES=$(MINGW32_CROSS_PREFIX)windres
 DLLWRAP=$(MINGW32_CROSS_PREFIX)dllwrap
 AR=$(MINGW32_CROSS_PREFIX)ar
 RANLIB=$(MINGW32_CROSS_PREFIX)ranlib
+
+ifneq (,$(findstring x86_64,$(shell $(CC) -dumpmachine)))
+CFLAGS+=-D_TIMESPEC_DEFINED -D_TIMEZONE_DEFINED
+else
+CFLAGS+=-march=i686
+endif
 
 CLAMAV_PROGRAMS=clamd.exe clamdscan.exe clamscan.exe freshclam.exe sigtool.exe clambc.exe
 CLAMAV_LIBS=libclamunrar.dll libclamunrar_iface.dll
