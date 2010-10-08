@@ -78,40 +78,88 @@ static char *my_fgets(struct my_f *f) {
 }
 
 PROCESS_INFORMATION pinfo;
-HANDLE updpipe;
+HANDLE updpipe, write_event;
+char datadir[4096];
+
+static void cleanup(char *path) {
+    WIN32_FIND_DATA wfd;
+    char delme[4096];
+    HANDLE findh;
+
+    if(!path)
+	_snprintf(delme, sizeof(delme), "%s\\clamav-????????????????????????????????", datadir);
+    else
+	_snprintf(delme, sizeof(delme), "%s\\*.*", path);
+    delme[sizeof(delme) - 1] = '\0';
+    findh = FindFirstFile(delme, &wfd);
+    if(findh == INVALID_HANDLE_VALUE)
+	return;
+    do {
+	if(wfd.cFileName[0] == '.' && (!wfd.cFileName[1] || (wfd.cFileName[1] == '.' && !wfd.cFileName[2])))
+	    continue;
+	if(wfd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+	    if(!path)
+		_snprintf(delme, sizeof(delme), "%s\\%s", datadir, wfd.cFileName);
+	    else
+		_snprintf(delme, sizeof(delme), "%s\\%s", path, wfd.cFileName);
+	    flog("recursing %s", delme);
+	    cleanup(delme);
+	    RemoveDirectory(delme);
+	} else if(path) {
+	    _snprintf(delme, sizeof(delme), "%s\\%s", path, wfd.cFileName);
+	    flog("deleting %s", delme);
+	    SetFileAttributes(delme, FILE_ATTRIBUTE_NORMAL);
+	    DeleteFile(delme);
+	}
+    } while(FindNextFile(findh, &wfd));
+    FindClose(findh);
+}
+
+
+static void kill_freshclam(void) {
+    TerminateProcess(pinfo.hProcess, 1337);
+    WaitForSingleObject(pinfo.hProcess, 30*1000);
+}
 
 static void send_pipe(AV_UPD_STATUS *updstatus, int state, int fail) {
     DWORD got;
-
-const char *phases[] = {
-    "UPD_CHECK",
-    "UPD_NEWER_FOUND",
-    "UPD_NONE",
-    "UPD_DOWNLOAD_BEGIN",
-    "UPD_DOWNLOAD_COMPLETE",
-    "UPD_PAUSE",
-    "UPD_ABORT",
-    "UPD_DONE",
-    "UPD_INSTALL_BEGIN",
-    "UPD_INSTALL_COMPLETE",
-    "UPD_FILE_BEGIN",
-    "UPD_FILE_COMPLETE",
-    "UPD_FILE_PROGRESS",
+    const char *phases[] = {
+	"UPD_CHECK",
+	"UPD_NEWER_FOUND",
+	"UPD_NONE",
+	"UPD_DOWNLOAD_BEGIN",
+	"UPD_DOWNLOAD_COMPLETE",
+	"UPD_PAUSE",
+	"UPD_ABORT",
+	"UPD_DONE",
+	"UPD_INSTALL_BEGIN",
+	"UPD_INSTALL_COMPLETE",
+	"UPD_FILE_BEGIN",
+	"UPD_FILE_COMPLETE",
+	"UPD_FILE_PROGRESS",
     };
+    OVERLAPPED o;
 
+    memset(&o, 0, sizeof(o)); /* kb110148 */
+    o.hEvent = write_event;
     flog("SEND: state: %s - status: %s - file: %S - pct: %u%%",
 	(unsigned int)state < sizeof(phases) / sizeof(*phases) ? phases[state] : "INVALID",
 	fail ? "fail" : "success", updstatus->fileName, updstatus->percentDownloaded);
     updstatus->state = state;
     updstatus->status = fail;
-    if(!WriteFile(updpipe, updstatus, sizeof(*updstatus), &got, NULL))
-	flog("WARNING: cannot write to pipe");
+    if(!WriteFile(updpipe, updstatus, sizeof(*updstatus), NULL, &o)) {
+	if(GetLastError() != ERROR_IO_PENDING)
+	    flog("WARNING: cannot write to pipe");
+	else if(!GetOverlappedResult(updpipe, &o, &got, TRUE))
+	    flog("WARNING: write to pipe failed");
+    }
 }
 
 #define SENDFAIL_AND_QUIT(phase)	    \
     do {				    \
 	send_pipe(&st, (phase), 1);\
 	CloseHandle(updpipe);		    \
+	cleanup(NULL);                 \
 	flog_close();		    \
 	return 1;			    \
     } while(0)
@@ -143,21 +191,37 @@ static void log_state(enum fresh_states s) {
 DWORD WINAPI watch_stop(LPVOID x) {
     AV_UPD_STATUS st;
     DWORD got;
+    OVERLAPPED o;
+    HANDLE read_event = CreateEvent(NULL, TRUE, FALSE, NULL);
 
-    while(1) {
-	//if(!ReadFile(updpipe, &st, sizeof(st), &got, NULL))
-	//    return 0;
-	//if(st.state == UPD_STOP)
-	//    break;
-	//flog("watch_stop: received bogus message %d", st.state);
+    if(!read_event) {
+	flog("watch_stop: failed to create pipe read event");
+	return 0;
     }
 
+    memset(&o, 0, sizeof(o));
+    o.hEvent = read_event;
+    while(1) {
+	if(!ReadFile(updpipe, &st, sizeof(st), NULL, NULL)) {
+	    if(GetLastError() != ERROR_IO_PENDING || !GetOverlappedResult(updpipe, &o, &got, TRUE)) {
+		flog("watch_stop: failed to read pipe");
+		return 0;
+	    }
+	}
+	if(st.state == UPD_STOP)
+	    break;
+	flog("watch_stop: received bogus message %d", st.state);
+    }
+    flog("STOP event received, killing freshclam");
+    kill_freshclam();
+    cleanup(NULL);
     return 0;
 }
 
 
 #define FRESH_PRE_START_S "ClamAV update process started at "
 #define FRESH_DOWN_S "Downloading "
+#define FRESH_DOWN_FAIL_S "ERROR: Verification: Can't verify database integrity"
 #define FRESH_UPDATED_S " updated (version: "
 #define FRESH_UPTODATE_S " is up to date "
 #define FRESH_DONE_S "Database updated "
@@ -169,31 +233,31 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     AV_UPD_STATUS st = {UPD_CHECK, 0, 0, 0, L""};
     DWORD dw;
     struct my_f spam;
-    char buf[4096], command[8192], *ptr;
+    char command[8192], *ptr;
     int updated_files = 0;
     wchar_t *cmdl = GetCommandLineW();
 
-    DebugBreak();
+    //DebugBreak();
 
     /* Locate myself */
-    dw = GetModuleFileName(NULL, buf, sizeof(buf));
-    if(!dw || dw >= sizeof(buf)-2)
+    dw = GetModuleFileName(NULL, datadir, sizeof(datadir));
+    if(!dw || dw >= sizeof(datadir)-2)
 	return 1;
-    ptr = strrchr(buf, '\\');
+    ptr = strrchr(datadir, '\\');
     if(!ptr)
 	return 1;
     *ptr = '\0';
 
     /* Log file */
-    _snprintf(command, sizeof(command)-1, "%s\\update.log", buf);
+    _snprintf(command, sizeof(command)-1, "%s\\update.log", datadir);
     command[sizeof(command)-1] = '\0';
     flog_open(command);
 
-    _snprintf(command, sizeof(command)-1, "freshclam.exe --stdout --config-file=\"%s\\freshclam.conf\" --datadir=\"%s\"", buf, buf);
+    _snprintf(command, sizeof(command)-1, "freshclam.exe --stdout --config-file=\"%s\\freshclam.conf\" --datadir=\"%s\"", datadir, datadir);
     command[sizeof(command)-1] = '\0';
 
     /* Connect to master */
-    updpipe = CreateFile("\\\\.\\pipe\\IMMUNET_AVUPDATE", GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
+    updpipe = CreateFile("\\\\.\\pipe\\IMMUNET_AVUPDATE", GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, NULL);
     if(updpipe == INVALID_HANDLE_VALUE) {
 	flog("ERROR: failed to connect pipe");
 	flog_close();
@@ -231,7 +295,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     sinfo.hStdOutput = cld_w2;
     sinfo.hStdError = cld_w2;
     sinfo.dwFlags = STARTF_FORCEOFFFEEDBACK|STARTF_USESTDHANDLES;
-    if(!CreateProcess(NULL, command, NULL, NULL, TRUE, DETACHED_PROCESS, NULL, buf, &sinfo, &pinfo)) {
+    if(!CreateProcess(NULL, command, NULL, NULL, TRUE, DETACHED_PROCESS, NULL, datadir, &sinfo, &pinfo)) {
 	CloseHandle(cld_w2);
 	CloseHandle(cld_r);
 	flog("ERROR: failed to execute '%s'", command);
@@ -243,7 +307,20 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     flog("Executing '%s'", command);
 
     /* Create STOP watcher */
-    CreateThread(NULL, 0, watch_stop, NULL, 0, &dw);
+    if(!(write_event = CreateEvent(NULL, TRUE, FALSE, NULL))) {
+	flog("ERROR: failed to create write event");
+	CloseHandle(cld_r);
+	CloseHandle(pinfo.hProcess);
+	SENDFAIL_AND_QUIT(UPD_CHECK);
+    }
+
+    if(!CreateThread(NULL, 0, watch_stop, NULL, 0, &dw)) {
+	flog("ERROR: failed to create watch_stop thread");
+	CloseHandle(cld_r);
+	CloseHandle(pinfo.hProcess);
+	CloseHandle(write_event);
+	SENDFAIL_AND_QUIT(UPD_CHECK);
+    }
 
     log_state(fstate);
     /* Spam parsing */
@@ -253,8 +330,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	flog("GOT: %s", buf);
 	if(!buf)
 	    break;
-	if(!strncmp(buf, "WARNING: ", 9))
-	    continue;
 
 	if(fstate == FRESH_PRE && !strncmp(buf, FRESH_PRE_START_S, sizeof(FRESH_PRE_START_S)-1)) {
 	    SENDOK(UPD_CHECK);
@@ -315,6 +390,18 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	    }
 	}
 	if(fstate == FRESH_DOWN) {
+	    if(!strcmp(buf, FRESH_DOWN_FAIL_S)) {
+		flog("sigcheck fucked up");
+#if 0
+		// FIXME: ask prashant
+		send_pipe(&st, UPD_FILE_COMPLETE, 1);
+#else
+		SENDOK(UPD_FILE_COMPLETE);
+#endif
+		fstate = FRESH_IDLE;
+		log_state(fstate);
+		continue;
+	    }
 	    if(strstr(buf, FRESH_UPDATED_S)) {
 		SENDOK(UPD_FILE_COMPLETE);
 		fstate = FRESH_IDLE;
@@ -324,22 +411,28 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	    if(strlen(buf) > sizeof(FRESH_DOWN_S)-1 && strstr(buf, FRESH_DOWN_S)) 
 		continue;
 	}
-	break;
     }
     CloseHandle(cld_r);
     WaitForSingleObject(pinfo.hProcess, 30*1000);
     if(!GetExitCodeProcess(pinfo.hProcess, &dw)) {
 	CloseHandle(pinfo.hProcess);
 	flog("ERROR: failed to retrieve freshclam return code");
+	CloseHandle(write_event);
 	SENDFAIL_AND_QUIT(st.state);
     }
     CloseHandle(pinfo.hProcess);
     if(dw) {
-	flog("ERROR: freshclam exit code %u", dw);
+	if(dw == STILL_ACTIVE) {
+	    flog("ERROR: freshclam didn't exit, killing...", dw);
+	    kill_freshclam();
+	} else
+	    flog("ERROR: freshclam exit code %u", dw);
+	CloseHandle(write_event);
 	SENDFAIL_AND_QUIT(st.state);
     }
     if((updated_files && fstate != FRESH_RELOAD) || (!updated_files && fstate != FRESH_IDLE)) {
 	flog("ERROR: log parse failure. Freshclam exit value: %u", dw);
+	CloseHandle(write_event);
 	SENDFAIL_AND_QUIT(st.state);
     }
 
@@ -352,5 +445,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     } else
 	SENDOK(UPD_NONE);
     flog_close();
+    CloseHandle(write_event);
     return 0;
 }

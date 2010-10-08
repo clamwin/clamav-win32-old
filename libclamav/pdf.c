@@ -1044,6 +1044,7 @@ int cli_pdf(const char *dir, cli_ctx *ctx, off_t offset)
     } else {
 	const char *t;
 	size = q - eofmap + map_off;
+	q -= 9;
 	for (;q > eofmap;q--) {
 	    if (memcmp(q, "startxref", 9) == 0)
 		break;
@@ -1087,7 +1088,7 @@ int cli_pdf(const char *dir, cli_ctx *ctx, off_t offset)
     rc = run_pdf_hooks(&pdf, PDF_PHASE_PRE, -1, -1);
     if (rc) {
 	cli_dbgmsg("cli_pdf: returning %d\n", rc);
-	return rc;
+	return rc == CL_BREAK ? CL_CLEAN : rc;
     }
     /* parse PDF and find obj offsets */
     while ((rc = pdf_findobj(&pdf)) > 0) {
