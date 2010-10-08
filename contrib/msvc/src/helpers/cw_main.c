@@ -1,7 +1,7 @@
 /*
  * main() wrapper to handle startup code
  *
- * Copyright (c) 2008 Gianluigi Tiesi <sherpya@netfarm.it>
+ * Copyright (c) 2008-2010 Gianluigi Tiesi <sherpya@netfarm.it>
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -28,6 +28,11 @@ int _CRT_glob = 0;
 
 extern int cw_main(int argc, char *argv[]);
 
+static void ae_revfs(void)
+{
+    cw_revertfsredir();
+}
+
 #undef main
 int main(int argc, char* argv[])
 {
@@ -42,6 +47,6 @@ int main(int argc, char* argv[])
         fprintf(stderr, "[cw_main] Cannot install Console Ctrl Handler (%d)\n", GetLastError());
 
     cw_disablefsredir();
-    atexit(cw_revertfsredir);
+    atexit(ae_revfs);
     return cw_main(argc, argv);
 }
