@@ -55,7 +55,8 @@ extern "C" {
 // Use new callback if:
 //  - Newer Visual Studio (comes with newer SDK).
 //  - Visual Studio 2005 with Windows SDK 6.0+
-#if !defined(_MSC_VER) || _MSC_VER < 1500 && (!defined(VER_PRODUCTBUILD) || VER_PRODUCTBUILD < 6000)
+//  - MinGW64
+#if !defined(__MINGW64__) && (!defined(_MSC_VER) || _MSC_VER < 1500 && (!defined(VER_PRODUCTBUILD) || VER_PRODUCTBUILD < 6000))
   static BOOL CALLBACK ELM_Callback(PSTR  ModuleName,
                                     ModuleBaseType ModuleBase,
                                     ULONG ModuleSize,
