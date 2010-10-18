@@ -261,6 +261,9 @@
 /* Define to 1 if pread is declared even after undefining macros. */
 /* #undef HAVE_RAW_DECL_PREAD */
 
+/* Define to 1 if pwrite is declared even after undefining macros. */
+/* #undef HAVE_RAW_DECL_PWRITE */
+
 /* Define to 1 if rawmemchr is declared even after undefining macros. */
 /* #undef HAVE_RAW_DECL_RAWMEMCHR */
 
@@ -549,6 +552,10 @@
 
 /* Define to 1 if you have the ANSI C header files. */
 #define STDC_HEADERS 1
+
+/* Define to the prefix of C symbols at the assembler and linker level, either
+   an underscore or empty. */
+#define USER_LABEL_PREFIX 
 
 /* Version number of package */
 #define VERSION "0"

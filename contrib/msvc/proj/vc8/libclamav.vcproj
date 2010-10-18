@@ -1539,6 +1539,10 @@
 					>
 				</File>
 				<File
+					RelativePath="..\..\gnulib\verify.h"
+					>
+				</File>
+				<File
 					RelativePath="..\..\gnulib\vsnprintf.c"
 					>
 				</File>
