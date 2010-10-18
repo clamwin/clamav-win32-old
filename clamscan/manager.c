@@ -363,9 +363,11 @@ static int scanstdin(const struct cl_engine *engine, const struct optstruct *opt
     } else if(ret == CL_CLEAN) {
 	if(!printinfected)
 	    mprintf("stdin: OK\n");
-    } else
+    } else {
 	if(!printinfected)
 	    logg("stdin: %s ERROR\n", cl_strerror(ret));
+	info.errors++;
+    }
 
     unlink(file);
     free(file);

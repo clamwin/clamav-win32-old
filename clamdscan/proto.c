@@ -316,24 +316,26 @@ int dsresult(int sockd, int scantype, const char *filename, int *printok, int *e
 	if(len > 7) {
 	    char *colon = strrchr(bol, ':');
 	    if(colon && colon[1] != ' ') {
-		char *colon2;
+		char *br;
 		*colon = 0;
-		colon2 = strrchr(bol, ':');
-		*colon = ':';
-		colon = colon2;
+		br = strrchr(bol, '(');
+		if(br)
+		    *br = 0;
+		colon = strrchr(bol, ':');
 	    }
 	    if(!colon) {
 		logg("Failed to parse reply\n");
 		return -1;
 	    } else if(!memcmp(eol - 7, " FOUND", 6)) {
+		*(eol - 7) = 0;
 		*printok = 0;
 		infected++;
 		if(filename) {
 		    if(scantype >= STREAM) {
-			logg("~%s%s\n", filename, colon);
+			logg("~%s%s FOUND\n", filename, colon);
 			if(action) action(filename);
 		    } else {
-			logg("~%s\n", bol);
+			logg("~%s FOUND\n", bol);
 			*colon = '\0';
 			if(action)
 			    action(bol);

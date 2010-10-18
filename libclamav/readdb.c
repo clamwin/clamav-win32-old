@@ -1256,6 +1256,19 @@ static int load_oneldb(char *buffer, int chkpua, int chkign, struct cl_engine *e
 	return CL_EMALFDB;
     }
 
+    if(tdb.engine) {
+	if(tdb.engine[0] > cl_retflevel()) {
+	    cli_dbgmsg("cli_loadldb: Signature for %s not loaded (required f-level: %u)\n", virname, tdb.engine[0]);
+	    FREE_TDB(tdb);
+	    (*sigs)--;
+	    return CL_SUCCESS;
+	} else if(tdb.engine[1] < cl_retflevel()) {
+	    FREE_TDB(tdb);
+	    (*sigs)--;
+	    return CL_SUCCESS;
+	}
+    }
+
     if(!tdb.target) {
 	cli_errmsg("cli_loadldb: No target specified in TDB\n");
 	FREE_TDB(tdb);
@@ -1336,19 +1349,6 @@ static int load_oneldb(char *buffer, int chkpua, int chkign, struct cl_engine *e
 	    if (!tdb.macro_ptids)
 		return CL_EMEM;
 	    tdb.macro_ptids[i-1] = root->ac_patterns-1;
-	}
-
-	if(tdb.engine) {
-	    if(tdb.engine[0] > cl_retflevel()) {
-		cli_dbgmsg("cli_loadldb: Signature for %s not loaded (required f-level: %u)\n", virname, tdb.engine[0]);
-		FREE_TDB(tdb);
-		(*sigs)--;
-		return CL_SUCCESS;
-	    } else if(tdb.engine[1] < cl_retflevel()) {
-		FREE_TDB(tdb);
-		(*sigs)--;
-		return CL_SUCCESS;
-	    }
 	}
     }
     memcpy(&lsig->tdb, &tdb, sizeof(tdb));
@@ -1468,6 +1468,8 @@ static int cli_loadcbc(FILE *fs, struct cl_engine *engine, unsigned int *signo, 
 	return CL_SUCCESS;
     }
     bc->id = bcs->count;/* must set after _load, since load zeroes */
+    if (engine->bytecode_mode == CL_BYTECODE_MODE_TEST)
+	cli_infomsg(NULL, "bytecode %u -> %s\n", bc->id, dbname);
     sigs++;
     if (bc->kind == BC_LOGICAL || bc->lsig) {
         unsigned oldsigs = sigs;
@@ -1995,7 +1997,7 @@ static int cli_loadmd5(FILE *fs, struct cl_engine *engine, unsigned int *signo, 
 
 	if(mode == MD5_MDB) { /* section MD5 */
 	    if(!db->md5_sizes_hs.capacity) {
-		    cli_hashset_init(&db->md5_sizes_hs, 65536, 80);
+		cli_hashset_init_pool(&db->md5_sizes_hs, 65536, 80, engine->mempool);
 	    }
 	    cli_hashset_addkey(&db->md5_sizes_hs, new->filesize);
 	}

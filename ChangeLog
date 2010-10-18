@@ -1,3 +1,67 @@
+Mon Oct 18 12:52:25 EEST 2010 (edwin)
+-------------------------------------
+ * libclamav/pdf.c: keep parsing after %%EOF (bb #2264).
+
+Mon Oct 18 11:30:01 CEST 2010 (tk)
+----------------------------------
+ * clamdscan: fix name parsing in normal mode (bb#2328)
+
+Mon Oct 18 11:10:14 CEST 2010 (tk)
+----------------------------------
+ * libclamav/others.h: bump f-level
+
+Mon Oct 18 11:27:16 EEST 2010 (edwin)
+-------------------------------------
+ * configure: fix bytecode and autoit for Apple-style universal builds (bb #2030)
+
+Mon Oct 18 10:46:25 EEST 2010 (edwin)
+-------------------------------------
+ * libclamav: test mode for bytecode (bb #2101)
+
+Sat Oct 16 18:23:17 CEST 2010 (acab)
+------------------------------------
+ * clamav-milter: send FILDES early (bb#2321)
+
+Fri Oct 15 17:48:00 CEST 2010 (acab)
+------------------------------------
+ * libclamav/pe_icons.c: make sure all ref points are initted (bb#2291)
+
+Fri Oct 15 16:13:27 CEST 2010 (tk)
+----------------------------------
+ * freshclam/manager.c: don't mix IPv4 and IPv6 addresses while randomizing (bb#2319)
+
+Thu Oct 14 19:43:09 CEST 2010 (acab)
+------------------------------------
+ * libclamav: add pool based hastabs so we don't frag on md5 sizes (bb#2185)
+
+Thu Oct 14 16:14:01 CEST 2010 (acab)
+------------------------------------
+ * libclamav/fmap.c: properly check for pread errors (bb#2306)
+
+Thu Oct 14 16:06:06 CEST 2010 (acab)
+------------------------------------
+ * clamd: properly terminate zSTATS (bb#2286)
+
+Thu Oct 14 15:36:06 CEST 2010 (acab)
+------------------------------------
+ * freshclam: undefine qcompare if HAVE_GETADDRINFO is unset (bb#2289)
+
+Mon Oct 11 13:49:29 CEST 2010 (tk)
+----------------------------------
+ * clamdscan: fix parsing of virus names in extended mode (bb#2311)
+
+Fri Oct  8 15:38:56 CEST 2010 (tk)
+----------------------------------
+ * clamscan/manager.c: return errors for stdin scan failures (bb#2317)
+
+Fri Oct  8 15:22:22 CEST 2010 (tk)
+----------------------------------
+ * libclamav/elf.c: shutdown error message (bb#2318)
+
+Fri Oct  8 14:23:24 CEST 2010 (tk)
+----------------------------------
+ * libclamav/readdb.c: fix handling of Engine attrib (bb#2297)
+
 Tue Oct  5 18:14:59 EEST 2010 (edwin)
 -------------------------------------
  * libclamav/pdf.c: Fix 'Unknown error code ERROR'(bb #2296).
