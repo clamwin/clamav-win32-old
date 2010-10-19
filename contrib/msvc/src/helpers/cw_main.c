@@ -28,11 +28,6 @@ int _CRT_glob = 0;
 
 extern int cw_main(int argc, char *argv[]);
 
-static void ae_revfs(void)
-{
-    cw_revertfsredir();
-}
-
 #undef main
 int main(int argc, char* argv[])
 {
@@ -47,6 +42,5 @@ int main(int argc, char* argv[])
         fprintf(stderr, "[cw_main] Cannot install Console Ctrl Handler (%d)\n", GetLastError());
 
     cw_disablefsredir();
-    atexit(ae_revfs);
     return cw_main(argc, argv);
 }
