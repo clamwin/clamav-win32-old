@@ -33,14 +33,14 @@
 
 #define MAX_VIRNAME_LEN 1024
 
-
-HANDLE engine_event; /* engine unused event */
+HANDLE reload_event;
+volatile LONG reload_waiters = 0;
 
 HANDLE engine_mutex;
 /* protects the following items */
 struct cl_engine *engine = NULL;
-struct cl_stat dbstat;
 char dbdir[PATH_MAX];
+char tmpdir[PATH_MAX];
 /* end of protected items */
 
 typedef struct {
@@ -113,8 +113,8 @@ static int add_instance(instance *inst) {
 	instances[i].inst = inst;
 	instances[i].refcnt = 0;
 	ninsts_avail--;
+	logg("add_instance: now %u/%u instances available\n", ninsts_avail, ninsts_total);
 	unlock_instances();
-	ResetEvent(engine_event);
 	return 0;
     }
     logg("!add_instances: you should not be reading this\n");
@@ -141,8 +141,7 @@ static int del_instance(instance *inst) {
 	instances[i].inst = NULL;
 	instances[i].refcnt = 0;
 	ninsts_avail++;
-	if(ninsts_avail == ninsts_total)
-	    ResetEvent(engine_event);
+	logg("del_instance: %u / %u instances now available\n", ninsts_avail, ninsts_total);
 	unlock_instances();
 	return 0;
     }
@@ -165,13 +164,12 @@ static int is_instance(instance *inst) {
 BOOL interface_setup(void) {
     if(!(engine_mutex = CreateMutex(NULL, FALSE, NULL)))
 	return FALSE;
-    if(!(engine_event = CreateEvent(NULL, TRUE, TRUE, NULL))) {
+    if(!(reload_event = CreateEvent(NULL, TRUE, TRUE, NULL))) {
 	CloseHandle(engine_mutex);
 	return FALSE;
     }
     if(!(instance_mutex = CreateMutex(NULL, FALSE, NULL))) {
 	CloseHandle(engine_mutex);
-	CloseHandle(engine_event);
 	return FALSE;
     }
     return TRUE;
@@ -202,47 +200,7 @@ static int load_db(void) {
     }
 
     logg("load_db: loaded %d signatures\n", signo);
-    memset(&dbstat, 0, sizeof(dbstat));
-    cl_statinidir(dbdir, &dbstat);
     WIN();
-}
-
-
-DWORD WINAPI reload(void *param) {
-    return 0; /* FIXME */
-    while(1) {
-	Sleep(1000*60);
-	if(WaitForSingleObject(engine_event, INFINITE) == WAIT_FAILED) {
-	    logg("!reload: failed to wait on reload event");
-	    continue;
-	}
-	while(1) {
-	    if(lock_engine()) {
-		logg("!reload: failed to lock engine");
-		break;
-	    }
-	    if(!engine || !cl_statchkdir(&dbstat)) {
-		unlock_engine();
-		break;
-	    }
-	    if(lock_instances()) {
-		unlock_engine();
-		logg("!reload: failed to lock instances\n");
-		break;
-	    }
-	    if(ninsts_avail != ninsts_total) {
-		unlock_engine();
-		unlock_instances();
-		Sleep(5000);
-		continue;
-	    }
-	    cl_engine_free(engine);
-	    load_db();
-	    unlock_engine();
-	    unlock_instances();
-	    break;
-	}
-    }
 }
 
 static void free_engine_and_unlock(void) {
@@ -252,7 +210,6 @@ static void free_engine_and_unlock(void) {
 }
 
 int CLAMAPI Scan_Initialize(const wchar_t *pEnginesFolder, const wchar_t *pTempRoot, const wchar_t *pLicenseKey, BOOL bLoadMinDefs) {
-    char tmpdir[PATH_MAX];
     BOOL cant_convert;
     int ret;
 
@@ -277,7 +234,7 @@ int CLAMAPI Scan_Initialize(const wchar_t *pEnginesFolder, const wchar_t *pTempR
     
     minimal_definitions = bLoadMinDefs;
     if(bLoadMinDefs)
-	logg("!MINIMAL DEFINITIONS MODE ON!");
+	logg("!MINIMAL DEFINITIONS MODE ON!\n");
 
     if(!WideCharToMultiByte(CP_ACP, WC_NO_BEST_FIT_CHARS, pTempRoot, -1, tmpdir, sizeof(tmpdir), NULL, &cant_convert) || cant_convert) {
 	free_engine_and_unlock();
@@ -564,6 +521,7 @@ int CLAMAPI Scan_ScanObjectByHandle(CClamAVScanner *pScanner, HANDLE object, int
 	FAIL(CL_EARG, "invalid instance %p", inst);
     }
     instances[i].refcnt++;
+    ResetEvent(reload_event);
     unlock_instances();
 
     sctx.entryfd = fd;
@@ -578,6 +536,8 @@ int CLAMAPI Scan_ScanObjectByHandle(CClamAVScanner *pScanner, HANDLE object, int
     if(lock_instances())
 	FAIL(CL_EMEM, "failed to lock instances for instance %p", pScanner);
     instances[i].refcnt--;
+    if(!instances[i].refcnt)
+	SetEvent(reload_event);
     unlock_instances();
 
     if(res == CL_VIRUS) {
@@ -737,5 +697,80 @@ cl_error_t postscan_cb(int fd, int result, const char *virname, void *context) {
 }
 
 CLAMAPI void Scan_ReloadDatabase(void) {
-    logg("Reloading db (FIXME: NOT REALLY)");
+    if(InterlockedIncrement(&reload_waiters)==1) {
+	int reload_ok = 0;
+	logg("Scan_ReloadDatabase: Database reload requested received, waiting for idle state\n");
+	while(1) {
+	    unsigned int i;
+	    int ret;
+	    if(WaitForSingleObject(reload_event, INFINITE) == WAIT_FAILED) {
+		logg("!Scan_ReloadDatabase: failed to wait on reload event\n");
+		continue;
+	    }
+	    logg("Scan_ReloadDatabase: Now idle, acquiring engine lock\n");
+    	    if(lock_engine()) {
+		logg("!Scan_ReloadDatabase: failed to lock engine\n");
+		break;
+	    }
+	    if(lock_engine()) {
+		logg("!Scan_ReloadDatabase: failed to lock engine\n");
+		break;
+	    }
+	    if(!engine) {
+		logg("!Scan_ReloadDatabase: engine is NULL\n");
+		unlock_engine();
+		break;
+	    }
+	    logg("Scan_ReloadDatabase: Engine locked, acquiring instance lock\n");
+	    if(lock_instances()) {
+		logg("!Scan_ReloadDatabase: failed to lock instances\n");
+		unlock_engine();
+		break;
+	    }
+            for(i=0; i<ninsts_total; i++) {
+		if(instances[i].inst && instances[i].refcnt)
+		    break;
+	    }
+	    if(i!=ninsts_total) {
+		logg("Scan_ScanObjectByHandle: some instances are still in use\n");
+		ResetEvent(reload_event);
+		unlock_instances();
+		unlock_engine();
+		continue;
+	    }
+	    logg("Scan_ReloadDatabase: Destroying old engine\n");
+	    cl_engine_free(engine);
+	    logg("Scan_ReloadDatabase: Loading new engine\n");
+
+	    // NEW STUFF //
+	    if(!(engine = cl_engine_new())) {
+		unlock_engine();
+		logg("!Scan_ReloadDatabase: Not enough memory for a new engine\n");
+		unlock_instances();
+		unlock_engine();
+		break;
+	    }
+	    cl_engine_set_clcb_pre_scan(engine, prescan_cb);
+	    cl_engine_set_clcb_post_scan(engine, postscan_cb);
+    
+	    if((ret = cl_engine_set_str(engine, CL_ENGINE_TMPDIR, tmpdir))) {
+		unlock_instances();
+		free_engine_and_unlock();
+		logg("!Scan_ReloadDatabase: Failed to set engine tempdir: %s\n", cl_strerror(ret));
+		break;
+	    }
+
+	    load_db(); /* FIXME: FIAL? */
+	    unlock_instances();
+	    unlock_engine();
+	    reload_ok = 1;
+	    break;
+	}
+	if(reload_ok)
+	    logg("Scan_ReloadDatabase: Database successfully reloaded\n");
+	else
+	    logg("!Scan_ReloadDatabase: Database reload failed\n");
+    } else
+	logg("^Database reload requested received while reload is pending\n");
+    InterlockedDecrement(&reload_waiters);
 }
