@@ -147,6 +147,7 @@ static void dynLoad(void)
     memset(&cw_helpers.psapi, 0, sizeof(psapi_t));
     memset(&cw_helpers.ws2, 0, sizeof(ws2_32_t));
     memset(&cw_helpers.wt, 0, sizeof(wintrust_t));
+    memset(&cw_helpers.dnsapi, 0, sizeof(dnsapi_t));
 
     /* kernel 32*/
     cw_helpers.k32.hLib = LoadLibraryA("kernel32.dll");
@@ -263,6 +264,14 @@ static void dynLoad(void)
         break;
     }
 
+    cw_helpers.dnsapi.hLib = LoadLibraryA("dnsapi.dll");
+    if (cw_helpers.dnsapi.hLib)
+    {
+        cw_helpers.dnsapi.ok = TRUE;
+        IMPORT_FUNC_OR_FAIL(dnsapi, DnsQuery_A);
+        IMPORT_FUNC_OR_FAIL(dnsapi, DnsRecordListFree);
+    }
+
     /* DynLoad jit */
     jit_init();
 
@@ -286,6 +295,8 @@ static void dynUnLoad(void)
         FreeLibrary(cw_helpers.ws2.hLib);
     if (cw_helpers.psapi.hLib)
         FreeLibrary(cw_helpers.psapi.hLib);
+    if (cw_helpers.dnsapi.hLib)
+        FreeLibrary(cw_helpers.dnsapi.hLib);
 
     jit_uninit();
 }

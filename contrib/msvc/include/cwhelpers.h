@@ -23,6 +23,7 @@
 
 #include <tlhelp32.h>
 #include <psapi.h>
+#include <windns.h>
 
 #undef getaddrinfo
 #undef freeaddrinfo
@@ -66,6 +67,11 @@ typedef BOOL (WINAPI *imp_UnregisterWaitEx)(HANDLE, HANDLE);
 /* ws2_32 ipv6 */
 typedef int (WINAPI *imp_getaddrinfo)(const char*, const char*, const struct addrinfo*, struct addrinfo**);
 typedef void (WINAPI *imp_freeaddrinfo)(struct addrinfo*);
+
+/* dnsapi */
+/* DNS API Version */
+typedef DNS_STATUS (WINAPI *imp_DnsQuery_A)(PCSTR, WORD, DWORD, PIP4_ARRAY, PDNS_RECORD *, PVOID *);
+typedef VOID (WINAPI *imp_DnsRecordListFree)(PDNS_RECORD, DNS_FREE_TYPE);
 
 /* wintrust */
 #include <pshpack8.h>
@@ -173,6 +179,14 @@ typedef struct _wintrust_t
     imp_WinVerifyTrust WinVerifyTrust;
 } wintrust_t;
 
+typedef struct _dnsapi_t
+{
+    BOOL ok;
+    HINSTANCE hLib;
+    imp_DnsQuery_A DnsQuery_A;
+    imp_DnsRecordListFree DnsRecordListFree;
+} dnsapi_t;
+
 typedef struct _helpers_t
 {
     kernel32_t k32;
@@ -180,6 +194,7 @@ typedef struct _helpers_t
     psapi_t psapi;
     ws2_32_t ws2;
     wintrust_t wt;
+    dnsapi_t dnsapi;
 } helpers_t;
 
 typedef int (*proc_callback)(PROCESSENTRY32 ProcStruct, MODULEENTRY32 me32, void *data);

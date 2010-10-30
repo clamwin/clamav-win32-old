@@ -20,7 +20,6 @@
 
 #include <platform.h>
 #include <osdeps.h>
-#include <windns.h>
 #include <iphlpapi.h>
 #include <inttypes.h>
 
@@ -389,47 +388,18 @@ char *txtquery_compat(const char *domain, unsigned int *ttl)
     return txt;
 }
 
-/* DNS API Version */
-typedef DNS_STATUS (WINAPI *fnDnsQuery)(
-    PCSTR           pszName,
-    WORD            wType,
-    DWORD           Options,
-    PIP4_ARRAY      aipServers,
-    PDNS_RECORD     *ppQueryResults,
-    PVOID           *pReserved
-);
-
-typedef VOID (WINAPI *fnDnsRecordListFree)(
-    PDNS_RECORD     pRecordList,
-    DNS_FREE_TYPE   FreeType
-);
 
 char *txtquery_dnsapi(const char *domain, unsigned int *ttl)
 {
     PDNS_RECORD pRec = NULL, pRecOrig = NULL;
-    HMODULE hDnsApi = NULL;
-    fnDnsQuery pDnsQuery = NULL;
-    fnDnsRecordListFree pDnsRecordListFree = NULL;
     char *txt = NULL;
 
-    if (!(hDnsApi = LoadLibraryA("dnsapi.dll")))
-    {
-        logg("!DNS Resolver: Cannot load dnsapi.dll: %lu\n", GetLastError());
+    if (!cw_helpers.dnsapi.ok)
         return txtquery_compat(domain, ttl);
-    }
 
-    if (!(pDnsQuery = (fnDnsQuery) GetProcAddress(hDnsApi, "DnsQuery_A")) ||
-        !(pDnsRecordListFree = (fnDnsRecordListFree) GetProcAddress(hDnsApi, "DnsRecordListFree")))
-    {
-        logg("!DNS Resolver: Cannot find needed exports in dnsapi.dll\n");
-        FreeLibrary(hDnsApi);
-        return txtquery_compat(domain, ttl);
-    }
-
-    if (pDnsQuery(domain, DNS_TYPE_TEXT, DNS_QUERY_STANDARD | DNS_QUERY_BYPASS_CACHE, NULL, &pRec, NULL) != ERROR_SUCCESS)
+    if (cw_helpers.dnsapi.DnsQuery_A(domain, DNS_TYPE_TEXT, DNS_QUERY_STANDARD | DNS_QUERY_BYPASS_CACHE, NULL, &pRec, NULL) != ERROR_SUCCESS)
     {
         logg("!DNS Resolver: Can't query %s\n", domain);
-        FreeLibrary(hDnsApi);
         return NULL;
     }
 
@@ -451,8 +421,7 @@ char *txtquery_dnsapi(const char *domain, unsigned int *ttl)
         pRec = pRec->pNext;
     }
     if (!txt) logg("!DNS Resolver: Broken DNS reply.\n");
-    pDnsRecordListFree(pRecOrig, DnsFreeRecordList);
-    FreeLibrary(hDnsApi);
+    cw_helpers.dnsapi.DnsRecordListFree(pRecOrig, DnsFreeRecordList);
     /* printf("DNS Resolver: Query Done using DnsApi Method\n"); */
     /* printf("DNS Resolver: Result [%s]\n", txt); */
     return txt;
