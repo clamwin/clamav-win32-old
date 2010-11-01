@@ -311,6 +311,8 @@ const struct clam_option __clam_options[] = {
 
     { "ScanOLE2", "scan-ole2", 0, TYPE_BOOL, MATCH_BOOL, 1, NULL, 0, OPT_CLAMD | OPT_CLAMSCAN, "This option enables scanning of OLE2 files, such as Microsoft Office\ndocuments and .msi files.", "yes" },
 
+    { "OLE2BlockMacros", NULL, 0, TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_CLAMD, "With this option enabled OLE2 files with VBA macros, which were not\ndetected by signatures will be marked as \"Heuristics.OLE2.ContainsMacros\".", "no" },
+
     { "ScanPDF", "scan-pdf", 0, TYPE_BOOL, MATCH_BOOL, 1, NULL, 0, OPT_CLAMD | OPT_CLAMSCAN, "This option enables scanning within PDF files.", "yes" },
 
     { "ScanArchive", "scan-archive", 0, TYPE_BOOL, MATCH_BOOL, 1, NULL, 0, OPT_CLAMD | OPT_CLAMSCAN, "Scan within archives and compressed files.", "yes" },
@@ -372,6 +374,8 @@ const struct clam_option __clam_options[] = {
     { "CompressLocalDatabase", NULL, 0, TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_FRESHCLAM, "By default freshclam will keep the local databases (.cld) uncompressed to\nmake their handling faster. With this option you can enable the compression.\nThe change will take effect with the next database update.", "" },
 
     { "ExtraDatabase", NULL, 0, TYPE_STRING, NULL, -1, NULL, FLAG_MULTIPLE, OPT_FRESHCLAM, "Download additional database. This option can be used multiple times.", "dbname1\ndbname2" },
+
+    { "DatabaseCustomURL", NULL, 0, TYPE_STRING, NULL, -1, NULL, FLAG_MULTIPLE, OPT_FRESHCLAM, "With this option you can provide custom sources (http:// or file://) for database files.\nThis option can be used multiple times.", "http://myserver.com/mysigs.ndb\nfile:///mnt/nfs/local.hdb" },
 
     { "HTTPProxyServer", NULL, 0, TYPE_STRING, NULL, -1, NULL, 0, OPT_FRESHCLAM, "If you're behind a proxy, please enter its address here.", "your-proxy" },
 

@@ -1,3 +1,24 @@
+Sun Oct 31 09:13:33 EET 2010 (edwin)
+------------------------------------
+ * libclamav/builtin_bytecodes.h: Don't disable JIT on pentium4 (bb #2345)
+
+Fri Oct 29 22:26:55 CEST 2010 (acab)
+------------------------------------
+ * clamav-for-windows: displace clamav-for-windows to a separate solution and directory
+
+Fri Oct 29 19:03:31 CEST 2010 (tk)
+----------------------------------
+ * clamd: add new option OLE2BlockMacros (requested by Mike)
+
+Fri Oct 29 17:55:10 CEST 2010 (tk)
+----------------------------------
+ * freshclam: DatabaseCustomURL: add support for If-Modified-Since
+	      and signature counter
+
+Thu Oct 28 16:23:47 CEST 2010 (tk)
+----------------------------------
+ * freshclam: add initial support for DatabaseCustomURL
+
 Mon Oct 25 18:02:56 CEST 2010 (tk)
 ----------------------------------
  * V 0.96.4
