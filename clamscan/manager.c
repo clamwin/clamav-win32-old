@@ -208,14 +208,19 @@ void scanfile(const char *filename, struct cl_engine *engine, const struct optst
     }
 
     if(ret == CL_VIRUS && action) {
-        fmap_t *maptype = fmap(fd, 0, 0);
-        cli_file_t type = cli_filetype2(maptype, engine);
-        funmap(maptype);
+        cli_file_t type = CL_TYPE_ANY;
+        if (optget(opts, "keep-mbox")->enabled) {
+            fmap_t *maptype = fmap(fd, 0, 0);
+            if (maptype) {
+                type = cli_filetype2(maptype, engine);
+                funmap(maptype);
+            }
+        }
         close(fd);
-        if (optget(opts, "keep-mbox")->enabled && (type == CL_TYPE_MAIL))
+        if (type == CL_TYPE_MAIL)
             logg("~%s: no action performed on a mailbox\n", filename);
         else
-	        action(filename);
+            action(filename);
 	}
     else
         close(fd);
