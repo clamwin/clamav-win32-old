@@ -69,6 +69,7 @@
 #include "localserver.h"
 #include "others.h"
 #include "shared.h"
+#include "scanner.h"
 
 short debug_mode = 0, logok = 0;
 short foreground = 0;
@@ -268,6 +269,8 @@ int main(int argc, char **argv)
     } else
 	logg_file = NULL;
 
+    if (optget(opts,"DevLiblog")->enabled)
+	cl_set_clcb_msg(msg_callback);
     if((ret = cl_init(CL_INIT_DEFAULT))) {
 	logg("!Can't initialize libclamav: %s\n", cl_strerror(ret));
 	ret = 1;
@@ -447,6 +450,9 @@ int main(int argc, char **argv)
 	    break;
 	}
     }
+
+    cl_engine_set_clcb_hash(engine, hash_callback);
+    detstats_clear();
 
     if(optget(opts, "LeaveTemporaryFiles")->enabled)
 	cl_engine_set_num(engine, CL_ENGINE_KEEPTMP, 1);

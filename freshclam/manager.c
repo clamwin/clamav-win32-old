@@ -53,6 +53,9 @@
 #include <sys/types.h>
 #include <time.h>
 #include <fcntl.h>
+#ifndef	_WIN32
+#include <sys/wait.h>
+#endif
 #include <sys/stat.h>
 #include <dirent.h>
 #include <errno.h>
@@ -72,6 +75,7 @@
 #include "shared/misc.h"
 #include "shared/cdiff.h"
 #include "shared/tar.h"
+#include "shared/clamdcom.h"
 
 #include "libclamav/clamav.h"
 #include "libclamav/others.h"
@@ -426,6 +430,7 @@ static int wwwconnect(const char *server, const char *proxy, int pport, char *ip
     return -2;
 }
 
+/*
 static const char *readblineraw(int fd, char *buf, int bufsize, int filesize, int *bread)
 {
 	char *pt;
@@ -486,6 +491,7 @@ static const char *readbline(int fd, char *buf, int bufsize, int filesize, int *
 
     return line;
 }
+*/
 
 static unsigned int fmt_base64(char *dest, const char *src, unsigned int len)
 {
@@ -556,25 +562,18 @@ static char *proxyauth(const char *user, const char *pass)
     return auth;
 }
 
-/*
- * TODO:
- * - strptime() is most likely not portable enough
- */
 int submitstats(const char *clamdcfg, const struct optstruct *opts)
 {
-	int fd, sd, bread, lread = 0, cnt, ret;
+	int sd, clamsockd, bread, cnt, ret;
 	char post[SUBMIT_MIN_ENTRIES * 256 + 512];
 	char query[SUBMIT_MIN_ENTRIES * 256];
-	char buff[512], statsdat[512], newstatsdat[512], uastr[128];
-	char logfile[256], fbuff[FILEBUFF];
-	char *pt, *pt2, *auth = NULL;
-	const char *line, *country = NULL, *user, *proxy = NULL, *hostid = NULL;
-	struct optstruct *clamdopt;
+	char uastr[128], *line;
+	char *pt, *auth = NULL;
+	const char *country = NULL, *user, *proxy = NULL, *hostid = NULL;
 	const struct optstruct *opt;
-	struct stat sb;
-	struct tm tms;
-	time_t epoch;
 	unsigned int qcnt, entries, submitted = 0, permfail = 0, port = 0;
+        struct RCVLN rcv;
+	const char *tokens[5];
 
 
     if((opt = optget(opts, "DetectionStatsCountry"))->enabled) {
@@ -593,67 +592,6 @@ int submitstats(const char *clamdcfg, const struct optstruct *opts)
 	hostid = opt->strarg;
     }
 
-    if(!(clamdopt = optparse(clamdcfg, 0, NULL, 1, OPT_CLAMD, 0, NULL))) {
-	logg("!SubmitDetectionStats: Can't open or parse configuration file %s\n", clamdcfg);
-	return 56;
-    }
-
-    if(!(opt = optget(clamdopt, "LogFile"))->enabled) {
-	logg("!SubmitDetectionStats: LogFile needs to be enabled in %s\n", clamdcfg);
-	logg("SubmitDetectionStats: Please consider enabling ExtendedDetectionInfo\n");
-	optfree(clamdopt);
-	return 56;
-    }
-    strncpy(logfile, opt->strarg, sizeof(logfile));
-    logfile[sizeof(logfile) - 1] = 0;
-
-    if(!optget(clamdopt, "LogTime")->enabled) {
-	logg("!SubmitDetectionStats: LogTime needs to be enabled in %s\n", clamdcfg);
-	optfree(clamdopt);
-	return 56;
-    }
-    optfree(clamdopt);
-
-    if((fd = open("stats.dat", O_RDONLY|O_BINARY)) != -1) {
-	if((bread = read(fd, statsdat, sizeof(statsdat) - 1)) == -1) {
-	    logg("^SubmitDetectionStats: Can't read stats.dat\n");
-	    bread = 0;
-	}
-	statsdat[bread] = 0;
-	close(fd);
-    } else {
-	*statsdat = 0;
-    }
-
-    if((fd = open(logfile, O_RDONLY|O_BINARY)) == -1) {
-	logg("!SubmitDetectionStats: Can't open %s for reading\n", logfile);
-	return 56;
-    }
-
-    if(fstat(fd, &sb) == -1) {
-	logg("!SubmitDetectionStats: fstat() failed\n");
-	close(fd);
-	return 56;
-    }
-
-    while((line = readbline(fd, fbuff, FILEBUFF, sb.st_size, &lread)))
-	if(strlen(line) >= 32 && !strcmp(&line[strlen(line) - 6], " FOUND"))
-	    break;
-
-    if(!line) {
-	logg("SubmitDetectionStats: No detection records found\n");
-	close(fd);
-	return 1;
-    }
-
-    if(*statsdat && !strcmp(line, statsdat)) {
-	logg("SubmitDetectionStats: No new detection records found\n");
-	close(fd);
-	return 1;
-    } else {
-	strncpy(newstatsdat, line, sizeof(newstatsdat));
-    }
-
     if((opt = optget(opts, "HTTPUserAgent"))->enabled)
         strncpy(uastr, opt->strarg, sizeof(uastr));
     else
@@ -669,14 +607,11 @@ int submitstats(const char *clamdcfg, const struct optstruct *opts)
 	    user = opt->strarg;
 	    if(!(opt = optget(opts, "HTTPProxyPassword"))->enabled) {
 		logg("!SubmitDetectionStats: HTTPProxyUsername requires HTTPProxyPassword\n");
-		close(fd);
 		return 56;
 	    }
 	    auth = proxyauth(user, opt->strarg);
-	    if(!auth) {
-		close(fd);
+	    if(!auth)
 		return 56;
-	    }
 	}
 
 	if((opt = optget(opts, "HTTPProxyPort"))->enabled)
@@ -685,50 +620,27 @@ int submitstats(const char *clamdcfg, const struct optstruct *opts)
 	logg("*Connecting via %s\n", proxy);
     }
 
+    if((clamsockd = clamd_connect(clamdcfg, "SubmitDetectionStats")) < 0)
+	return 52;
+
+    recvlninit(&rcv, clamsockd);
+    if(sendln(clamsockd, "zDETSTATS", 10)) {
+        closesocket(clamsockd);
+	return 52;
+    }
+
     ret = 0;
     memset(query, 0, sizeof(query));
     qcnt = 0;
     entries = 0;
-    do {
-	if(strlen(line) < 32 || strcmp(&line[strlen(line) - 6], " FOUND"))
-	    continue;
-
-	if(*statsdat && !strcmp(line, statsdat))
-	    break;
-
-	strncpy(buff, line, sizeof(buff));
-	buff[sizeof(buff) - 1] = 0;
-	if(!(pt = strstr(buff, " -> "))) {
-	    logg("*SubmitDetectionStats: Skipping detection entry logged without time\b");
-	    continue;
-	}
-	*pt = 0;
-	pt += 4;
-
-	tms.tm_isdst = -1;
-	if(!strptime(buff, "%a %b  %d %H:%M:%S %Y", &tms) || (epoch = mktime(&tms)) == -1) {
-	    logg("!SubmitDetectionStats: Failed to convert date string\n");
-	    ret = 1;
+    while(recvln(&rcv, &line, NULL) > 0) {
+        if(cli_strtokenize(line, ':', 5, tokens) != 5) {
+	    logg("!SubmitDetectionStats: Invalid data format\n");
+	    ret = 52;
 	    break;
 	}
 
-	pt2 = &pt[strlen(pt) - 6];
-	*pt2 = 0;
-
-	if(!(pt2 = strrchr(pt, ' ')) || pt2[-1] != ':') {
-	    logg("!SubmitDetectionStats: Incorrect format of the log file (1)\n");
-	    ret = 1;
-	    break;
-	}
-	pt2[-1] = 0;
-	pt2++;
-
-	if((pt = strrchr(pt, *PATHSEP)))
-	    *pt++ = 0;
-	if(!pt)
-	    pt = (char*) "NOFNAME";
-
-	qcnt += snprintf(&query[qcnt], sizeof(query) - qcnt, "ts[]=%u&fname[]=%s&virus[]=%s&", (unsigned int) epoch, pt, pt2);
+	qcnt += snprintf(&query[qcnt], sizeof(query) - qcnt, "ts[]=%s&fname[]=%s&virus[]=%s(%s:%s)&", tokens[0], tokens[4], tokens[3], tokens[1], tokens[2]);
 	entries++;
 
 	if(entries == SUBMIT_MIN_ENTRIES) {
@@ -738,7 +650,6 @@ int submitstats(const char *clamdcfg, const struct optstruct *opts)
 		ret = 52;
 		break;
 	    }
-
 	    query[sizeof(query) - 1] = 0;
 	    if(mdprintf(sd,
 		"POST http://stats.clamav.net/submit.php HTTP/1.0\r\n"
@@ -809,30 +720,23 @@ int submitstats(const char *clamdcfg, const struct optstruct *opts)
 
 	    break;
 	}
-
-    } while((line = readbline(fd, fbuff, FILEBUFF, sb.st_size, &lread)));
-
-    close(fd);
+    }
+    closesocket(clamsockd);
     if(auth)
 	free(auth);
 
-    if(submitted || permfail) {
-	if((fd = open("stats.dat", O_WRONLY | O_BINARY | O_CREAT | O_TRUNC, 0600)) == -1) {
-	    logg("^SubmitDetectionStats: Can't open stats.dat for writing\n");
+    if(ret == 0) {
+	if(!submitted) {
+	    logg("SubmitDetectionStats: Not enough recent data for submission\n");
 	} else {
-	    if((bread = write(fd, newstatsdat, sizeof(newstatsdat))) != sizeof(newstatsdat))
-		logg("^SubmitDetectionStats: Can't write to stats.dat\n");
-	    close(fd);
+	    logg("SubmitDetectionStats: Submitted %u records\n", submitted);
+	    if((clamsockd = clamd_connect(clamdcfg, "SubmitDetectionStats")) != -1) {
+		sendln(clamsockd, "DETSTATSCLEAR", 14);
+		recv(clamsockd, query, sizeof(query), 0);
+		closesocket(clamsockd);
+	    }
 	}
     }
-
-    if(ret == 0) {
-	if(!submitted)
-	    logg("SubmitDetectionStats: Not enough recent data for submission\n");
-	else
-	    logg("SubmitDetectionStats: Submitted %u records\n", submitted);
-    }
-
     return ret;
 }
 
@@ -1518,11 +1422,128 @@ static int buildcld(const char *tmpdir, const char *dbname, const char *newfile,
     return 0;
 }
 
+static int test_database(const char *newfile, const char *newdb, int bytecode)
+{
+    struct cl_engine *engine;
+    unsigned newsigs = 0;
+    int ret;
+
+    logg("*Loading signatures from %s\n", newdb);
+    if(!(engine = cl_engine_new())) {
+	return 55;
+    }
+
+    if((ret = cl_load(newfile, engine, &newsigs, CL_DB_PHISHING | CL_DB_PHISHING_URLS | CL_DB_BYTECODE | CL_DB_PUA)) != CL_SUCCESS) {
+	logg("!Failed to load new database: %s\n", cl_strerror(ret));
+	cl_engine_free(engine);
+	return 55;
+    }
+    if(bytecode && (ret = cli_bytecode_prepare2(engine, &engine->bcs, engine->dconf->bytecode/*FIXME: dconf has no sense here*/))) {
+	logg("!Failed to compile/load bytecode: %s\n", cl_strerror(ret));
+	cl_engine_free(engine);
+	return 55;
+    }
+    logg("*Properly loaded %u signatures from new %s\n", newsigs, newdb);
+    if(engine->domainlist_matcher && engine->domainlist_matcher->sha256_pfx_set.keys)
+	cli_hashset_destroy(&engine->domainlist_matcher->sha256_pfx_set);
+    cl_engine_free(engine);
+    return 0;
+}
+
+#ifndef WIN32
+static int test_database_wrap(const char *file, const char *newdb, int bytecode)
+{
+    char firstline[256];
+    char lastline[256];
+    int pipefd[2];
+    pid_t pid;
+    int status = 0;
+    FILE *f;
+
+    if (pipe(pipefd) == -1) {
+	logg("^pipe() failed: %s\n", strerror(errno));
+	return test_database(file, newdb, bytecode);
+    }
+
+    switch ( pid = fork() ) {
+	case 0:
+	    close(pipefd[0]);
+	    dup2(pipefd[1], 2);
+	    exit(test_database(file, newdb, bytecode));
+	case -1:
+	    close(pipefd[0]);
+	    close(pipefd[1]);
+	    logg("^fork() failed: %s\n", strerror(errno));
+	    return test_database(file, newdb, bytecode);
+	default:
+	    /* read first / last line printed by child*/
+	    close(pipefd[1]);
+	    f = fdopen(pipefd[0], "r");
+	    firstline[0] = 0;
+	    lastline[0] = 0;
+	    do {
+		if (!fgets(firstline, sizeof(firstline), f))
+		    break;
+		/* ignore warning messages, otherwise the outdated warning will
+		 * make us miss the important part of the error message */
+	    } while (!strncmp(firstline, "LibClamAV Warning:", 18));
+	    /* must read entire output, child doesn't like EPIPE */
+	    while (fgets(lastline, sizeof(firstline), f)) {
+		/* print the full output only when LogVerbose or -v is given */
+		logg("*%s", lastline);
+	    }
+	    fclose(f);
+
+	    if (waitpid(pid, &status, 0) == -1 && errno != ECHILD)
+		logg("^waitpid() failed: %s\n", strerror(errno));
+	    cli_chomp(firstline);
+	    cli_chomp(lastline);
+	    if (firstline[0]) {
+		logg("!During database load : %s%s%s\n",
+		     firstline, lastline[0] ? " [...] " : "",
+		     lastline);
+	    }
+	    if (WIFEXITED(status)) {
+		int ret = WEXITSTATUS(status);
+		if (ret) {
+		    logg("^Database load exited with status %d\n", ret);
+		    return ret;
+		}
+		if (firstline[0])
+		    logg("^Database successfully loaded, but there is stderr output\n");
+		return 0;
+	    }
+	    if (WIFSIGNALED(status)) {
+		logg("!Database load killed by signal %d\n", WTERMSIG(status));
+		return 55;
+	    }
+	    logg("^Unknown status from wait: %d\n", status);
+	    return 55;
+    }
+}
+#else
+static int test_database_wrap(const char *file, const char *newdb, int bytecode)
+{
+    int ret = 55;
+    __try
+    {
+	ret = test_database(file, newdb, bytecode);
+    }
+    __except (logg("!Exception during database testing, code %08x\n",
+		 GetExceptionCode()),
+	      EXCEPTION_CONTINUE_SEARCH)
+    { }
+    return ret;
+}
+#endif
+
+extern int sigchld_wait;
+
 static int updatedb(const char *dbname, const char *hostname, char *ip, int *signo, const struct optstruct *opts, const char *dnsreply, char *localip, int outdated, struct mirdat *mdat, int logerr, int extra)
 {
 	struct cl_cvd *current, *remote;
 	const struct optstruct *opt;
-	unsigned int nodb = 0, currver = 0, newver = 0, port = 0, i, j, newsigs = 0;
+	unsigned int nodb = 0, currver = 0, newver = 0, port = 0, i, j;
 	int ret, ims = -1;
 	char *pt, cvdfile[32], localname[32], *tmpdir = NULL, *newfile, *newfile2, newdb[32];
 	char extradbinfo[64], *extradnsreply = NULL;
@@ -1530,7 +1551,6 @@ static int updatedb(const char *dbname, const char *hostname, char *ip, int *sig
 	unsigned int flevel = cl_retflevel(), remote_flevel = 0, maxattempts;
 	unsigned int can_whitelist = 0;
 	int ctimeout, rtimeout;
-	struct cl_engine *engine;
 
 
     snprintf(cvdfile, sizeof(cvdfile), "%s.cvd", dbname);
@@ -1774,16 +1794,11 @@ static int updatedb(const char *dbname, const char *hostname, char *ip, int *sig
     }
 
     if(optget(opts, "TestDatabases")->enabled && strlen(newfile) > 4) {
-	if(!(engine = cl_engine_new())) {
-	    unlink(newfile);
-	    free(newfile);
-	    return 55;
-	}
 	newfile2 = strdup(newfile);
 	if(!newfile2) {
+	    logg("!Can't allocate memory for filename!\n");
 	    unlink(newfile);
 	    free(newfile);
-	    cl_engine_free(engine);
 	    return 55;
 	}
 	newfile2[strlen(newfile2) - 4] = '.';
@@ -1795,29 +1810,18 @@ static int updatedb(const char *dbname, const char *hostname, char *ip, int *sig
 	    unlink(newfile);
 	    free(newfile);
 	    free(newfile2);
-	    cl_engine_free(engine);
 	    return 57;
 	}
 	free(newfile);
 	newfile = newfile2;
-	if((ret = cl_load(newfile, engine, &newsigs, CL_DB_PHISHING | CL_DB_PHISHING_URLS | CL_DB_BYTECODE | CL_DB_PUA)) != CL_SUCCESS) {
+	sigchld_wait = 0;/* we need to wait() for the child ourselves */
+	if (test_database_wrap(newfile, newdb, optget(opts, "Bytecode")->enabled)) {
 	    logg("!Failed to load new database: %s\n", cl_strerror(ret));
 	    unlink(newfile);
 	    free(newfile);
-	    cl_engine_free(engine);
 	    return 55;
 	}
-	if(optget(opts, "Bytecode")->enabled && (ret = cli_bytecode_prepare2(engine, &engine->bcs, engine->dconf->bytecode/*FIXME: dconf has no sense here*/))) {
-	    logg("!Failed to compile/load bytecode: %s\n", cl_strerror(ret));
-	    unlink(newfile);
-	    free(newfile);
-	    cl_engine_free(engine);
-	    return 55;
-	}
-	logg("*Properly loaded %u signatures from new %s\n", newsigs, newdb);
-	if(engine->domainlist_matcher && engine->domainlist_matcher->sha256_pfx_set.keys)
-	    cli_hashset_destroy(&engine->domainlist_matcher->sha256_pfx_set);
-	cl_engine_free(engine);
+	sigchld_wait = 1;
     }
 
 #ifdef _WIN32
@@ -1866,12 +1870,11 @@ static int updatedb(const char *dbname, const char *hostname, char *ip, int *sig
 static int updatecustomdb(const char *url, int *signo, const struct optstruct *opts, char *localip, int logerr)
 {
 	const struct optstruct *opt;
-	unsigned int port = 0, newsigs = 0, sigs = 0;
+	unsigned int port = 0, sigs = 0;
 	int ret;
 	char *pt, *host, urlcpy[256], *newfile = NULL, mtime[36], *newfile2;
 	const char *proxy = NULL, *user = NULL, *pass = NULL, *uas = NULL, *rpath, *dbname;
 	int ctimeout, rtimeout;
-	struct cl_engine *engine;
 	struct stat sb;
 	struct cl_cvd *cvd;
 
@@ -1981,29 +1984,14 @@ static int updatecustomdb(const char *url, int *signo, const struct optstruct *o
 	}
 	free(newfile);
 	newfile = newfile2;
-	if(!(engine = cl_engine_new())) {
-	    unlink(newfile);
-	    free(newfile);
-	    return 55;
-	}
-	if((ret = cl_load(newfile, engine, &newsigs, CL_DB_PHISHING | CL_DB_PHISHING_URLS | CL_DB_BYTECODE | CL_DB_PUA)) != CL_SUCCESS) {
+	sigchld_wait = 0;/* we need to wait() for the child ourselves */
+	if (test_database_wrap(newfile, dbname, optget(opts, "Bytecode")->enabled)) {
 	    logg("!Failed to load new database: %s\n", cl_strerror(ret));
 	    unlink(newfile);
 	    free(newfile);
-	    cl_engine_free(engine);
 	    return 55;
 	}
-	if(optget(opts, "Bytecode")->enabled && (ret = cli_bytecode_prepare2(engine, &engine->bcs, engine->dconf->bytecode/*FIXME: dconf has no sense here*/))) {
-	    logg("!Failed to compile/load bytecode: %s\n", cl_strerror(ret));
-	    unlink(newfile);
-	    free(newfile);
-	    cl_engine_free(engine);
-	    return 55;
-	}
-	logg("*Properly loaded %u signatures from new (custom) %s\n", newsigs, dbname);
-	if(engine->domainlist_matcher && engine->domainlist_matcher->sha256_pfx_set.keys)
-	    cli_hashset_destroy(&engine->domainlist_matcher->sha256_pfx_set);
-	cl_engine_free(engine);
+	sigchld_wait = 1;
     }
 
 #ifdef _WIN32

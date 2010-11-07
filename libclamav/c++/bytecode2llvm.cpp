@@ -66,6 +66,9 @@
 #include "llvm/System/Signals.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/System/Threading.h"
+
+void LLVMInitializeX86AsmPrinter();
+void LLVMInitializePowerPCAsmPrinter();
 #include "llvm/Target/TargetSelect.h"
 #include "llvm/Target/TargetData.h"
 #include "llvm/Target/TargetOptions.h"
@@ -135,6 +138,7 @@ struct cli_bcengine {
 extern "C" BCAPI uint8_t cli_debug_flag;
 namespace {
 
+#define LLVM28
 #ifdef LLVM28
 #define llvm_report_error(x) report_fatal_error(x)
 #define llvm_install_error_handler(x) install_fatal_error_handler(x)
@@ -1616,11 +1620,14 @@ class LLVMApiScopedLock {
 	// we need to wrap all LLVM API calls with a giant mutex lock, but
 	// only then.
 	LLVMApiScopedLock() {
-	    if (!llvm_is_multithreaded())
+	    // It is safer to just run all codegen under the mutex,
+	    // it is not like we are going to codegen from multiple threads
+	    // at a time anyway.
+//	    if (!llvm_is_multithreaded())
 		llvm_api_lock.acquire();
 	}
 	~LLVMApiScopedLock() {
-	    if (!llvm_is_multithreaded())
+//	    if (!llvm_is_multithreaded())
 		llvm_api_lock.release();
 	}
 };

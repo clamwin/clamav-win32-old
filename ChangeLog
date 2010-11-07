@@ -1,3 +1,35 @@
+Sat Nov  6 15:47:01 EET 2010 (edwin)
+------------------------------------
+ * libclamav/c++: Update embedded copy of LLVM to version 2.8 (bb #2327)
+
+Fri Nov  5 16:40:31 CET 2010 (tk)
+---------------------------------
+ * freshclam: make query format backward compatible
+
+Fri Nov  5 15:32:22 CET 2010 (tk)
+---------------------------------
+ * freshclam: get detection stats directly from clamd (bb#2312)
+
+Thu Nov  4 21:12:53 EET 2010 (edwin)
+------------------------------------
+ * libclamav/cache.c,c++/bytecode2llvm.cpp}: make cl_load thread safe (bb #2333).
+
+Thu Nov  4 19:47:17 EET 2010 (edwin)
+------------------------------------
+ * freshclam: load database in subprocess (bb #2147).
+
+Wed Nov  3 13:38:47 CET 2010 (tk)
+---------------------------------
+ * clamd: add new commands DETSTATS and DETSTATSCLEAR (part of bb#2312)
+
+Tue Nov  2 13:01:14 EET 2010 (edwin)
+------------------------------------
+ * libclamav/7z.c: fix file descriptor leak (bb #2347)
+
+Mon Oct 18 11:35:45 EEST 2010 (edwin)
+-------------------------------------
+ * clamd, libclamavll: add ability to logg messages from libclamav (bb #1965)
+
 Sun Oct 31 09:13:33 EET 2010 (edwin)
 ------------------------------------
  * libclamav/builtin_bytecodes.h: Don't disable JIT on pentium4 (bb #2345)
