@@ -13,6 +13,7 @@ libclamav_llvm_SOURCES=$(addprefix $(top)/libclamav/c++/,ClamBCRTChecks.cpp \
 	llvm/lib/Analysis/IPA/CallGraph.cpp \
 	llvm/lib/Analysis/IVUsers.cpp \
 	llvm/lib/Analysis/InstructionSimplify.cpp \
+	llvm/lib/Analysis/Loads.cpp \
 	llvm/lib/Analysis/LoopInfo.cpp \
 	llvm/lib/Analysis/LoopPass.cpp \
 	llvm/lib/Analysis/MemoryBuiltins.cpp \
@@ -22,32 +23,29 @@ libclamav_llvm_SOURCES=$(addprefix $(top)/libclamav/c++/,ClamBCRTChecks.cpp \
 	llvm/lib/Analysis/ProfileInfo.cpp \
 	llvm/lib/Analysis/ScalarEvolution.cpp \
 	llvm/lib/Analysis/ScalarEvolutionExpander.cpp \
+	llvm/lib/Analysis/ScalarEvolutionNormalization.cpp \
 	llvm/lib/Analysis/ValueTracking.cpp \
 	llvm/lib/CodeGen/AggressiveAntiDepBreaker.cpp \
-	llvm/lib/CodeGen/AsmPrinter/AsmPrinter.cpp \
-	llvm/lib/CodeGen/AsmPrinter/DIE.cpp \
-	llvm/lib/CodeGen/AsmPrinter/DwarfDebug.cpp \
-	llvm/lib/CodeGen/AsmPrinter/DwarfException.cpp \
-	llvm/lib/CodeGen/AsmPrinter/DwarfLabel.cpp \
-	llvm/lib/CodeGen/AsmPrinter/DwarfPrinter.cpp \
-	llvm/lib/CodeGen/AsmPrinter/DwarfWriter.cpp \
+	llvm/lib/CodeGen/Analysis.cpp \
 	llvm/lib/CodeGen/BranchFolding.cpp \
 	llvm/lib/CodeGen/CalcSpillWeights.cpp \
+	llvm/lib/CodeGen/CallingConvLower.cpp \
 	llvm/lib/CodeGen/CodePlacementOpt.cpp \
 	llvm/lib/CodeGen/CriticalAntiDepBreaker.cpp \
 	llvm/lib/CodeGen/DeadMachineInstructionElim.cpp \
 	llvm/lib/CodeGen/DwarfEHPrepare.cpp \
 	llvm/lib/CodeGen/ELFCodeEmitter.cpp \
 	llvm/lib/CodeGen/ELFWriter.cpp \
-	llvm/lib/CodeGen/ExactHazardRecognizer.cpp \
 	llvm/lib/CodeGen/GCMetadata.cpp \
 	llvm/lib/CodeGen/GCStrategy.cpp \
+	llvm/lib/CodeGen/InlineSpiller.cpp \
 	llvm/lib/CodeGen/LLVMTargetMachine.cpp \
 	llvm/lib/CodeGen/LatencyPriorityQueue.cpp \
 	llvm/lib/CodeGen/LiveInterval.cpp \
 	llvm/lib/CodeGen/LiveIntervalAnalysis.cpp \
 	llvm/lib/CodeGen/LiveStackAnalysis.cpp \
 	llvm/lib/CodeGen/LiveVariables.cpp \
+	llvm/lib/CodeGen/LocalStackSlotAllocation.cpp \
 	llvm/lib/CodeGen/LowerSubregs.cpp \
 	llvm/lib/CodeGen/MachineBasicBlock.cpp \
 	llvm/lib/CodeGen/MachineCSE.cpp \
@@ -55,6 +53,7 @@ libclamav_llvm_SOURCES=$(addprefix $(top)/libclamav/c++/,ClamBCRTChecks.cpp \
 	llvm/lib/CodeGen/MachineFunction.cpp \
 	llvm/lib/CodeGen/MachineFunctionAnalysis.cpp \
 	llvm/lib/CodeGen/MachineFunctionPass.cpp \
+	llvm/lib/CodeGen/MachineFunctionPrinterPass.cpp \
 	llvm/lib/CodeGen/MachineInstr.cpp \
 	llvm/lib/CodeGen/MachineLICM.cpp \
 	llvm/lib/CodeGen/MachineLoopInfo.cpp \
@@ -66,15 +65,17 @@ libclamav_llvm_SOURCES=$(addprefix $(top)/libclamav/c++/,ClamBCRTChecks.cpp \
 	llvm/lib/CodeGen/MachineSink.cpp \
 	llvm/lib/CodeGen/MachineVerifier.cpp \
 	llvm/lib/CodeGen/ObjectCodeEmitter.cpp \
-	llvm/lib/CodeGen/OptimizeExts.cpp \
 	llvm/lib/CodeGen/OptimizePHIs.cpp \
 	llvm/lib/CodeGen/PHIElimination.cpp \
 	llvm/lib/CodeGen/Passes.cpp \
+	llvm/lib/CodeGen/PeepholeOptimizer.cpp \
+	llvm/lib/CodeGen/PostRAHazardRecognizer.cpp \
 	llvm/lib/CodeGen/PostRASchedulerList.cpp \
 	llvm/lib/CodeGen/PreAllocSplitting.cpp \
 	llvm/lib/CodeGen/ProcessImplicitDefs.cpp \
 	llvm/lib/CodeGen/PrologEpilogInserter.cpp \
 	llvm/lib/CodeGen/PseudoSourceValue.cpp \
+	llvm/lib/CodeGen/RegAllocFast.cpp \
 	llvm/lib/CodeGen/RegAllocLinearScan.cpp \
 	llvm/lib/CodeGen/RegisterCoalescer.cpp \
 	llvm/lib/CodeGen/RegisterScavenging.cpp \
@@ -82,7 +83,6 @@ libclamav_llvm_SOURCES=$(addprefix $(top)/libclamav/c++/,ClamBCRTChecks.cpp \
 	llvm/lib/CodeGen/ScheduleDAGEmit.cpp \
 	llvm/lib/CodeGen/ScheduleDAGInstrs.cpp \
 	llvm/lib/CodeGen/ScheduleDAGPrinter.cpp \
-	llvm/lib/CodeGen/SelectionDAG/CallingConvLower.cpp \
 	llvm/lib/CodeGen/SelectionDAG/DAGCombiner.cpp \
 	llvm/lib/CodeGen/SelectionDAG/FastISel.cpp \
 	llvm/lib/CodeGen/SelectionDAG/FunctionLoweringInfo.cpp \
@@ -94,7 +94,6 @@ libclamav_llvm_SOURCES=$(addprefix $(top)/libclamav/c++/,ClamBCRTChecks.cpp \
 	llvm/lib/CodeGen/SelectionDAG/LegalizeTypesGeneric.cpp \
 	llvm/lib/CodeGen/SelectionDAG/LegalizeVectorOps.cpp \
 	llvm/lib/CodeGen/SelectionDAG/LegalizeVectorTypes.cpp \
-	llvm/lib/CodeGen/SelectionDAG/ScheduleDAGFast.cpp \
 	llvm/lib/CodeGen/SelectionDAG/ScheduleDAGList.cpp \
 	llvm/lib/CodeGen/SelectionDAG/ScheduleDAGRRList.cpp \
 	llvm/lib/CodeGen/SelectionDAG/ScheduleDAGSDNodes.cpp \
@@ -103,11 +102,13 @@ libclamav_llvm_SOURCES=$(addprefix $(top)/libclamav/c++/,ClamBCRTChecks.cpp \
 	llvm/lib/CodeGen/SelectionDAG/SelectionDAGISel.cpp \
 	llvm/lib/CodeGen/SelectionDAG/SelectionDAGPrinter.cpp \
 	llvm/lib/CodeGen/SelectionDAG/TargetLowering.cpp \
+	llvm/lib/CodeGen/SelectionDAG/TargetSelectionDAGInfo.cpp \
 	llvm/lib/CodeGen/ShrinkWrapping.cpp \
 	llvm/lib/CodeGen/SimpleRegisterCoalescing.cpp \
 	llvm/lib/CodeGen/SjLjEHPrepare.cpp \
 	llvm/lib/CodeGen/SlotIndexes.cpp \
 	llvm/lib/CodeGen/Spiller.cpp \
+	llvm/lib/CodeGen/SplitKit.cpp \
 	llvm/lib/CodeGen/StackProtector.cpp \
 	llvm/lib/CodeGen/StackSlotColoring.cpp \
 	llvm/lib/CodeGen/StrongPHIElimination.cpp \
@@ -127,6 +128,7 @@ libclamav_llvm_SOURCES=$(addprefix $(top)/libclamav/c++/,ClamBCRTChecks.cpp \
 	llvm/lib/ExecutionEngine/JIT/JITMemoryManager.cpp \
 	llvm/lib/ExecutionEngine/JIT/OProfileJITEventListener.cpp \
 	llvm/lib/ExecutionEngine/JIT/TargetSelect.cpp \
+	llvm/lib/MC/ELFObjectWriter.cpp \
 	llvm/lib/MC/MCAsmInfo.cpp \
 	llvm/lib/MC/MCAsmInfoCOFF.cpp \
 	llvm/lib/MC/MCAsmInfoDarwin.cpp \
@@ -134,16 +136,25 @@ libclamav_llvm_SOURCES=$(addprefix $(top)/libclamav/c++/,ClamBCRTChecks.cpp \
 	llvm/lib/MC/MCAssembler.cpp \
 	llvm/lib/MC/MCCodeEmitter.cpp \
 	llvm/lib/MC/MCContext.cpp \
+	llvm/lib/MC/MCELFStreamer.cpp \
 	llvm/lib/MC/MCExpr.cpp \
 	llvm/lib/MC/MCInst.cpp \
+	llvm/lib/MC/MCInstPrinter.cpp \
+	llvm/lib/MC/MCLoggingStreamer.cpp \
 	llvm/lib/MC/MCMachOStreamer.cpp \
 	llvm/lib/MC/MCNullStreamer.cpp \
+	llvm/lib/MC/MCObjectStreamer.cpp \
+	llvm/lib/MC/MCObjectWriter.cpp \
 	llvm/lib/MC/MCSection.cpp \
+	llvm/lib/MC/MCSectionCOFF.cpp \
 	llvm/lib/MC/MCSectionELF.cpp \
 	llvm/lib/MC/MCSectionMachO.cpp \
 	llvm/lib/MC/MCStreamer.cpp \
 	llvm/lib/MC/MCSymbol.cpp \
+	llvm/lib/MC/MachObjectWriter.cpp \
 	llvm/lib/MC/TargetAsmBackend.cpp \
+	llvm/lib/MC/WinCOFFObjectWriter.cpp \
+	llvm/lib/MC/WinCOFFStreamer.cpp \
 	llvm/lib/Support/APFloat.cpp \
 	llvm/lib/Support/APInt.cpp \
 	llvm/lib/Support/Allocator.cpp \
@@ -189,6 +200,7 @@ libclamav_llvm_SOURCES=$(addprefix $(top)/libclamav/c++/,ClamBCRTChecks.cpp \
 	llvm/lib/System/ThreadLocal.cpp \
 	llvm/lib/System/Threading.cpp \
 	llvm/lib/System/TimeValue.cpp \
+	llvm/lib/System/Valgrind.cpp \
 	llvm/lib/Target/Mangler.cpp \
 	llvm/lib/Target/SubtargetFeature.cpp \
 	llvm/lib/Target/TargetData.cpp \
@@ -199,6 +211,7 @@ libclamav_llvm_SOURCES=$(addprefix $(top)/libclamav/c++/,ClamBCRTChecks.cpp \
 	llvm/lib/Target/TargetMachine.cpp \
 	llvm/lib/Target/TargetRegisterInfo.cpp \
 	llvm/lib/Target/TargetSubtarget.cpp \
+	llvm/lib/Target/X86/SSEDomainFix.cpp \
 	llvm/lib/Target/X86/TargetInfo/X86TargetInfo.cpp \
 	llvm/lib/Target/X86/X86AsmBackend.cpp \
 	llvm/lib/Target/X86/X86COFFMachineModuleInfo.cpp \
@@ -206,22 +219,19 @@ libclamav_llvm_SOURCES=$(addprefix $(top)/libclamav/c++/,ClamBCRTChecks.cpp \
 	llvm/lib/Target/X86/X86ELFWriterInfo.cpp \
 	llvm/lib/Target/X86/X86FastISel.cpp \
 	llvm/lib/Target/X86/X86FloatingPoint.cpp \
-	llvm/lib/Target/X86/X86FloatingPointRegKill.cpp \
 	llvm/lib/Target/X86/X86ISelDAGToDAG.cpp \
 	llvm/lib/Target/X86/X86ISelLowering.cpp \
 	llvm/lib/Target/X86/X86InstrInfo.cpp \
 	llvm/lib/Target/X86/X86JITInfo.cpp \
 	llvm/lib/Target/X86/X86MCAsmInfo.cpp \
 	llvm/lib/Target/X86/X86MCCodeEmitter.cpp \
-	llvm/lib/Target/X86/X86MCTargetExpr.cpp \
 	llvm/lib/Target/X86/X86RegisterInfo.cpp \
+	llvm/lib/Target/X86/X86SelectionDAGInfo.cpp \
 	llvm/lib/Target/X86/X86Subtarget.cpp \
 	llvm/lib/Target/X86/X86TargetMachine.cpp \
 	llvm/lib/Target/X86/X86TargetObjectFile.cpp \
 	llvm/lib/Transforms/IPO/ConstantMerge.cpp \
-	llvm/lib/Transforms/IPO/GlobalDCE.cpp \
 	llvm/lib/Transforms/IPO/GlobalOpt.cpp \
-	llvm/lib/Transforms/Scalar/ADCE.cpp \
 	llvm/lib/Transforms/Scalar/CodeGenPrepare.cpp \
 	llvm/lib/Transforms/Scalar/DCE.cpp \
 	llvm/lib/Transforms/Scalar/GEPSplitter.cpp \
@@ -232,6 +242,7 @@ libclamav_llvm_SOURCES=$(addprefix $(top)/libclamav/c++/,ClamBCRTChecks.cpp \
 	llvm/lib/Transforms/Utils/AddrModeMatcher.cpp \
 	llvm/lib/Transforms/Utils/BasicBlockUtils.cpp \
 	llvm/lib/Transforms/Utils/BreakCriticalEdges.cpp \
+	llvm/lib/Transforms/Utils/BuildLibCalls.cpp \
 	llvm/lib/Transforms/Utils/DemoteRegToStack.cpp \
 	llvm/lib/Transforms/Utils/LCSSA.cpp \
 	llvm/lib/Transforms/Utils/Local.cpp \
@@ -250,6 +261,7 @@ libclamav_llvm_SOURCES=$(addprefix $(top)/libclamav/c++/,ClamBCRTChecks.cpp \
 	llvm/lib/VMCore/ConstantFold.cpp \
 	llvm/lib/VMCore/Constants.cpp \
 	llvm/lib/VMCore/Core.cpp \
+	llvm/lib/VMCore/DebugLoc.cpp \
 	llvm/lib/VMCore/Dominators.cpp \
 	llvm/lib/VMCore/Function.cpp \
 	llvm/lib/VMCore/GVMaterializer.cpp \
@@ -266,6 +278,7 @@ libclamav_llvm_SOURCES=$(addprefix $(top)/libclamav/c++/,ClamBCRTChecks.cpp \
 	llvm/lib/VMCore/Module.cpp \
 	llvm/lib/VMCore/Pass.cpp \
 	llvm/lib/VMCore/PassManager.cpp \
+	llvm/lib/VMCore/PassRegistry.cpp \
 	llvm/lib/VMCore/PrintModulePass.cpp \
 	llvm/lib/VMCore/Type.cpp \
 	llvm/lib/VMCore/TypeSymbolTable.cpp \

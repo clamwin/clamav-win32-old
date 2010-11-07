@@ -1521,7 +1521,7 @@ static int test_database_wrap(const char *file, const char *newdb, int bytecode)
 	    return 55;
     }
 }
-#else
+#elif defined(_MSC_VER)
 static int test_database_wrap(const char *file, const char *newdb, int bytecode)
 {
     int ret = 55;
@@ -1534,6 +1534,11 @@ static int test_database_wrap(const char *file, const char *newdb, int bytecode)
 	      EXCEPTION_CONTINUE_SEARCH)
     { }
     return ret;
+}
+#else
+static int test_database_wrap(const char *file, const char *newdb, int bytecode)
+{
+    return test_database(file, newdb, bytecode);
 }
 #endif
 

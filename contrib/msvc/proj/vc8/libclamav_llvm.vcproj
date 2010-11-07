@@ -373,14 +373,14 @@
 				RelativePath="..\..\include\llvmbuild\llvm\System\DataTypes.h"
 				>
 			</File>
+			<File
+				RelativePath="..\..\include\llvmbuild\llvm\Config\llvm-config.h"
+				>
+			</File>
 		</Filter>
 		<Filter
 			Name="Source Files"
 			>
-			<File
-				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Transforms\Scalar\ADCE.cpp"
-				>
-			</File>
 			<File
 				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Transforms\Utils\AddrModeMatcher.cpp"
 				>
@@ -406,15 +406,15 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\CodeGen\Analysis.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Support\APFloat.cpp"
 				>
 			</File>
 			<File
 				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Support\APInt.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\CodeGen\AsmPrinter\AsmPrinter.cpp"
 				>
 			</File>
 			<File
@@ -454,6 +454,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Transforms\Utils\BuildLibCalls.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\..\libclamav\c++\bytecode2llvm.cpp"
 				>
 			</File>
@@ -466,7 +470,7 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\CodeGen\SelectionDAG\CallingConvLower.cpp"
+				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\CodeGen\CallingConvLower.cpp"
 				>
 			</File>
 			<File
@@ -542,15 +546,15 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\VMCore\DebugLoc.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Transforms\Utils\DemoteRegToStack.cpp"
 				>
 			</File>
 			<File
 				RelativePath="..\..\..\..\libclamav\c++\detect.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\CodeGen\AsmPrinter\DIE.cpp"
 				>
 			</File>
 			<File
@@ -566,27 +570,7 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\CodeGen\AsmPrinter\DwarfDebug.cpp"
-				>
-			</File>
-			<File
 				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\CodeGen\DwarfEHPrepare.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\CodeGen\AsmPrinter\DwarfException.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\CodeGen\AsmPrinter\DwarfLabel.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\CodeGen\AsmPrinter\DwarfPrinter.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\CodeGen\AsmPrinter\DwarfWriter.cpp"
 				>
 			</File>
 			<File
@@ -595,6 +579,10 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\CodeGen\ELFCodeEmitter.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\MC\ELFObjectWriter.cpp"
 				>
 			</File>
 			<File
@@ -607,10 +595,6 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Support\ErrorHandling.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\CodeGen\ExactHazardRecognizer.cpp"
 				>
 			</File>
 			<File
@@ -650,10 +634,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Transforms\IPO\GlobalDCE.cpp"
-				>
-			</File>
-			<File
 				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Transforms\IPO\GlobalOpt.cpp"
 				>
 			</File>
@@ -683,6 +663,10 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\VMCore\InlineAsm.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\CodeGen\InlineSpiller.cpp"
 				>
 			</File>
 			<File
@@ -806,7 +790,15 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Analysis\Loads.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Transforms\Utils\Local.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\CodeGen\LocalStackSlotAllocation.cpp"
 				>
 			</File>
 			<File
@@ -862,6 +854,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\CodeGen\MachineFunctionPrinterPass.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\CodeGen\MachineInstr.cpp"
 				>
 			</File>
@@ -902,6 +898,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\MC\MachObjectWriter.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Support\ManagedStatic.cpp"
 				>
 			</File>
@@ -938,11 +938,23 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\MC\MCELFStreamer.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\MC\MCExpr.cpp"
 				>
 			</File>
 			<File
 				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\MC\MCInst.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\MC\MCInstPrinter.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\MC\MCLoggingStreamer.cpp"
 				>
 			</File>
 			<File
@@ -954,7 +966,19 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\MC\MCObjectStreamer.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\MC\MCObjectWriter.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\MC\MCSection.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\MC\MCSectionCOFF.cpp"
 				>
 			</File>
 			<File
@@ -1014,10 +1038,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\CodeGen\OptimizeExts.cpp"
-				>
-			</File>
-			<File
 				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\CodeGen\OptimizePHIs.cpp"
 				>
 			</File>
@@ -1034,7 +1054,15 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\VMCore\PassRegistry.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\System\Path.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\CodeGen\PeepholeOptimizer.cpp"
 				>
 			</File>
 			<File
@@ -1047,6 +1075,10 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Analysis\PointerTracking.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\CodeGen\PostRAHazardRecognizer.cpp"
 				>
 			</File>
 			<File
@@ -1098,6 +1130,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\CodeGen\RegAllocFast.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\CodeGen\RegAllocLinearScan.cpp"
 				>
 			</File>
@@ -1122,6 +1158,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Analysis\ScalarEvolutionNormalization.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Transforms\Scalar\SCCP.cpp"
 				>
 			</File>
@@ -1131,10 +1171,6 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\CodeGen\ScheduleDAGEmit.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\CodeGen\SelectionDAG\ScheduleDAGFast.cpp"
 				>
 			</File>
 			<File
@@ -1218,7 +1254,15 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\CodeGen\SplitKit.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Transforms\Utils\SSAUpdater.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Target\X86\SSEDomainFix.cpp"
 				>
 			</File>
 			<File
@@ -1314,6 +1358,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\CodeGen\SelectionDAG\TargetSelectionDAGInfo.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Target\TargetSubtarget.cpp"
 				>
 			</File>
@@ -1366,6 +1414,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\System\Valgrind.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\VMCore\Value.cpp"
 				>
 			</File>
@@ -1394,6 +1446,14 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\MC\WinCOFFObjectWriter.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\MC\WinCOFFStreamer.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Target\X86\X86AsmBackend.cpp"
 				>
 			</File>
@@ -1415,10 +1475,6 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Target\X86\X86FloatingPoint.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Target\X86\X86FloatingPointRegKill.cpp"
 				>
 			</File>
 			<File
@@ -1446,11 +1502,11 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Target\X86\X86MCTargetExpr.cpp"
+				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Target\X86\X86RegisterInfo.cpp"
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Target\X86\X86RegisterInfo.cpp"
+				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\Target\X86\X86SelectionDAGInfo.cpp"
 				>
 			</File>
 			<File

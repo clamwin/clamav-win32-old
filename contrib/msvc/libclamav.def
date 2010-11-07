@@ -11,6 +11,7 @@ cl_engine_set_num
 cl_engine_get_num
 cl_engine_set_str
 cl_engine_get_str
+cl_engine_set_clcb_hash
 cl_engine_set_clcb_pre_scan
 cl_engine_set_clcb_post_scan
 cl_engine_set_clcb_progress
@@ -19,6 +20,9 @@ cl_engine_free
 cl_engine_settings_copy
 cl_engine_settings_apply
 cl_engine_settings_free
+cl_scandesc_callback
+cl_scanfile_callback
+cl_set_clcb_msg
 
 ; Scanning
 cl_scandesc
@@ -140,22 +144,20 @@ cli_rndnum                          @128 NONAME
 cli_scancpio_newc                   @129 NONAME
 cli_scancpio_odc                    @130 NONAME
 cli_scancpio_old                    @131 NONAME
-cli_scandesc_stats                  @132 NONAME
-cli_scanfile_stats                  @133 NONAME
-cli_scanmacho                       @134 NONAME
-cli_str2hex                         @135 NONAME
-cli_strbcasestr                     @136 NONAME
-cli_strdup                          @137 NONAME
-cli_strerror                        @138 NONAME
-cli_strtok                          @139 NONAME
-cli_strtokenize                     @140 NONAME
-cli_utf16toascii                    @141 NONAME
-cli_vba_inflate                     @142 NONAME
-cli_vba_readdir                     @143 NONAME
-cli_versig2                         @144 NONAME
-cli_wm_decrypt_macro                @145 NONAME
-cli_wm_readdir                      @146 NONAME
-cli_writen                          @147 NONAME
+cli_scanmacho                       @132 NONAME
+cli_str2hex                         @133 NONAME
+cli_strbcasestr                     @134 NONAME
+cli_strdup                          @135 NONAME
+cli_strerror                        @136 NONAME
+cli_strtok                          @137 NONAME
+cli_strtokenize                     @138 NONAME
+cli_utf16toascii                    @139 NONAME
+cli_vba_inflate                     @140 NONAME
+cli_vba_readdir                     @141 NONAME
+cli_versig2                         @142 NONAME
+cli_wm_decrypt_macro                @143 NONAME
+cli_wm_readdir                      @144 NONAME
+cli_writen                          @145 NONAME
 
 html_normalise_map                  @150 NONAME
 mp_clear                            @151 NONAME
