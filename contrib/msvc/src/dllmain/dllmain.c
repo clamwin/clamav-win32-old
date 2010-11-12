@@ -246,6 +246,11 @@ static void dynLoad(void)
         IMPORT_FUNC_OR_FAIL(wt, CryptCATAdminCalcHashFromFileHandle);
         IMPORT_FUNC_OR_FAIL(wt, CryptCATCatalogInfoFromContext);
 
+        /* Digital signature verification is disabled for now on old platforms,
+           typically win9x. For an unknown reason the process locks the checked
+           file in a way only a reboot can unlock it again */
+        break;
+
         /* if ok I can avoid loading mscat32 */
         if (cw_helpers.wt.ok)
             break;
