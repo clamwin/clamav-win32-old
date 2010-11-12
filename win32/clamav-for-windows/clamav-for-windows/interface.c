@@ -23,6 +23,7 @@
 
 #include "clamav.h"
 #include "shared/output.h"
+#include "mpool.h"
 #include "clscanapi.h"
 #include "interface.h"
 
@@ -36,11 +37,15 @@
 HANDLE reload_event;
 volatile LONG reload_waiters = 0;
 
+HANDLE monitor_event;
+HANDLE monitor_hdl = NULL;
+
 HANDLE engine_mutex;
 /* protects the following items */
 struct cl_engine *engine = NULL;
 char dbdir[PATH_MAX];
 char tmpdir[PATH_MAX];
+FILETIME last_chk_time = {0, 0};
 /* end of protected items */
 
 typedef struct {
@@ -67,6 +72,66 @@ BOOL minimal_definitions = FALSE;
 
 cl_error_t prescan_cb(int fd, void *context);
 cl_error_t postscan_cb(int fd, int result, const char *virname, void *context);
+
+
+DWORD WINAPI monitor_thread(VOID *p) {
+    char watchme[PATH_MAX];
+    HANDLE harr[2], fff;
+
+    if(lock_engine()) {
+	logg("monitor_thread: failed to lock engine\n");
+	return 0;
+    }
+
+    snprintf(watchme, sizeof(watchme), "%s\\forcerld", dbdir);
+    watchme[sizeof(watchme)-1] = '\0';
+
+    harr[0] = monitor_event;
+    harr[1] = FindFirstChangeNotification(dbdir, FALSE, FILE_NOTIFY_CHANGE_LAST_WRITE);
+
+    logg("monitor_thread: watching directory changes on %s\n", dbdir);
+
+    unlock_engine();
+
+    if(harr[1] == INVALID_HANDLE_VALUE) {
+	logg("monitor_thread: failed to monitor directory changes on %s\n", dbdir);
+	return 0;
+    }
+
+    while(1) {
+	WIN32_FIND_DATA wfd;
+	SYSTEMTIME st;
+
+	switch(WaitForMultipleObjects(2, harr, FALSE, INFINITE)) {
+	case WAIT_OBJECT_0:
+	    logg("monitor_thread: terminating upon request\n");
+	    FindCloseChangeNotification(harr[1]);
+	    return 0;
+	case WAIT_OBJECT_0 + 1:
+	    break;
+	default:
+	    logg("monitor_thread: unexpected wait failure - %u\n", GetLastError());
+	    Sleep(1000);
+	    continue;
+	}
+	FindNextChangeNotification(harr[1]);
+	if((fff = FindFirstFile(watchme, &wfd)) == INVALID_HANDLE_VALUE)
+	    continue;
+	FindClose(fff);
+
+	GetSystemTime(&st);
+	SystemTimeToFileTime(&st, &wfd.ftCreationTime);
+	if(CompareFileTime(&wfd.ftLastWriteTime, &wfd.ftCreationTime) > 0)
+	    wfd.ftLastWriteTime = wfd.ftCreationTime;
+	if(CompareFileTime(&wfd.ftLastWriteTime, &last_chk_time) <= 0)
+	    continue;
+
+	logg("monitor_thread: reload requested!\n");
+	Scan_ReloadDatabase();
+	GetSystemTime(&st);
+	SystemTimeToFileTime(&st, &last_chk_time); /* FIXME: small race here */
+    }
+}
 
 static wchar_t *threat_type(const char *virname) {
     if(!virname)
@@ -168,7 +233,14 @@ BOOL interface_setup(void) {
 	CloseHandle(engine_mutex);
 	return FALSE;
     }
+    if(!(monitor_event = CreateEvent(NULL, TRUE, FALSE, NULL))) {
+	CloseHandle(reload_event);
+	CloseHandle(engine_mutex);
+	return FALSE;
+    }
     if(!(instance_mutex = CreateMutex(NULL, FALSE, NULL))) {
+	CloseHandle(monitor_event);
+	CloseHandle(reload_event);
 	CloseHandle(engine_mutex);
 	return FALSE;
     }
@@ -181,14 +253,40 @@ static int sigload_callback(const char *type, const char *name, void *context) {
     return 0;
 }
 
+
+/* Must be called with engine_mutex locked ! */
+static void touch_last_update(void) {
+    char touchme[PATH_MAX];
+    HANDLE h;
+
+    snprintf(touchme, sizeof(touchme), "%s\\lastupd", dbdir);
+    touchme[sizeof(touchme)-1] = '\0';
+    if((h = CreateFile(touchme, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL)) != INVALID_HANDLE_VALUE) {
+	DWORD d;
+	snprintf(touchme, sizeof(touchme), "w00t!");
+	touchme[sizeof(touchme)-1] = '\0';
+	if(WriteFile(h, touchme, strlen(touchme), &d, NULL)) {
+	    /* SetEndOfFile(h); */
+	    GetFileTime(h, NULL, NULL, &last_chk_time);
+	}
+	CloseHandle(h);
+    } else
+	logg("touch_lastcheck: failed to touch lastreload\n");
+}
+
+
 /* Must be called with engine_mutex locked ! */
 static int load_db(void) {
-    int ret;
     unsigned int signo = 0;
+    size_t used, total;
+    int ret;
+
+
     INFN();
 
     cl_engine_set_clcb_sigload(engine, sigload_callback, NULL);
-    if((ret = cl_load(dbdir, engine, &signo, CL_DB_STDOPT & ~CL_DB_PHISHING & ~CL_DB_PHISHING_URLS & CL_DB_OFFICIAL_ONLY)) != CL_SUCCESS) {
+    if((ret = cl_load(dbdir, engine, &signo, CL_DB_STDOPT & ~CL_DB_PHISHING & ~CL_DB_PHISHING_URLS)) != CL_SUCCESS) {
+	cl_engine_free(engine);
 	engine = NULL;
 	FAIL(ret, "Failed to load database: %s", cl_strerror(ret));
     }
@@ -200,6 +298,11 @@ static int load_db(void) {
     }
 
     logg("load_db: loaded %d signatures\n", signo);
+    if (!mpool_getstats(engine, &used, &total))
+	logg("load_db: memory %.3f MB / %.3f MB\n", used/(1024*1024.0), total/(1024*1024.0));
+
+    touch_last_update();
+
     WIN();
 }
 
@@ -250,6 +353,11 @@ int CLAMAPI Scan_Initialize(const wchar_t *pEnginesFolder, const wchar_t *pTempR
     }
     ret = load_db();
     unlock_engine();
+
+    ResetEvent(monitor_event);
+    if(!(monitor_hdl = CreateThread(NULL, 0, monitor_thread, NULL, 0, NULL)))
+	logg("!Falied to start db monitoring thread\n");
+
     logg("Scan_Initialize: returning %d\n", ret);
     return ret;
 }
@@ -280,6 +388,15 @@ int CLAMAPI Scan_Uninitialize(void) {
     }
     unlock_instances();
     free_engine_and_unlock();
+
+    if(monitor_hdl) {
+	SetEvent(monitor_event);
+	if(WaitForSingleObject(monitor_hdl, 60000) != WAIT_OBJECT_0) {
+	    logg("Scan_Uninitialize: forcibly terminating monitor thread after 60 seconds\n");
+	    TerminateThread(monitor_hdl, 0);
+	}
+    }
+    monitor_hdl = NULL;
     WIN();
 }
 
@@ -460,6 +577,80 @@ int CLAMAPI Scan_GetOption(CClamAVScanner *pScanner, int option, void *value, un
     WIN();
 }
 
+
+int CLAMAPI Scan_GetLimit(int option, unsigned int *value) {
+    enum cl_engine_field limit;
+    long long curlimit;
+    int err;
+
+    INFN();
+    if(lock_engine())
+	FAIL(CL_EMEM, "Failed to lock engine");
+    if(!engine) {
+	unlock_engine();
+	FAIL(CL_EARG, "Engine is NULL");
+    }
+    switch((enum CLAM_LIMIT_TYPE)option) {
+    case CLAM_LIMIT_FILESIZE:
+	limit = CL_ENGINE_MAX_FILESIZE;
+	break;
+    case CLAM_LIMIT_SCANSIZE:
+	limit = CL_ENGINE_MAX_SCANSIZE;
+	break;
+    case CLAM_LIMIT_RECURSION:
+	limit = CL_ENGINE_MAX_SCANSIZE;
+	break;
+    default:
+	unlock_engine();
+	FAIL(CL_EARG, "Unsupported limit type: %d", option);
+    }
+    curlimit = cl_engine_get_num(engine, limit, &err);
+    if(err) {
+	unlock_engine();
+	FAIL(err, "Failed to get engine value: %s", cl_strerror(err));
+    }
+    if(curlimit > 0xffffffff)
+	*value = 0xffffffff;
+    else
+	*value = (unsigned int)curlimit;
+    unlock_engine();
+    WIN();
+}
+
+
+int CLAMAPI Scan_SetLimit(int option, unsigned int value) {
+    enum cl_engine_field limit;
+    int err;
+
+    INFN();
+    if(lock_engine())
+	FAIL(CL_EMEM, "Failed to lock engine");
+    if(!engine) {
+	unlock_engine();
+	FAIL(CL_EARG, "Engine is NULL");
+    }
+    switch((enum CLAM_LIMIT_TYPE)option) {
+    case CLAM_LIMIT_FILESIZE:
+	limit = CL_ENGINE_MAX_FILESIZE;
+	break;
+    case CLAM_LIMIT_SCANSIZE:
+	limit = CL_ENGINE_MAX_SCANSIZE;
+	break;
+    case CLAM_LIMIT_RECURSION:
+	limit = CL_ENGINE_MAX_SCANSIZE;
+	break;
+    default:
+	unlock_engine();
+	FAIL(CL_EARG, "Unsupported limit type: %d", option);
+    }
+    err = cl_engine_set_num(engine, limit, (long long)value);
+    unlock_engine();
+    if(err)
+	FAIL(err, "Failed to set engine value: %s", cl_strerror(err));
+    WIN();
+}
+
+
 int CLAMAPI Scan_ScanObject(CClamAVScanner *pScanner, const wchar_t *pObjectPath, int *pScanStatus, PCLAM_SCAN_INFO_LIST *pInfoList) {
     HANDLE fhdl;
     int res;
@@ -533,7 +724,6 @@ int CLAMAPI Scan_ScanObjectByHandle(CClamAVScanner *pScanner, HANDLE object, int
     do {
 	CLAM_SCAN_INFO si;
 	CLAM_ACTION act;
-	HANDLE fdhdl;
 	DWORD cbperf;
 	wchar_t wvirname[MAX_VIRNAME_LEN];
 	LONG lo = 0, hi = 0, hi2 = 0;
@@ -745,10 +935,6 @@ CLAMAPI void Scan_ReloadDatabase(void) {
 		continue;
 	    }
 	    logg("Scan_ReloadDatabase: Now idle, acquiring engine lock\n");
-    	    if(lock_engine()) {
-		logg("!Scan_ReloadDatabase: failed to lock engine\n");
-		break;
-	    }
 	    if(lock_engine()) {
 		logg("!Scan_ReloadDatabase: failed to lock engine\n");
 		break;
@@ -781,7 +967,6 @@ CLAMAPI void Scan_ReloadDatabase(void) {
 
 	    // NEW STUFF //
 	    if(!(engine = cl_engine_new())) {
-		unlock_engine();
 		logg("!Scan_ReloadDatabase: Not enough memory for a new engine\n");
 		unlock_instances();
 		unlock_engine();
@@ -810,4 +995,26 @@ CLAMAPI void Scan_ReloadDatabase(void) {
     } else
 	logg("^Database reload requested received while reload is pending\n");
     InterlockedDecrement(&reload_waiters);
+}
+
+void msg_callback(enum cl_msg severity, const char *fullmsg, const char *msg, void *ctx)
+{
+    struct scan_ctx *sctx = (struct scan_ctx*)ctx;
+    const void *instance = sctx ? sctx->inst : NULL;
+    int fd = sctx ? sctx->entryfd : -1;
+    char sv;
+    switch (severity) {
+	case CL_MSG_ERROR:
+	    sv = '!';
+	    break;
+	case CL_MSG_WARN:
+	    sv = '^';
+	    break;
+	default:
+	    sv = '*';
+	    break;
+    }
+
+    logg("%c[LibClamAV] (instance %p, clamav context %p, fd %d): %s",
+	 sv, instance, sctx, fd, msg);
 }
