@@ -355,6 +355,9 @@ struct cl_engine *cl_engine_new(void)
 	return NULL;
     }
 
+#ifdef _WIN32
+    cl_engine_set_clcb_post_scan(new, cw_postscan_check);
+#endif
     cli_dbgmsg("Initialized %s engine\n", cl_retver());
     return new;
 }

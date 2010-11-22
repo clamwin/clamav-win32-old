@@ -64,10 +64,6 @@ extern int cw_init(void);
 extern BOOL cw_disablefsredir(void);
 extern BOOL cw_revertfsredir(void);
 
-/* wintrust check to avoid FP */
-typedef struct cli_ctx_tag _cli_ctx;
-extern int cw_sigcheck(_cli_ctx *ctx, int checkfp);
-
 /* ctrl + c handler */
 extern BOOL WINAPI cw_stop_ctrl_handler(DWORD CtrlType);
 

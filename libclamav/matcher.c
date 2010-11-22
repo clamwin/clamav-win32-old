@@ -383,11 +383,6 @@ int cli_checkfp(unsigned char *digest, size_t size, cli_ctx *ctx)
 	unsigned int i;
 	const char *virname;
 
-#ifdef _WIN32
-    if (!cw_sigcheck(ctx, 1))
-        return CL_CLEAN;
-#endif
-
     if(ctx->engine->md5_fp && cli_md5m_scan(digest, size, &virname, ctx->engine->md5_fp) == CL_VIRUS) {
 	cli_dbgmsg("cli_checkfp(): Found false positive detection (fp sig: %s)\n", virname);
 	return CL_CLEAN;
