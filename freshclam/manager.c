@@ -302,7 +302,7 @@ static int wwwconnect(const char *server, const char *proxy, int pport, char *ip
 		    loadbal_rp = rp;
 		    strncpy(loadbal_ipaddr, ipaddr, sizeof(loadbal_ipaddr));
 		} else {
-		    if(md->succ < minsucc && md->fail <= minfail) {
+		    if(md->succ <= minsucc && md->fail <= minfail) {
 			minsucc = md->succ;
 			minfail = md->fail;
 			loadbal_rp = rp;
@@ -324,7 +324,12 @@ static int wwwconnect(const char *server, const char *proxy, int pport, char *ip
 	    }
 	    rp = loadbal_rp;
 	    strncpy(ipaddr, loadbal_ipaddr, sizeof(ipaddr));
-
+#ifdef SUPPORT_IPv6
+	    if(rp->ai_family == AF_INET6)
+		addr = &((struct sockaddr_in6 *) rp->ai_addr)->sin6_addr;
+	    else
+#endif
+		addr = &((struct sockaddr_in *) rp->ai_addr)->sin_addr;
 	} else if(loadbal_rp == rp) {
 	    i++;
 	    continue;
@@ -920,13 +925,13 @@ static struct cl_cvd *remote_cvdhead(const char *cvdfile, const char *localfile,
     return cvd;
 }
 
-static int getfile(const char *srcfile, const char *destfile, const char *hostname, char *ip, const char *localip, const char *proxy, int port, const char *user, const char *pass, const char *uas, int ctimeout, int rtimeout, struct mirdat *mdat, int logerr, unsigned int can_whitelist, const char *ims)
+static int getfile_mirman(const char *srcfile, const char *destfile, const char *hostname, char *ip, const char *localip, const char *proxy, int port, const char *user, const char *pass, const char *uas, int ctimeout, int rtimeout, struct mirdat *mdat, int logerr, unsigned int can_whitelist, const char *ims, const char *ipaddr, int sd)
 {
 	char cmd[512], uastr[128], buffer[FILEBUFF], *ch;
 	int bread, fd, totalsize = 0,  rot = 0, totaldownloaded = 0,
-	    percentage = 0, sd;
+	    percentage = 0;
 	unsigned int i;
-	char *remotename = NULL, *authorization = NULL, *headerline, ipaddr[46];
+	char *remotename = NULL, *authorization = NULL, *headerline;
 	const char *rotation = "|/-\\", *fname;
 
 
@@ -973,24 +978,13 @@ static int getfile(const char *srcfile, const char *destfile, const char *hostna
     if(authorization)
 	free(authorization);
 
-    memset(ipaddr, 0, sizeof(ipaddr));
-    if(ip && ip[0]) /* use ip to connect */
-	sd = wwwconnect(ip, proxy, port, ipaddr, localip, ctimeout, mdat, logerr, can_whitelist);
-    else
-	sd = wwwconnect(hostname, proxy, port, ipaddr, localip, ctimeout, mdat, logerr, can_whitelist);
-
-    if(sd < 0) {
-	return 52;
-    } else {
-	logg("*Trying to download http://%s/%s (IP: %s)\n", hostname, srcfile, ipaddr);
-    }
+    logg("*Trying to download http://%s/%s (IP: %s)\n", hostname, srcfile, ipaddr);
 
     if(ip && !ip[0])
 	strcpy(ip, ipaddr);
 
     if(send(sd, cmd, strlen(cmd), 0) < 0) {
 	logg("%cgetfile: Can't write to socket\n", logerr ? '!' : '^');
-	closesocket(sd);
 	return 52;
     }
 
@@ -1007,7 +1001,6 @@ static int getfile(const char *srcfile, const char *destfile, const char *hostna
 	    logg("%cgetfile: Error while reading database from %s (IP: %s): %s\n", logerr ? '!' : '^', hostname, ipaddr, strerror(errno));
 	    if(mdat)
 		mirman_update(mdat->currip, mdat->af, mdat, 1);
-	    closesocket(sd);
 	    return 52;
 	}
 
@@ -1026,7 +1019,6 @@ static int getfile(const char *srcfile, const char *destfile, const char *hostna
 	logg("^getfile: %s not found on remote server (IP: %s)\n", srcfile, ipaddr);
 	if(mdat)
 	    mirman_update(mdat->currip, mdat->af, mdat, 2);
-	closesocket(sd);
 	return 58;
     }
 
@@ -1034,7 +1026,6 @@ static int getfile(const char *srcfile, const char *destfile, const char *hostna
     if(strstr(buffer, "HTTP/1.1 304") || strstr(buffer, "HTTP/1.0 304")) { 
 	if(mdat)
 	    mirman_update(mdat->currip, mdat->af, mdat, 0);
-	closesocket(sd);
 	return 1;
     }
 
@@ -1043,7 +1034,6 @@ static int getfile(const char *srcfile, const char *destfile, const char *hostna
 	logg("%cgetfile: Unknown response from remote server (IP: %s)\n", logerr ? '!' : '^', ipaddr);
 	if(mdat)
 	    mirman_update(mdat->currip, mdat->af, mdat, 1);
-	closesocket(sd);
 	return 58;
     }
 
@@ -1068,7 +1058,6 @@ static int getfile(const char *srcfile, const char *destfile, const char *hostna
 	else
         logg("!getfile: Can't create new file %s in the current directory: %s\n", destfile, strerror(errno));
 
-	closesocket(sd);
 	return 57;
     }
 
@@ -1084,9 +1073,8 @@ static int getfile(const char *srcfile, const char *destfile, const char *hostna
 #endif
         if(write(fd, buffer, bread) != bread) {
 	    logg("getfile: Can't write %d bytes to %s\n", bread, destfile);
-	    unlink(destfile);
 	    close(fd);
-	    closesocket(sd);
+	    unlink(destfile);
 	    return 57; /* FIXME */
 	}
 
@@ -1105,7 +1093,6 @@ static int getfile(const char *srcfile, const char *destfile, const char *hostna
             fflush(stdout);
         }
     }
-    closesocket(sd);
     close(fd);
 
     if(bread == -1) {
@@ -1128,14 +1115,45 @@ static int getfile(const char *srcfile, const char *destfile, const char *hostna
     return 0;
 }
 
-static int getcvd(const char *cvdfile, const char *newfile, const char *hostname, char *ip, const char *localip, const char *proxy, int port, const char *user, const char *pass, const char *uas, unsigned int newver, int ctimeout, int rtimeout, struct mirdat *mdat, int logerr, unsigned int can_whitelist)
+static int getfile(const char *srcfile, const char *destfile, const char *hostname, char *ip, const char *localip, const char *proxy, int port, const char *user, const char *pass, const char *uas, int ctimeout, int rtimeout, struct mirdat *mdat, int logerr, unsigned int can_whitelist, const char *ims, const struct optstruct *opts)
+{
+	int ret, sd;
+	char ipaddr[46];
+
+    memset(ipaddr, 0, sizeof(ipaddr));
+    if(ip && ip[0]) /* use ip to connect */
+	sd = wwwconnect(ip, proxy, port, ipaddr, localip, ctimeout, mdat, logerr, can_whitelist);
+    else
+	sd = wwwconnect(hostname, proxy, port, ipaddr, localip, ctimeout, mdat, logerr, can_whitelist);
+
+    if(sd < 0)
+	return 52;
+
+    if(mdat) {
+	mirman_update_sf(mdat->currip, mdat->af, mdat, 0, 1);
+	mirman_write("mirrors.dat", optget(opts, "DatabaseDirectory")->strarg, mdat);
+    }
+
+    ret = getfile_mirman(srcfile, destfile, hostname, ip, localip, proxy, port, user, pass, uas, ctimeout, rtimeout, mdat, logerr, can_whitelist, ims, ipaddr, sd);
+    closesocket(sd);
+
+    if(mdat) {
+	mirman_update_sf(mdat->currip, mdat->af, mdat, 0, -1);
+	mirman_write("mirrors.dat", optget(opts, "DatabaseDirectory")->strarg, mdat);
+    }
+
+    return ret;
+}
+
+static int getcvd(const char *cvdfile, const char *newfile, const char *hostname, char *ip, const char *localip, const char *proxy, int port, const char *user, const char *pass, const char *uas, unsigned int newver, int ctimeout, int rtimeout, struct mirdat *mdat, int logerr, unsigned int can_whitelist, const struct optstruct *opts)
 {
 	struct cl_cvd *cvd;
 	int ret;
 
 
     logg("*Retrieving http://%s/%s\n", hostname, cvdfile);
-    if((ret = getfile(cvdfile, newfile, hostname, ip, localip, proxy, port, user, pass, uas, ctimeout, rtimeout, mdat, logerr, can_whitelist, NULL))) {
+
+    if((ret = getfile(cvdfile, newfile, hostname, ip, localip, proxy, port, user, pass, uas, ctimeout, rtimeout, mdat, logerr, can_whitelist, NULL, opts))) {
         logg("%cCan't download %s from %s\n", logerr ? '!' : '^', cvdfile, hostname);
         unlink(newfile);
         return ret;
@@ -1200,7 +1218,7 @@ static int chdir_tmp(const char *dbname, const char *tmpdir)
     return 0;
 }
 
-static int getpatch(const char *dbname, const char *tmpdir, int version, const char *hostname, char *ip, const char *localip, const char *proxy, int port, const char *user, const char *pass, const char *uas, int ctimeout, int rtimeout, struct mirdat *mdat, int logerr, unsigned int can_whitelist)
+static int getpatch(const char *dbname, const char *tmpdir, int version, const char *hostname, char *ip, const char *localip, const char *proxy, int port, const char *user, const char *pass, const char *uas, int ctimeout, int rtimeout, struct mirdat *mdat, int logerr, unsigned int can_whitelist, const struct optstruct *opts)
 {
 	char *tempname, patch[32], olddir[512];
 	int ret, fd;
@@ -1218,7 +1236,7 @@ static int getpatch(const char *dbname, const char *tmpdir, int version, const c
     snprintf(patch, sizeof(patch), "%s-%d.cdiff", dbname, version);
 
     logg("*Retrieving http://%s/%s\n", hostname, patch);
-    if((ret = getfile(patch, tempname, hostname, ip, localip, proxy, port, user, pass, uas, ctimeout, rtimeout, mdat, logerr, can_whitelist, NULL))) {
+    if((ret = getfile(patch, tempname, hostname, ip, localip, proxy, port, user, pass, uas, ctimeout, rtimeout, mdat, logerr, can_whitelist, NULL, opts))) {
 	if(ret == 53)
 	    logg("Empty script %s, need to download entire database\n", patch);
 	else
@@ -1327,16 +1345,16 @@ static int buildcld(const char *tmpdir, const char *dbname, const char *newfile,
     if(write(fd, buff, 512) != 512) {
 	logg("!buildcld: Can't write to %s\n", newfile);
 	CHDIR_ERR(cwd);
-	unlink(newfile);
 	close(fd);
+	unlink(newfile);
 	return -1;
     }
 
     if((dir = opendir(".")) == NULL) {
 	logg("!buildcld: Can't open directory %s\n", tmpdir);
 	CHDIR_ERR(cwd);
-	unlink(newfile);
 	close(fd);
+	unlink(newfile);
 	return -1;
     }
 
@@ -1345,8 +1363,8 @@ static int buildcld(const char *tmpdir, const char *dbname, const char *newfile,
 	if(!(gzs = gzopen(newfile, "ab9f"))) {
 	    logg("!buildcld: gzopen() failed for %s\n", newfile);
 	    CHDIR_ERR(cwd);
-	    unlink(newfile);
 	    closedir(dir);
+	    unlink(newfile);
 	    return -1;
 	}
     }
@@ -1374,8 +1392,8 @@ static int buildcld(const char *tmpdir, const char *dbname, const char *newfile,
 	    gzclose(gzs);
 	else
 	    close(fd);
-	unlink(newfile);
 	closedir(dir);
+	unlink(newfile);
 	return -1;
     }
 
@@ -1392,8 +1410,8 @@ static int buildcld(const char *tmpdir, const char *dbname, const char *newfile,
 		    gzclose(gzs);
 		else
 		    close(fd);
-		unlink(newfile);
 		closedir(dir);
+		unlink(newfile);
 		return -1;
 	    }
 	}
@@ -1735,7 +1753,7 @@ static int updatedb(const char *dbname, const char *hostname, char *ip, int *sig
 
     newfile = cli_gentemp(updtmpdir);
     if(nodb) {
-	ret = getcvd(cvdfile, newfile, hostname, ip, localip, proxy, port, user, pass, uas, newver, ctimeout, rtimeout, mdat, logerr, can_whitelist);
+	ret = getcvd(cvdfile, newfile, hostname, ip, localip, proxy, port, user, pass, uas, newver, ctimeout, rtimeout, mdat, logerr, can_whitelist, opts);
 	if(ret) {
 	    memset(ip, 0, 16);
 	    free(newfile);
@@ -1753,7 +1771,7 @@ static int updatedb(const char *dbname, const char *hostname, char *ip, int *sig
 		    int llogerr = logerr;
 		if(logerr)
 		    llogerr = (j == maxattempts - 1);
-		ret = getpatch(dbname, tmpdir, i, hostname, ip, localip, proxy, port, user, pass, uas, ctimeout, rtimeout, mdat, llogerr, can_whitelist);
+		ret = getpatch(dbname, tmpdir, i, hostname, ip, localip, proxy, port, user, pass, uas, ctimeout, rtimeout, mdat, llogerr, can_whitelist, opts);
 		if(ret == 52 || ret == 58) {
 		    memset(ip, 0, 16);
 		    continue;
@@ -1771,7 +1789,7 @@ static int updatedb(const char *dbname, const char *hostname, char *ip, int *sig
 	    if(ret != 53)
 		logg("^Incremental update failed, trying to download %s\n", cvdfile);
 	    mirman_whitelist(mdat, 2);
-	    ret = getcvd(cvdfile, newfile, hostname, ip, localip, proxy, port, user, pass, uas, newver, ctimeout, rtimeout, mdat, logerr, can_whitelist);
+	    ret = getcvd(cvdfile, newfile, hostname, ip, localip, proxy, port, user, pass, uas, newver, ctimeout, rtimeout, mdat, logerr, can_whitelist, opts);
 	    if(ret) {
 		free(newfile);
 		return ret;
@@ -1929,7 +1947,7 @@ static int updatecustomdb(const char *url, int *signo, const struct optstruct *o
 	    Rfc2822DateTime(mtime, sb.st_mtime);
 
 	newfile = cli_gentemp(updtmpdir);
-	ret = getfile(rpath, newfile, host, NULL, localip, proxy, port, user, pass, uas, ctimeout, rtimeout, NULL, logerr, 0, *mtime ? mtime : NULL);
+	ret = getfile(rpath, newfile, host, NULL, localip, proxy, port, user, pass, uas, ctimeout, rtimeout, NULL, logerr, 0, *mtime ? mtime : NULL, opts);
 	if(ret == 1) {
 	    logg("%s is up to date (version: custom database)\n", dbname);
 	    unlink(newfile);
@@ -2141,7 +2159,8 @@ int downloadmanager(const struct optstruct *opts, const char *hostname, const ch
 	if(newver)
 	    free(newver);
 
-	mirman_write("mirrors.dat", &mdat);
+	mirman_write("mirrors.dat", dbdir, &mdat);
+	mirman_free(&mdat);
 	cli_rmdirs(updtmpdir);
 	return ret;
 
@@ -2156,7 +2175,8 @@ int downloadmanager(const struct optstruct *opts, const char *hostname, const ch
 	if(newver)
 	    free(newver);
 
-	mirman_write("mirrors.dat", &mdat);
+	mirman_write("mirrors.dat", dbdir, &mdat);
+	mirman_free(&mdat);
 	cli_rmdirs(updtmpdir);
 	return ret;
 
@@ -2185,7 +2205,8 @@ int downloadmanager(const struct optstruct *opts, const char *hostname, const ch
 	if(newver)
 	    free(newver);
 
-	mirman_write("mirrors.dat", &mdat);
+	mirman_write("mirrors.dat", dbdir, &mdat);
+	mirman_free(&mdat);
 	cli_rmdirs(updtmpdir);
 	return ret;
     } else if(ret == 0)
@@ -2212,7 +2233,8 @@ int downloadmanager(const struct optstruct *opts, const char *hostname, const ch
 	if(newver)
 	    free(newver);
 
-	mirman_write("mirrors.dat", &mdat);
+	mirman_write("mirrors.dat", dbdir, &mdat);
+	mirman_free(&mdat);
 	cli_rmdirs(updtmpdir);
 	return ret;
     } else if(ret == 0)
@@ -2226,7 +2248,8 @@ int downloadmanager(const struct optstruct *opts, const char *hostname, const ch
 	    if((ret = updatedb(opt->strarg, hostname, ipaddr, &signo, opts, NULL, localip, outdated, &mdat, logerr, 1)) > 50) {
 		if(newver)
 		    free(newver);
-		mirman_write("mirrors.dat", &mdat);
+		mirman_write("mirrors.dat", dbdir, &mdat);
+		mirman_free(&mdat);
 		cli_rmdirs(updtmpdir);
 		return ret;
 	    } else if(ret == 0)
@@ -2234,6 +2257,9 @@ int downloadmanager(const struct optstruct *opts, const char *hostname, const ch
 	    opt = opt->nextarg;
 	}
     }
+
+    mirman_write("mirrors.dat", dbdir, &mdat);
+    mirman_free(&mdat);
 
     /* custom dbs */
     if((opt = optget(opts, "DatabaseCustomURL"))->enabled) {
@@ -2244,7 +2270,6 @@ int downloadmanager(const struct optstruct *opts, const char *hostname, const ch
 	}
     }
 
-    mirman_write("mirrors.dat", &mdat);
     cli_rmdirs(updtmpdir);
 
     if(updated) {
