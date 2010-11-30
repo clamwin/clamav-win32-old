@@ -115,4 +115,5 @@ int cw_rmdirs(const char *dirname)
    but the file is created by libclamav */
 #undef cli_unlink
 
+cl_error_t cw_postscan_check(int fd, int result, const char *virname, void *context);
 #include <libclamav/others.c>

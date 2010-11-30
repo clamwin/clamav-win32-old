@@ -67,7 +67,7 @@ Enable verbose logging.
 Default: no
 .TP 
 \fBExtendedDetectionInfo BOOL\fR
-Provide additional information about the infected file, such as its size and hash, together with the virus name. It's recommended to enable this option along with SubmitDetectionStats in freshclam.conf.
+Log additional information about the infected file, such as its size and hash, together with the virus name.
 .br 
 Default: no
 .TP 
@@ -298,6 +298,11 @@ Default: no
 This option enables scanning of OLE2 files, such as Microsoft Office documents and .msi files.
 .br 
 Default: yes
+.TP 
+\fBOLE2BlockMacros BOOL\fR
+With this option enabled OLE2 files with VBA macros, which were not detected by signatures will be marked as "Heuristics.OLE2.ContainsMacros".
+.br 
+Default: no
 .TP 
 \fBScanPDF BOOL\fR
 This option enables scanning within PDF files.

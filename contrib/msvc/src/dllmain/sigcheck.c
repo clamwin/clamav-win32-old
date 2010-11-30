@@ -87,12 +87,11 @@ typedef struct _WINTRUST_DATA
 #define TRUST_E_NOSIGNATURE 0x800B0100L
 #endif
 
-static int sigcheck(cli_ctx *ctx, int checkfp)
+static int sigcheck(int fd, const char *virname, int warnfp)
 {
-    fmap_t *map = *ctx->fmap;
     const char *scanning = cw_get_currentfile();
-    LONG lstatus;
-    LONG lsigned = TRUST_E_NOSIGNATURE;
+    LONG lstatus, lsigned = TRUST_E_NOSIGNATURE;
+    HANDLE hFile = (HANDLE) _get_osfhandle(fd);
     HCATINFO *phCatInfo = NULL;
     CATALOG_INFO sCatInfo;
     WINTRUST_FILE_INFO wtfi;
@@ -107,10 +106,10 @@ static int sigcheck(cli_ctx *ctx, int checkfp)
     GUID pgActionID = WINTRUST_ACTION_GENERIC_VERIFY_V2;
     DWORD cbHash = sizeof(bHash);
 
-    while (scanning && ctx->container_type == CL_TYPE_ANY)
+    while (scanning)
     {
 
-        if (!cw_helpers.wt.CryptCATAdminCalcHashFromFileHandle(map->fh, &cbHash, bHash, 0))
+        if (!cw_helpers.wt.CryptCATAdminCalcHashFromFileHandle(hFile, &cbHash, bHash, 0))
         {
             cli_dbgmsg("sigcheck: CryptCATAdminCalcHashFromFileHandle() failed: %d\n", GetLastError());
             break;
@@ -173,7 +172,7 @@ static int sigcheck(cli_ctx *ctx, int checkfp)
             memset(&wtfi, 0, sizeof(wtfi));
             wtfi.cbStruct = sizeof(wtfi);
             wtfi.pcwszFilePath = filename;
-            wtfi.hFile = map->fh;
+            wtfi.hFile = hFile;
 
             wtd.dwUnionChoice = WTD_CHOICE_FILE;
             wtd.pFile = &wtfi;
@@ -187,8 +186,8 @@ static int sigcheck(cli_ctx *ctx, int checkfp)
         break;
     }
 
-    if (checkfp && (lsigned == ERROR_SUCCESS))
-        fprintf(stderr, "%s: [%s] FALSE POSITIVE FOUND\n", scanning, *ctx->virname);
+    if (warnfp && (lsigned == ERROR_SUCCESS))
+        fprintf(stderr, "%s: [%s] FALSE POSITIVE FOUND\n", scanning, virname);
 
     if (filename)
         free(filename);
@@ -197,17 +196,19 @@ static int sigcheck(cli_ctx *ctx, int checkfp)
     return lsigned;
 }
 
-static int sigcheck_dummy(cli_ctx *ctx, int checkfp)
+static int sigcheck_dummy(int fd, const char *virname, int warnfp)
 {
     return TRUST_E_NOSIGNATURE;
 }
 
-typedef int (__cdecl *pfn_sigcheck)(cli_ctx *ctx, int checkfp);
+typedef int (*pfn_sigcheck)(int fd, const char *virname, int warnfp);
 static pfn_sigcheck pf_sigcheck = sigcheck_dummy;
 
-int cw_sigcheck(cli_ctx *ctx, int checkfp)
+cl_error_t cw_postscan_check(int fd, int result, const char *virname, void *context)
 {
-    return pf_sigcheck(ctx, checkfp);
+    if ((result == CL_VIRUS) && (pf_sigcheck(fd, virname, 1) == ERROR_SUCCESS))
+        return CL_BREAK;
+    return CL_CLEAN;
 }
 
 int cw_sig_init(void)
@@ -224,4 +225,10 @@ int cw_sig_init(void)
     cli_dbgmsg("sigcheck: Engine enabled\n");
     pf_sigcheck = sigcheck;
     return 0;
+}
+
+/* exported */
+int cw_sigcheck(int fd)
+{
+    return pf_sigcheck(fd, NULL, 0);
 }

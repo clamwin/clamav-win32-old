@@ -53,7 +53,7 @@
  * in re-enabling affected modules.
  */
 
-#define CL_FLEVEL 56
+#define CL_FLEVEL 58
 #define CL_FLEVEL_DCONF	CL_FLEVEL
 #define CL_FLEVEL_SIGTOOL CL_FLEVEL
 
@@ -109,8 +109,6 @@ typedef struct bitset_tag
 /* internal clamav context */
 typedef struct cli_ctx_tag {
     const char **virname;
-    char *virhash;
-    unsigned int *virsize;
     unsigned long int *scanned;
     const struct cli_matcher *root;
     const struct cl_engine *engine;
@@ -257,6 +255,9 @@ struct cl_engine {
     void *cb_progress_ctx;
     clcb_sigload cb_sigload;
     void *cb_sigload_ctx;
+    clcb_msg cb_msg;
+    clcb_hash cb_hash;
+    enum cl_msg cb_msg_minseverity;
 
     /* Used for bytecode */
     struct cli_all_bc bcs;
@@ -304,6 +305,7 @@ extern int have_rar;
 #define DETECT_ENCRYPTED    (ctx->options & CL_SCAN_BLOCKENCRYPTED)
 /* #define BLOCKMAX	    (ctx->options & CL_SCAN_BLOCKMAX) */
 #define DETECT_BROKEN	    (ctx->options & CL_SCAN_BLOCKBROKEN)
+#define BLOCK_MACROS	    (ctx->options & CL_SCAN_BLOCKMACROS)
 #define SCAN_STRUCTURED	    (ctx->options & CL_SCAN_STRUCTURED)
 
 /* based on macros from A. Melnikoff */
@@ -436,6 +438,7 @@ void cli_infomsg(const cli_ctx* ctx, const char *fmt, ...);
 #endif
 
 void cli_logg_setup(const cli_ctx* ctx);
+void cli_logg_unsetup(void);
 
 /* tell compiler about branches that are very rarely taken,
  * such as debug paths, and error paths */

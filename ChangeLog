@@ -1,3 +1,99 @@
+Tue Nov 30 14:05:34 CET 2010 (tk)
+---------------------------------
+ * V 0.96.5
+
+Tue Nov 30 13:07:15 EET 2010 (edwin)
+------------------------------------
+ * libclamav/pdf.c: fix crashes (bb #2358, bb #2380, bb #2396).
+ Thanks to Arkadiusz Miskiewicz <arekm*maven.pl> for bb #2380.
+
+Tue Nov 30 12:09:56 CET 2010 (acab)
+-----------------------------------
+ * libclamav/pe_icons.c: off by one while (bb#2344)
+
+Mon Nov 29 17:40:39 CET 2010 (tk)
+---------------------------------
+ * libclamav: fix detection of embedded executables
+
+Wed Nov 24 23:52:28 CET 2010 (tk)
+---------------------------------
+ * libclamav/matcher-ac.c: fix offset handling for sigs with {x-y}
+			   wildcards (bb#2393)
+
+Tue Nov 23 12:44:25 CET 2010 (tk)
+---------------------------------
+ * freshclam/manager.c: fix error path infinite loop (bb#2389)
+
+Tue Nov 23 13:13:40 EET 2010 (edwin)
+------------------------------------
+ * clamd/clamd.c: fix RLIMIT_DATA setting on BSD (bb #1941), thanks to
+    Andreas Longwitz <longwitz* incore.de>.
+
+Mon Nov 15 16:04:31 CET 2010 (tk)
+---------------------------------
+ * freshclam: improve mirror management
+
+Fri Nov 12 15:47:09 CET 2010 (tk)
+---------------------------------
+ * libclamav: fix possible use of uninitialized values (bb#2291)
+
+Wed Nov 10 16:31:49 CET 2010 (acab)
+-----------------------------------
+ * libclamav: Set the unreliability flag on (un)packed files (bb#2307)
+
+Sat Nov  6 15:47:01 EET 2010 (edwin)
+------------------------------------
+ * libclamav/c++: Update embedded copy of LLVM to version 2.8 (bb #2327)
+
+Fri Nov  5 16:40:31 CET 2010 (tk)
+---------------------------------
+ * freshclam: make query format backward compatible
+
+Fri Nov  5 15:32:22 CET 2010 (tk)
+---------------------------------
+ * freshclam: get detection stats directly from clamd (bb#2312)
+
+Thu Nov  4 21:12:53 EET 2010 (edwin)
+------------------------------------
+ * libclamav/cache.c,c++/bytecode2llvm.cpp}: make cl_load thread safe (bb #2333).
+
+Thu Nov  4 19:47:17 EET 2010 (edwin)
+------------------------------------
+ * freshclam: load database in subprocess (bb #2147).
+
+Wed Nov  3 13:38:47 CET 2010 (tk)
+---------------------------------
+ * clamd: add new commands DETSTATS and DETSTATSCLEAR (part of bb#2312)
+
+Tue Nov  2 13:01:14 EET 2010 (edwin)
+------------------------------------
+ * libclamav/7z.c: fix file descriptor leak (bb #2347)
+
+Mon Oct 18 11:35:45 EEST 2010 (edwin)
+-------------------------------------
+ * clamd, libclamavll: add ability to logg messages from libclamav (bb #1965)
+
+Sun Oct 31 09:13:33 EET 2010 (edwin)
+------------------------------------
+ * libclamav/builtin_bytecodes.h: Don't disable JIT on pentium4 (bb #2345)
+
+Fri Oct 29 22:26:55 CEST 2010 (acab)
+------------------------------------
+ * clamav-for-windows: displace clamav-for-windows to a separate solution and directory
+
+Fri Oct 29 19:03:31 CEST 2010 (tk)
+----------------------------------
+ * clamd: add new option OLE2BlockMacros (requested by Mike)
+
+Fri Oct 29 17:55:10 CEST 2010 (tk)
+----------------------------------
+ * freshclam: DatabaseCustomURL: add support for If-Modified-Since
+	      and signature counter
+
+Thu Oct 28 16:23:47 CEST 2010 (tk)
+----------------------------------
+ * freshclam: add initial support for DatabaseCustomURL
+
 Mon Oct 25 18:02:56 CEST 2010 (tk)
 ----------------------------------
  * V 0.96.4

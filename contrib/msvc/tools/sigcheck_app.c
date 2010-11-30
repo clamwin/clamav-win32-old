@@ -41,10 +41,11 @@ void formatmessage(int code)
         printf("Sigcheck result: 0x%08x - %s\n", code, fmtfallback(code));
 }
 
+extern int cw_sigcheck(int fd);
+
 int main(int argc, char *argv[])
 {
     int fd, result;
-    cli_ctx ctx;
 
     if (argc != 2)
     {
@@ -62,28 +63,11 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    memset(&ctx, 0, sizeof(cli_ctx));
-    ctx.container_type = CL_TYPE_ANY;
-
-    if (!(ctx.fmap = cli_calloc(sizeof(fmap_t *), 1)))
-    {
-        fprintf(stderr, "out of memory\n");
-        return 1;
-    }
-
-    if (!(*ctx.fmap = fmap(fd, 0, 0)))
-    {
-        fprintf(stderr, "fmap failed\n");
-        return 1;
-    }
-
-    result = cw_sigcheck(&ctx, 0);
+    result = cw_sigcheck(fd);
     if (result)
         printf("LE: 0x%08x ", GetLastError());
     formatmessage(result);
     
-    funmap(*ctx.fmap);
-    free(ctx.fmap);
     close(fd);
     
     return 0;

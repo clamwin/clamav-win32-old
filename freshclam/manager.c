@@ -53,6 +53,9 @@
 #include <sys/types.h>
 #include <time.h>
 #include <fcntl.h>
+#ifndef	_WIN32
+#include <sys/wait.h>
+#endif
 #include <sys/stat.h>
 #include <dirent.h>
 #include <errno.h>
@@ -72,6 +75,7 @@
 #include "shared/misc.h"
 #include "shared/cdiff.h"
 #include "shared/tar.h"
+#include "shared/clamdcom.h"
 
 #include "libclamav/clamav.h"
 #include "libclamav/others.h"
@@ -298,7 +302,7 @@ static int wwwconnect(const char *server, const char *proxy, int pport, char *ip
 		    loadbal_rp = rp;
 		    strncpy(loadbal_ipaddr, ipaddr, sizeof(loadbal_ipaddr));
 		} else {
-		    if(md->succ < minsucc && md->fail <= minfail) {
+		    if(md->succ <= minsucc && md->fail <= minfail) {
 			minsucc = md->succ;
 			minfail = md->fail;
 			loadbal_rp = rp;
@@ -320,7 +324,12 @@ static int wwwconnect(const char *server, const char *proxy, int pport, char *ip
 	    }
 	    rp = loadbal_rp;
 	    strncpy(ipaddr, loadbal_ipaddr, sizeof(ipaddr));
-
+#ifdef SUPPORT_IPv6
+	    if(rp->ai_family == AF_INET6)
+		addr = &((struct sockaddr_in6 *) rp->ai_addr)->sin6_addr;
+	    else
+#endif
+		addr = &((struct sockaddr_in *) rp->ai_addr)->sin_addr;
 	} else if(loadbal_rp == rp) {
 	    i++;
 	    continue;
@@ -348,7 +357,7 @@ static int wwwconnect(const char *server, const char *proxy, int pport, char *ip
 	    if(loadbal) {
 		loadbal = 0;
 		i = 0;
-	    }
+	    } else i++;
 	    continue;
 	} else {
 	    if(mdat) {
@@ -426,6 +435,7 @@ static int wwwconnect(const char *server, const char *proxy, int pport, char *ip
     return -2;
 }
 
+/*
 static const char *readblineraw(int fd, char *buf, int bufsize, int filesize, int *bread)
 {
 	char *pt;
@@ -486,6 +496,7 @@ static const char *readbline(int fd, char *buf, int bufsize, int filesize, int *
 
     return line;
 }
+*/
 
 static unsigned int fmt_base64(char *dest, const char *src, unsigned int len)
 {
@@ -556,25 +567,18 @@ static char *proxyauth(const char *user, const char *pass)
     return auth;
 }
 
-/*
- * TODO:
- * - strptime() is most likely not portable enough
- */
 int submitstats(const char *clamdcfg, const struct optstruct *opts)
 {
-	int fd, sd, bread, lread = 0, cnt, ret;
+	int sd, clamsockd, bread, cnt, ret;
 	char post[SUBMIT_MIN_ENTRIES * 256 + 512];
 	char query[SUBMIT_MIN_ENTRIES * 256];
-	char buff[512], statsdat[512], newstatsdat[512], uastr[128];
-	char logfile[256], fbuff[FILEBUFF];
-	char *pt, *pt2, *auth = NULL;
-	const char *line, *country = NULL, *user, *proxy = NULL, *hostid = NULL;
-	struct optstruct *clamdopt;
+	char uastr[128], *line;
+	char *pt, *auth = NULL;
+	const char *country = NULL, *user, *proxy = NULL, *hostid = NULL;
 	const struct optstruct *opt;
-	struct stat sb;
-	struct tm tms;
-	time_t epoch;
 	unsigned int qcnt, entries, submitted = 0, permfail = 0, port = 0;
+        struct RCVLN rcv;
+	const char *tokens[5];
 
 
     if((opt = optget(opts, "DetectionStatsCountry"))->enabled) {
@@ -593,67 +597,6 @@ int submitstats(const char *clamdcfg, const struct optstruct *opts)
 	hostid = opt->strarg;
     }
 
-    if(!(clamdopt = optparse(clamdcfg, 0, NULL, 1, OPT_CLAMD, 0, NULL))) {
-	logg("!SubmitDetectionStats: Can't open or parse configuration file %s\n", clamdcfg);
-	return 56;
-    }
-
-    if(!(opt = optget(clamdopt, "LogFile"))->enabled) {
-	logg("!SubmitDetectionStats: LogFile needs to be enabled in %s\n", clamdcfg);
-	logg("SubmitDetectionStats: Please consider enabling ExtendedDetectionInfo\n");
-	optfree(clamdopt);
-	return 56;
-    }
-    strncpy(logfile, opt->strarg, sizeof(logfile));
-    logfile[sizeof(logfile) - 1] = 0;
-
-    if(!optget(clamdopt, "LogTime")->enabled) {
-	logg("!SubmitDetectionStats: LogTime needs to be enabled in %s\n", clamdcfg);
-	optfree(clamdopt);
-	return 56;
-    }
-    optfree(clamdopt);
-
-    if((fd = open("stats.dat", O_RDONLY|O_BINARY)) != -1) {
-	if((bread = read(fd, statsdat, sizeof(statsdat) - 1)) == -1) {
-	    logg("^SubmitDetectionStats: Can't read stats.dat\n");
-	    bread = 0;
-	}
-	statsdat[bread] = 0;
-	close(fd);
-    } else {
-	*statsdat = 0;
-    }
-
-    if((fd = open(logfile, O_RDONLY|O_BINARY)) == -1) {
-	logg("!SubmitDetectionStats: Can't open %s for reading\n", logfile);
-	return 56;
-    }
-
-    if(fstat(fd, &sb) == -1) {
-	logg("!SubmitDetectionStats: fstat() failed\n");
-	close(fd);
-	return 56;
-    }
-
-    while((line = readbline(fd, fbuff, FILEBUFF, sb.st_size, &lread)))
-	if(strlen(line) >= 32 && !strcmp(&line[strlen(line) - 6], " FOUND"))
-	    break;
-
-    if(!line) {
-	logg("SubmitDetectionStats: No detection records found\n");
-	close(fd);
-	return 1;
-    }
-
-    if(*statsdat && !strcmp(line, statsdat)) {
-	logg("SubmitDetectionStats: No new detection records found\n");
-	close(fd);
-	return 1;
-    } else {
-	strncpy(newstatsdat, line, sizeof(newstatsdat));
-    }
-
     if((opt = optget(opts, "HTTPUserAgent"))->enabled)
         strncpy(uastr, opt->strarg, sizeof(uastr));
     else
@@ -669,14 +612,11 @@ int submitstats(const char *clamdcfg, const struct optstruct *opts)
 	    user = opt->strarg;
 	    if(!(opt = optget(opts, "HTTPProxyPassword"))->enabled) {
 		logg("!SubmitDetectionStats: HTTPProxyUsername requires HTTPProxyPassword\n");
-		close(fd);
 		return 56;
 	    }
 	    auth = proxyauth(user, opt->strarg);
-	    if(!auth) {
-		close(fd);
+	    if(!auth)
 		return 56;
-	    }
 	}
 
 	if((opt = optget(opts, "HTTPProxyPort"))->enabled)
@@ -685,50 +625,27 @@ int submitstats(const char *clamdcfg, const struct optstruct *opts)
 	logg("*Connecting via %s\n", proxy);
     }
 
+    if((clamsockd = clamd_connect(clamdcfg, "SubmitDetectionStats")) < 0)
+	return 52;
+
+    recvlninit(&rcv, clamsockd);
+    if(sendln(clamsockd, "zDETSTATS", 10)) {
+        closesocket(clamsockd);
+	return 52;
+    }
+
     ret = 0;
     memset(query, 0, sizeof(query));
     qcnt = 0;
     entries = 0;
-    do {
-	if(strlen(line) < 32 || strcmp(&line[strlen(line) - 6], " FOUND"))
-	    continue;
-
-	if(*statsdat && !strcmp(line, statsdat))
-	    break;
-
-	strncpy(buff, line, sizeof(buff));
-	buff[sizeof(buff) - 1] = 0;
-	if(!(pt = strstr(buff, " -> "))) {
-	    logg("*SubmitDetectionStats: Skipping detection entry logged without time\b");
-	    continue;
-	}
-	*pt = 0;
-	pt += 4;
-
-	tms.tm_isdst = -1;
-	if(!strptime(buff, "%a %b  %d %H:%M:%S %Y", &tms) || (epoch = mktime(&tms)) == -1) {
-	    logg("!SubmitDetectionStats: Failed to convert date string\n");
-	    ret = 1;
+    while(recvln(&rcv, &line, NULL) > 0) {
+        if(cli_strtokenize(line, ':', 5, tokens) != 5) {
+	    logg("!SubmitDetectionStats: Invalid data format\n");
+	    ret = 52;
 	    break;
 	}
 
-	pt2 = &pt[strlen(pt) - 6];
-	*pt2 = 0;
-
-	if(!(pt2 = strrchr(pt, ' ')) || pt2[-1] != ':') {
-	    logg("!SubmitDetectionStats: Incorrect format of the log file (1)\n");
-	    ret = 1;
-	    break;
-	}
-	pt2[-1] = 0;
-	pt2++;
-
-	if((pt = strrchr(pt, *PATHSEP)))
-	    *pt++ = 0;
-	if(!pt)
-	    pt = (char*) "NOFNAME";
-
-	qcnt += snprintf(&query[qcnt], sizeof(query) - qcnt, "ts[]=%u&fname[]=%s&virus[]=%s&", (unsigned int) epoch, pt, pt2);
+	qcnt += snprintf(&query[qcnt], sizeof(query) - qcnt, "ts[]=%s&fname[]=%s&virus[]=%s(%s:%s)&", tokens[0], tokens[4], tokens[3], tokens[1], tokens[2]);
 	entries++;
 
 	if(entries == SUBMIT_MIN_ENTRIES) {
@@ -738,7 +655,6 @@ int submitstats(const char *clamdcfg, const struct optstruct *opts)
 		ret = 52;
 		break;
 	    }
-
 	    query[sizeof(query) - 1] = 0;
 	    if(mdprintf(sd,
 		"POST http://stats.clamav.net/submit.php HTTP/1.0\r\n"
@@ -809,30 +725,23 @@ int submitstats(const char *clamdcfg, const struct optstruct *opts)
 
 	    break;
 	}
-
-    } while((line = readbline(fd, fbuff, FILEBUFF, sb.st_size, &lread)));
-
-    close(fd);
+    }
+    closesocket(clamsockd);
     if(auth)
 	free(auth);
 
-    if(submitted || permfail) {
-	if((fd = open("stats.dat", O_WRONLY | O_BINARY | O_CREAT | O_TRUNC, 0600)) == -1) {
-	    logg("^SubmitDetectionStats: Can't open stats.dat for writing\n");
+    if(ret == 0) {
+	if(!submitted) {
+	    logg("SubmitDetectionStats: Not enough recent data for submission\n");
 	} else {
-	    if((bread = write(fd, newstatsdat, sizeof(newstatsdat))) != sizeof(newstatsdat))
-		logg("^SubmitDetectionStats: Can't write to stats.dat\n");
-	    close(fd);
+	    logg("SubmitDetectionStats: Submitted %u records\n", submitted);
+	    if((clamsockd = clamd_connect(clamdcfg, "SubmitDetectionStats")) != -1) {
+		sendln(clamsockd, "DETSTATSCLEAR", 14);
+		recv(clamsockd, query, sizeof(query), 0);
+		closesocket(clamsockd);
+	    }
 	}
     }
-
-    if(ret == 0) {
-	if(!submitted)
-	    logg("SubmitDetectionStats: Not enough recent data for submission\n");
-	else
-	    logg("SubmitDetectionStats: Submitted %u records\n", submitted);
-    }
-
     return ret;
 }
 
@@ -1016,14 +925,14 @@ static struct cl_cvd *remote_cvdhead(const char *cvdfile, const char *localfile,
     return cvd;
 }
 
-static int getfile(const char *srcfile, const char *destfile, const char *hostname, char *ip, const char *localip, const char *proxy, int port, const char *user, const char *pass, const char *uas, int ctimeout, int rtimeout, struct mirdat *mdat, int logerr, unsigned int can_whitelist)
+static int getfile_mirman(const char *srcfile, const char *destfile, const char *hostname, char *ip, const char *localip, const char *proxy, int port, const char *user, const char *pass, const char *uas, int ctimeout, int rtimeout, struct mirdat *mdat, int logerr, unsigned int can_whitelist, const char *ims, const char *ipaddr, int sd)
 {
 	char cmd[512], uastr[128], buffer[FILEBUFF], *ch;
 	int bread, fd, totalsize = 0,  rot = 0, totaldownloaded = 0,
-	    percentage = 0, sd;
+	    percentage = 0;
 	unsigned int i;
-	char *remotename = NULL, *authorization = NULL, *headerline, ipaddr[46];
-	const char *rotation = "|/-\\";
+	char *remotename = NULL, *authorization = NULL, *headerline;
+	const char *rotation = "|/-\\", *fname;
 
 
     if(proxy) {
@@ -1043,6 +952,9 @@ static int getfile(const char *srcfile, const char *destfile, const char *hostna
 	}
     }
 
+    if(ims)
+	logg("*If-Modified-Since: %s\n", ims);
+
     if(uas)
 	strncpy(uastr, uas, sizeof(uastr));
     else
@@ -1057,7 +969,8 @@ static int getfile(const char *srcfile, const char *destfile, const char *hostna
 	"Cache-Control: no-cache\r\n"
 #endif
 	"Connection: close\r\n"
-	"\r\n", (remotename != NULL) ? remotename : "", srcfile, hostname, (authorization != NULL) ? authorization : "", uastr);
+	"%s%s%s"
+	"\r\n", (remotename != NULL) ? remotename : "", srcfile, hostname, (authorization != NULL) ? authorization : "", uastr, ims ? "If-Modified-Since: " : "", ims ? ims : "", ims ? "\r\n": "");
 
     if(remotename)
 	free(remotename);
@@ -1065,24 +978,13 @@ static int getfile(const char *srcfile, const char *destfile, const char *hostna
     if(authorization)
 	free(authorization);
 
-    memset(ipaddr, 0, sizeof(ipaddr));
-    if(ip[0]) /* use ip to connect */
-	sd = wwwconnect(ip, proxy, port, ipaddr, localip, ctimeout, mdat, logerr, can_whitelist);
-    else
-	sd = wwwconnect(hostname, proxy, port, ipaddr, localip, ctimeout, mdat, logerr, can_whitelist);
+    logg("*Trying to download http://%s/%s (IP: %s)\n", hostname, srcfile, ipaddr);
 
-    if(sd < 0) {
-	return 52;
-    } else {
-	logg("*Trying to download http://%s/%s (IP: %s)\n", hostname, srcfile, ipaddr);
-    }
-
-    if(!ip[0])
+    if(ip && !ip[0])
 	strcpy(ip, ipaddr);
 
     if(send(sd, cmd, strlen(cmd), 0) < 0) {
 	logg("%cgetfile: Can't write to socket\n", logerr ? '!' : '^');
-	closesocket(sd);
 	return 52;
     }
 
@@ -1097,8 +999,8 @@ static int getfile(const char *srcfile, const char *destfile, const char *hostna
 	if((i >= sizeof(buffer) - 1) || recv(sd, buffer + i, 1, 0) == -1) {
 #endif
 	    logg("%cgetfile: Error while reading database from %s (IP: %s): %s\n", logerr ? '!' : '^', hostname, ipaddr, strerror(errno));
-	    mirman_update(mdat->currip, mdat->af, mdat, 1);
-	    closesocket(sd);
+	    if(mdat)
+		mirman_update(mdat->currip, mdat->af, mdat, 1);
 	    return 52;
 	}
 
@@ -1115,16 +1017,23 @@ static int getfile(const char *srcfile, const char *destfile, const char *hostna
     /* check whether the resource actually existed or not */
     if((strstr(buffer, "HTTP/1.1 404")) != NULL || (strstr(buffer, "HTTP/1.0 404")) != NULL) { 
 	logg("^getfile: %s not found on remote server (IP: %s)\n", srcfile, ipaddr);
-	mirman_update(mdat->currip, mdat->af, mdat, 2);
-	closesocket(sd);
+	if(mdat)
+	    mirman_update(mdat->currip, mdat->af, mdat, 2);
 	return 58;
+    }
+
+    /* If-Modified-Since */
+    if(strstr(buffer, "HTTP/1.1 304") || strstr(buffer, "HTTP/1.0 304")) { 
+	if(mdat)
+	    mirman_update(mdat->currip, mdat->af, mdat, 0);
+	return 1;
     }
 
     if(!strstr(buffer, "HTTP/1.1 200") && !strstr(buffer, "HTTP/1.0 200") &&
        !strstr(buffer, "HTTP/1.1 206") && !strstr(buffer, "HTTP/1.0 206")) {
 	logg("%cgetfile: Unknown response from remote server (IP: %s)\n", logerr ? '!' : '^', ipaddr);
-	mirman_update(mdat->currip, mdat->af, mdat, 1);
-	closesocket(sd);
+	if(mdat)
+	    mirman_update(mdat->currip, mdat->af, mdat, 1);
 	return 58;
     }
 
@@ -1149,9 +1058,13 @@ static int getfile(const char *srcfile, const char *destfile, const char *hostna
 	else
         logg("!getfile: Can't create new file %s in the current directory: %s\n", destfile, strerror(errno));
 
-	closesocket(sd);
 	return 57;
     }
+
+    if((fname = strrchr(srcfile, '/')))
+	fname++;
+    else
+	fname = srcfile;
 
 #ifdef SO_ERROR
     while((bread = wait_recv(sd, buffer, FILEBUFF, 0, rtimeout)) > 0) {
@@ -1160,9 +1073,8 @@ static int getfile(const char *srcfile, const char *destfile, const char *hostna
 #endif
         if(write(fd, buffer, bread) != bread) {
 	    logg("getfile: Can't write %d bytes to %s\n", bread, destfile);
-	    unlink(destfile);
 	    close(fd);
-	    closesocket(sd);
+	    unlink(destfile);
 	    return 57; /* FIXME */
 	}
 
@@ -1172,21 +1084,21 @@ static int getfile(const char *srcfile, const char *destfile, const char *hostna
 
         if(!mprintf_quiet) {
             if(totalsize > 0) {
-                mprintf("Downloading %s [%3i%%]\r", srcfile, percentage);
+                mprintf("Downloading %s [%3i%%]\r", fname, percentage);
             } else {
-                mprintf("Downloading %s [%c]\r", srcfile, rotation[rot]);
+                mprintf("Downloading %s [%c]\r", fname, rotation[rot]);
                 rot++;
                 rot %= 4;
             }
             fflush(stdout);
         }
     }
-    closesocket(sd);
     close(fd);
 
     if(bread == -1) {
 	logg("%cgetfile: Download interrupted: %s (IP: %s)\n", logerr ? '!' : '^', strerror(errno), ipaddr);
-	mirman_update(mdat->currip, mdat->af, mdat, 2);
+	if(mdat)
+	    mirman_update(mdat->currip, mdat->af, mdat, 2);
 	return 52;
     }
 
@@ -1194,23 +1106,54 @@ static int getfile(const char *srcfile, const char *destfile, const char *hostna
 	return 53;
 
     if(totalsize > 0)
-     /* FIMXE: Sherpya this is not correct but needed by ClamWin */
-        mprintf("\n");
+        logg("Downloading %s [100%%]\n", fname);
     else
-        logg("Downloading %s [*]\n", srcfile);
+        logg("Downloading %s [*]\n", fname);
 
-    mirman_update(mdat->currip, mdat->af, mdat, 0);
+    if(mdat)
+	mirman_update(mdat->currip, mdat->af, mdat, 0);
     return 0;
 }
 
-static int getcvd(const char *cvdfile, const char *newfile, const char *hostname, char *ip, const char *localip, const char *proxy, int port, const char *user, const char *pass, const char *uas, unsigned int newver, int ctimeout, int rtimeout, struct mirdat *mdat, int logerr, unsigned int can_whitelist)
+static int getfile(const char *srcfile, const char *destfile, const char *hostname, char *ip, const char *localip, const char *proxy, int port, const char *user, const char *pass, const char *uas, int ctimeout, int rtimeout, struct mirdat *mdat, int logerr, unsigned int can_whitelist, const char *ims, const struct optstruct *opts)
+{
+	int ret, sd;
+	char ipaddr[46];
+
+    memset(ipaddr, 0, sizeof(ipaddr));
+    if(ip && ip[0]) /* use ip to connect */
+	sd = wwwconnect(ip, proxy, port, ipaddr, localip, ctimeout, mdat, logerr, can_whitelist);
+    else
+	sd = wwwconnect(hostname, proxy, port, ipaddr, localip, ctimeout, mdat, logerr, can_whitelist);
+
+    if(sd < 0)
+	return 52;
+
+    if(mdat) {
+	mirman_update_sf(mdat->currip, mdat->af, mdat, 0, 1);
+	mirman_write("mirrors.dat", optget(opts, "DatabaseDirectory")->strarg, mdat);
+    }
+
+    ret = getfile_mirman(srcfile, destfile, hostname, ip, localip, proxy, port, user, pass, uas, ctimeout, rtimeout, mdat, logerr, can_whitelist, ims, ipaddr, sd);
+    closesocket(sd);
+
+    if(mdat) {
+	mirman_update_sf(mdat->currip, mdat->af, mdat, 0, -1);
+	mirman_write("mirrors.dat", optget(opts, "DatabaseDirectory")->strarg, mdat);
+    }
+
+    return ret;
+}
+
+static int getcvd(const char *cvdfile, const char *newfile, const char *hostname, char *ip, const char *localip, const char *proxy, int port, const char *user, const char *pass, const char *uas, unsigned int newver, int ctimeout, int rtimeout, struct mirdat *mdat, int logerr, unsigned int can_whitelist, const struct optstruct *opts)
 {
 	struct cl_cvd *cvd;
 	int ret;
 
 
     logg("*Retrieving http://%s/%s\n", hostname, cvdfile);
-    if((ret = getfile(cvdfile, newfile, hostname, ip, localip, proxy, port, user, pass, uas, ctimeout, rtimeout, mdat, logerr, can_whitelist))) {
+
+    if((ret = getfile(cvdfile, newfile, hostname, ip, localip, proxy, port, user, pass, uas, ctimeout, rtimeout, mdat, logerr, can_whitelist, NULL, opts))) {
         logg("%cCan't download %s from %s\n", logerr ? '!' : '^', cvdfile, hostname);
         unlink(newfile);
         return ret;
@@ -1275,7 +1218,7 @@ static int chdir_tmp(const char *dbname, const char *tmpdir)
     return 0;
 }
 
-static int getpatch(const char *dbname, const char *tmpdir, int version, const char *hostname, char *ip, const char *localip, const char *proxy, int port, const char *user, const char *pass, const char *uas, int ctimeout, int rtimeout, struct mirdat *mdat, int logerr, unsigned int can_whitelist)
+static int getpatch(const char *dbname, const char *tmpdir, int version, const char *hostname, char *ip, const char *localip, const char *proxy, int port, const char *user, const char *pass, const char *uas, int ctimeout, int rtimeout, struct mirdat *mdat, int logerr, unsigned int can_whitelist, const struct optstruct *opts)
 {
 	char *tempname, patch[32], olddir[512];
 	int ret, fd;
@@ -1293,7 +1236,7 @@ static int getpatch(const char *dbname, const char *tmpdir, int version, const c
     snprintf(patch, sizeof(patch), "%s-%d.cdiff", dbname, version);
 
     logg("*Retrieving http://%s/%s\n", hostname, patch);
-    if((ret = getfile(patch, tempname, hostname, ip, localip, proxy, port, user, pass, uas, ctimeout, rtimeout, mdat, logerr, can_whitelist))) {
+    if((ret = getfile(patch, tempname, hostname, ip, localip, proxy, port, user, pass, uas, ctimeout, rtimeout, mdat, logerr, can_whitelist, NULL, opts))) {
 	if(ret == 53)
 	    logg("Empty script %s, need to download entire database\n", patch);
 	else
@@ -1402,16 +1345,16 @@ static int buildcld(const char *tmpdir, const char *dbname, const char *newfile,
     if(write(fd, buff, 512) != 512) {
 	logg("!buildcld: Can't write to %s\n", newfile);
 	CHDIR_ERR(cwd);
-	unlink(newfile);
 	close(fd);
+	unlink(newfile);
 	return -1;
     }
 
     if((dir = opendir(".")) == NULL) {
 	logg("!buildcld: Can't open directory %s\n", tmpdir);
 	CHDIR_ERR(cwd);
-	unlink(newfile);
 	close(fd);
+	unlink(newfile);
 	return -1;
     }
 
@@ -1420,8 +1363,8 @@ static int buildcld(const char *tmpdir, const char *dbname, const char *newfile,
 	if(!(gzs = gzopen(newfile, "ab9f"))) {
 	    logg("!buildcld: gzopen() failed for %s\n", newfile);
 	    CHDIR_ERR(cwd);
-	    unlink(newfile);
 	    closedir(dir);
+	    unlink(newfile);
 	    return -1;
 	}
     }
@@ -1449,8 +1392,8 @@ static int buildcld(const char *tmpdir, const char *dbname, const char *newfile,
 	    gzclose(gzs);
 	else
 	    close(fd);
-	unlink(newfile);
 	closedir(dir);
+	unlink(newfile);
 	return -1;
     }
 
@@ -1467,8 +1410,8 @@ static int buildcld(const char *tmpdir, const char *dbname, const char *newfile,
 		    gzclose(gzs);
 		else
 		    close(fd);
-		unlink(newfile);
 		closedir(dir);
+		unlink(newfile);
 		return -1;
 	    }
 	}
@@ -1497,11 +1440,133 @@ static int buildcld(const char *tmpdir, const char *dbname, const char *newfile,
     return 0;
 }
 
+static int test_database(const char *newfile, const char *newdb, int bytecode)
+{
+    struct cl_engine *engine;
+    unsigned newsigs = 0;
+    int ret;
+
+    logg("*Loading signatures from %s\n", newdb);
+    if(!(engine = cl_engine_new())) {
+	return 55;
+    }
+
+    if((ret = cl_load(newfile, engine, &newsigs, CL_DB_PHISHING | CL_DB_PHISHING_URLS | CL_DB_BYTECODE | CL_DB_PUA)) != CL_SUCCESS) {
+	logg("!Failed to load new database: %s\n", cl_strerror(ret));
+	cl_engine_free(engine);
+	return 55;
+    }
+    if(bytecode && (ret = cli_bytecode_prepare2(engine, &engine->bcs, engine->dconf->bytecode/*FIXME: dconf has no sense here*/))) {
+	logg("!Failed to compile/load bytecode: %s\n", cl_strerror(ret));
+	cl_engine_free(engine);
+	return 55;
+    }
+    logg("*Properly loaded %u signatures from new %s\n", newsigs, newdb);
+    if(engine->domainlist_matcher && engine->domainlist_matcher->sha256_pfx_set.keys)
+	cli_hashset_destroy(&engine->domainlist_matcher->sha256_pfx_set);
+    cl_engine_free(engine);
+    return 0;
+}
+
+#ifndef WIN32
+static int test_database_wrap(const char *file, const char *newdb, int bytecode)
+{
+    char firstline[256];
+    char lastline[256];
+    int pipefd[2];
+    pid_t pid;
+    int status = 0;
+    FILE *f;
+
+    if (pipe(pipefd) == -1) {
+	logg("^pipe() failed: %s\n", strerror(errno));
+	return test_database(file, newdb, bytecode);
+    }
+
+    switch ( pid = fork() ) {
+	case 0:
+	    close(pipefd[0]);
+	    dup2(pipefd[1], 2);
+	    exit(test_database(file, newdb, bytecode));
+	case -1:
+	    close(pipefd[0]);
+	    close(pipefd[1]);
+	    logg("^fork() failed: %s\n", strerror(errno));
+	    return test_database(file, newdb, bytecode);
+	default:
+	    /* read first / last line printed by child*/
+	    close(pipefd[1]);
+	    f = fdopen(pipefd[0], "r");
+	    firstline[0] = 0;
+	    lastline[0] = 0;
+	    do {
+		if (!fgets(firstline, sizeof(firstline), f))
+		    break;
+		/* ignore warning messages, otherwise the outdated warning will
+		 * make us miss the important part of the error message */
+	    } while (!strncmp(firstline, "LibClamAV Warning:", 18));
+	    /* must read entire output, child doesn't like EPIPE */
+	    while (fgets(lastline, sizeof(firstline), f)) {
+		/* print the full output only when LogVerbose or -v is given */
+		logg("*%s", lastline);
+	    }
+	    fclose(f);
+
+	    if (waitpid(pid, &status, 0) == -1 && errno != ECHILD)
+		logg("^waitpid() failed: %s\n", strerror(errno));
+	    cli_chomp(firstline);
+	    cli_chomp(lastline);
+	    if (firstline[0]) {
+		logg("!During database load : %s%s%s\n",
+		     firstline, lastline[0] ? " [...] " : "",
+		     lastline);
+	    }
+	    if (WIFEXITED(status)) {
+		int ret = WEXITSTATUS(status);
+		if (ret) {
+		    logg("^Database load exited with status %d\n", ret);
+		    return ret;
+		}
+		if (firstline[0])
+		    logg("^Database successfully loaded, but there is stderr output\n");
+		return 0;
+	    }
+	    if (WIFSIGNALED(status)) {
+		logg("!Database load killed by signal %d\n", WTERMSIG(status));
+		return 55;
+	    }
+	    logg("^Unknown status from wait: %d\n", status);
+	    return 55;
+    }
+}
+#elif defined(_MSC_VER)
+static int test_database_wrap(const char *file, const char *newdb, int bytecode)
+{
+    int ret = 55;
+    __try
+    {
+	ret = test_database(file, newdb, bytecode);
+    }
+    __except (logg("!Exception during database testing, code %08x\n",
+		 GetExceptionCode()),
+	      EXCEPTION_CONTINUE_SEARCH)
+    { }
+    return ret;
+}
+#else
+static int test_database_wrap(const char *file, const char *newdb, int bytecode)
+{
+    return test_database(file, newdb, bytecode);
+}
+#endif
+
+extern int sigchld_wait;
+
 static int updatedb(const char *dbname, const char *hostname, char *ip, int *signo, const struct optstruct *opts, const char *dnsreply, char *localip, int outdated, struct mirdat *mdat, int logerr, int extra)
 {
 	struct cl_cvd *current, *remote;
 	const struct optstruct *opt;
-	unsigned int nodb = 0, currver = 0, newver = 0, port = 0, i, j, newsigs = 0;
+	unsigned int nodb = 0, currver = 0, newver = 0, port = 0, i, j;
 	int ret, ims = -1;
 	char *pt, cvdfile[32], localname[32], *tmpdir = NULL, *newfile, *newfile2, newdb[32];
 	char extradbinfo[64], *extradnsreply = NULL;
@@ -1509,7 +1574,6 @@ static int updatedb(const char *dbname, const char *hostname, char *ip, int *sig
 	unsigned int flevel = cl_retflevel(), remote_flevel = 0, maxattempts;
 	unsigned int can_whitelist = 0;
 	int ctimeout, rtimeout;
-	struct cl_engine *engine;
 
 
     snprintf(cvdfile, sizeof(cvdfile), "%s.cvd", dbname);
@@ -1689,7 +1753,7 @@ static int updatedb(const char *dbname, const char *hostname, char *ip, int *sig
 
     newfile = cli_gentemp(updtmpdir);
     if(nodb) {
-	ret = getcvd(cvdfile, newfile, hostname, ip, localip, proxy, port, user, pass, uas, newver, ctimeout, rtimeout, mdat, logerr, can_whitelist);
+	ret = getcvd(cvdfile, newfile, hostname, ip, localip, proxy, port, user, pass, uas, newver, ctimeout, rtimeout, mdat, logerr, can_whitelist, opts);
 	if(ret) {
 	    memset(ip, 0, 16);
 	    free(newfile);
@@ -1707,7 +1771,7 @@ static int updatedb(const char *dbname, const char *hostname, char *ip, int *sig
 		    int llogerr = logerr;
 		if(logerr)
 		    llogerr = (j == maxattempts - 1);
-		ret = getpatch(dbname, tmpdir, i, hostname, ip, localip, proxy, port, user, pass, uas, ctimeout, rtimeout, mdat, llogerr, can_whitelist);
+		ret = getpatch(dbname, tmpdir, i, hostname, ip, localip, proxy, port, user, pass, uas, ctimeout, rtimeout, mdat, llogerr, can_whitelist, opts);
 		if(ret == 52 || ret == 58) {
 		    memset(ip, 0, 16);
 		    continue;
@@ -1725,7 +1789,7 @@ static int updatedb(const char *dbname, const char *hostname, char *ip, int *sig
 	    if(ret != 53)
 		logg("^Incremental update failed, trying to download %s\n", cvdfile);
 	    mirman_whitelist(mdat, 2);
-	    ret = getcvd(cvdfile, newfile, hostname, ip, localip, proxy, port, user, pass, uas, newver, ctimeout, rtimeout, mdat, logerr, can_whitelist);
+	    ret = getcvd(cvdfile, newfile, hostname, ip, localip, proxy, port, user, pass, uas, newver, ctimeout, rtimeout, mdat, logerr, can_whitelist, opts);
 	    if(ret) {
 		free(newfile);
 		return ret;
@@ -1753,16 +1817,11 @@ static int updatedb(const char *dbname, const char *hostname, char *ip, int *sig
     }
 
     if(optget(opts, "TestDatabases")->enabled && strlen(newfile) > 4) {
-	if(!(engine = cl_engine_new())) {
-	    unlink(newfile);
-	    free(newfile);
-	    return 55;
-	}
 	newfile2 = strdup(newfile);
 	if(!newfile2) {
+	    logg("!Can't allocate memory for filename!\n");
 	    unlink(newfile);
 	    free(newfile);
-	    cl_engine_free(engine);
 	    return 55;
 	}
 	newfile2[strlen(newfile2) - 4] = '.';
@@ -1774,29 +1833,18 @@ static int updatedb(const char *dbname, const char *hostname, char *ip, int *sig
 	    unlink(newfile);
 	    free(newfile);
 	    free(newfile2);
-	    cl_engine_free(engine);
 	    return 57;
 	}
 	free(newfile);
 	newfile = newfile2;
-	if((ret = cl_load(newfile, engine, &newsigs, CL_DB_PHISHING | CL_DB_PHISHING_URLS | CL_DB_BYTECODE | CL_DB_PUA)) != CL_SUCCESS) {
+	sigchld_wait = 0;/* we need to wait() for the child ourselves */
+	if (test_database_wrap(newfile, newdb, optget(opts, "Bytecode")->enabled)) {
 	    logg("!Failed to load new database: %s\n", cl_strerror(ret));
 	    unlink(newfile);
 	    free(newfile);
-	    cl_engine_free(engine);
 	    return 55;
 	}
-	if(optget(opts, "Bytecode")->enabled && (ret = cli_bytecode_prepare2(engine, &engine->bcs, engine->dconf->bytecode/*FIXME: dconf has no sense here*/))) {
-	    logg("!Failed to compile/load bytecode: %s\n", cl_strerror(ret));
-	    unlink(newfile);
-	    free(newfile);
-	    cl_engine_free(engine);
-	    return 55;
-	}
-	logg("*Properly loaded %u signatures from new %s\n", newsigs, newdb);
-	if(engine->domainlist_matcher && engine->domainlist_matcher->sha256_pfx_set.keys)
-	    cli_hashset_destroy(&engine->domainlist_matcher->sha256_pfx_set);
-	cl_engine_free(engine);
+	sigchld_wait = 1;
     }
 
 #ifdef _WIN32
@@ -1839,6 +1887,166 @@ static int updatedb(const char *dbname, const char *hostname, char *ip, int *sig
 
     *signo += current->sigs;
     cl_cvdfree(current);
+    return 0;
+}
+
+static int updatecustomdb(const char *url, int *signo, const struct optstruct *opts, char *localip, int logerr)
+{
+	const struct optstruct *opt;
+	unsigned int port = 0, sigs = 0;
+	int ret;
+	char *pt, *host, urlcpy[256], *newfile = NULL, mtime[36], *newfile2;
+	const char *proxy = NULL, *user = NULL, *pass = NULL, *uas = NULL, *rpath, *dbname;
+	int ctimeout, rtimeout;
+	struct stat sb;
+	struct cl_cvd *cvd;
+
+    if(!strncasecmp(url, "http://", 7)) {
+	strncpy(urlcpy, url, sizeof(urlcpy));
+	host = &urlcpy[7];
+	if(!(pt = strchr(host, '/'))) {
+	    logg("!DatabaseCustomURL: Incorrect URL\n");
+	    return 70;
+	}
+	*pt = 0;
+	rpath = &url[pt - urlcpy + 1];
+	dbname = strrchr(url, '/') + 1;
+	if(!dbname || strlen(dbname) < 4) {
+	    logg("DatabaseCustomURL: Incorrect URL\n");
+	    return 70;
+	}
+
+	/* Initialize proxy settings */
+	if((opt = optget(opts, "HTTPProxyServer"))->enabled) {
+	    proxy = opt->strarg;
+	    if(strncasecmp(proxy, "http://", 7) == 0)
+		proxy += 7;
+
+	    if((opt = optget(opts, "HTTPProxyUsername"))->enabled) {
+		user = opt->strarg;
+		if((opt = optget(opts, "HTTPProxyPassword"))->enabled) {
+		    pass = opt->strarg;
+		} else {
+		    logg("HTTPProxyUsername requires HTTPProxyPassword\n");
+		    return 56;
+		}
+	    }
+	    if((opt = optget(opts, "HTTPProxyPort"))->enabled)
+		port = opt->numarg;
+	    logg("Connecting via %s\n", proxy);
+	}
+
+	if((opt = optget(opts, "HTTPUserAgent"))->enabled)
+	    uas = opt->strarg;
+
+	ctimeout = optget(opts, "ConnectTimeout")->numarg;
+	rtimeout = optget(opts, "ReceiveTimeout")->numarg;
+
+	*mtime = 0;
+	if(stat(dbname, &sb) != -1)
+	    Rfc2822DateTime(mtime, sb.st_mtime);
+
+	newfile = cli_gentemp(updtmpdir);
+	ret = getfile(rpath, newfile, host, NULL, localip, proxy, port, user, pass, uas, ctimeout, rtimeout, NULL, logerr, 0, *mtime ? mtime : NULL, opts);
+	if(ret == 1) {
+	    logg("%s is up to date (version: custom database)\n", dbname);
+	    unlink(newfile);
+	    free(newfile);
+	    return 1;
+	} else if(ret > 1) {
+	    logg("%cCan't download %s from %s\n", logerr ? '!' : '^', dbname, host);
+	    unlink(newfile);
+	    free(newfile);
+	    return ret;
+	}
+
+    } else if(!strncasecmp(url, "file://", 7)) {
+	rpath = &url[7];
+#ifdef _WIN32
+	dbname = strrchr(rpath, '\\');
+#else
+	dbname = strrchr(rpath, '/');
+#endif
+	if(!dbname || strlen(dbname++) < 5) {
+	    logg("DatabaseCustomURL: Incorrect URL\n");
+	    return 70;
+	}
+
+	newfile = cli_gentemp(updtmpdir);
+	if(!newfile)
+	    return 70;
+
+	/* FIXME: preserve file permissions, calculate % */
+	logg("Downloading %s [  0%%]\r", dbname);
+	if(cli_filecopy(rpath, newfile) == -1) {
+	    logg("DatabaseCustomURL: Can't copy file %s into database directory\n", rpath);
+	    free(newfile);
+	    return 70;
+	}
+	logg("Downloading %s [100%%]\n", dbname);
+    } else {
+	logg("!DatabaseCustomURL: Not supported protocol\n");
+	return 70;
+    }
+
+    if(optget(opts, "TestDatabases")->enabled && strlen(newfile) > 4) {
+	newfile2 = malloc(strlen(newfile) + strlen(dbname) + 1);
+	if(!newfile2) {
+	    unlink(newfile);
+	    free(newfile);
+	    return 55;
+	}
+	sprintf(newfile2, "%s%s", newfile, dbname);
+	newfile2[strlen(newfile) + strlen(dbname)] = 0;
+	if(rename(newfile, newfile2) == -1) {
+	    logg("!Can't rename %s to %s: %s\n", newfile, newfile2, strerror(errno));
+	    unlink(newfile);
+	    free(newfile);
+	    free(newfile2);
+	    return 57;
+	}
+	free(newfile);
+	newfile = newfile2;
+	sigchld_wait = 0;/* we need to wait() for the child ourselves */
+	if (test_database_wrap(newfile, dbname, optget(opts, "Bytecode")->enabled)) {
+	    logg("!Failed to load new database: %s\n", cl_strerror(ret));
+	    unlink(newfile);
+	    free(newfile);
+	    return 55;
+	}
+	sigchld_wait = 1;
+    }
+
+#ifdef _WIN32
+    if(!access(dbname, R_OK) && unlink(dbname)) {
+	logg("!Can't unlink %s. Please fix the problem manually and try again.\n", dbname);
+	unlink(newfile);
+	free(newfile);
+	return 53;
+    }
+#endif
+
+    if(rename(newfile, dbname) == -1) {
+	logg("!Can't rename %s to %s: %s\n", newfile, dbname, strerror(errno));
+	unlink(newfile);
+	free(newfile);
+	return 57;
+    }
+    free(newfile);
+
+    if(cli_strbcasestr(dbname, ".cld") || cli_strbcasestr(dbname, ".cvd")) {
+	if((cvd = cl_cvdhead(dbname))) {
+	    sigs = cvd->sigs;
+	    cl_cvdfree(cvd);
+	}
+    } else if(cli_strbcasestr(dbname, ".cbc")) {
+	sigs = 1;
+    } else {
+	sigs = countlines(dbname);
+    }
+
+    logg("%s updated (version: custom database, sigs: %u)\n", dbname, sigs);
+    *signo += sigs;
     return 0;
 }
 
@@ -1951,7 +2159,8 @@ int downloadmanager(const struct optstruct *opts, const char *hostname, const ch
 	if(newver)
 	    free(newver);
 
-	mirman_write("mirrors.dat", &mdat);
+	mirman_write("mirrors.dat", dbdir, &mdat);
+	mirman_free(&mdat);
 	cli_rmdirs(updtmpdir);
 	return ret;
 
@@ -1966,7 +2175,8 @@ int downloadmanager(const struct optstruct *opts, const char *hostname, const ch
 	if(newver)
 	    free(newver);
 
-	mirman_write("mirrors.dat", &mdat);
+	mirman_write("mirrors.dat", dbdir, &mdat);
+	mirman_free(&mdat);
 	cli_rmdirs(updtmpdir);
 	return ret;
 
@@ -1995,7 +2205,8 @@ int downloadmanager(const struct optstruct *opts, const char *hostname, const ch
 	if(newver)
 	    free(newver);
 
-	mirman_write("mirrors.dat", &mdat);
+	mirman_write("mirrors.dat", dbdir, &mdat);
+	mirman_free(&mdat);
 	cli_rmdirs(updtmpdir);
 	return ret;
     } else if(ret == 0)
@@ -2022,7 +2233,8 @@ int downloadmanager(const struct optstruct *opts, const char *hostname, const ch
 	if(newver)
 	    free(newver);
 
-	mirman_write("mirrors.dat", &mdat);
+	mirman_write("mirrors.dat", dbdir, &mdat);
+	mirman_free(&mdat);
 	cli_rmdirs(updtmpdir);
 	return ret;
     } else if(ret == 0)
@@ -2036,7 +2248,8 @@ int downloadmanager(const struct optstruct *opts, const char *hostname, const ch
 	    if((ret = updatedb(opt->strarg, hostname, ipaddr, &signo, opts, NULL, localip, outdated, &mdat, logerr, 1)) > 50) {
 		if(newver)
 		    free(newver);
-		mirman_write("mirrors.dat", &mdat);
+		mirman_write("mirrors.dat", dbdir, &mdat);
+		mirman_free(&mdat);
 		cli_rmdirs(updtmpdir);
 		return ret;
 	    } else if(ret == 0)
@@ -2045,11 +2258,22 @@ int downloadmanager(const struct optstruct *opts, const char *hostname, const ch
 	}
     }
 
-    mirman_write("mirrors.dat", &mdat);
+    mirman_write("mirrors.dat", dbdir, &mdat);
+    mirman_free(&mdat);
+
+    /* custom dbs */
+    if((opt = optget(opts, "DatabaseCustomURL"))->enabled) {
+	while(opt) {
+	    if(updatecustomdb(opt->strarg, &signo, opts, localip, logerr) == 0)
+		updated = 1;
+	    opt = opt->nextarg;
+	}
+    }
+
     cli_rmdirs(updtmpdir);
 
     if(updated) {
-	if(optget(opts, "HTTPProxyServer")->enabled) {
+	if(optget(opts, "HTTPProxyServer")->enabled || !ipaddr[0]) {
 	    logg("Database updated (%d signatures) from %s\n", signo, hostname);
 	} else {
 	    logg("Database updated (%d signatures) from %s (IP: %s)\n", signo, hostname, ipaddr);

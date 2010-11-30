@@ -64,14 +64,22 @@ extern int active_children;
 
 static short foreground = 1;
 char updtmpdir[512];
+int sigchld_wait = 1;
 
 static void sighandler(int sig) {
 
     switch(sig) {
 #ifdef	SIGCHLD
 	case SIGCHLD:
-	    waitpid(-1, NULL, WNOHANG);
+	    if (sigchld_wait)
+		waitpid(-1, NULL, WNOHANG);
 	    active_children--;
+	    break;
+#endif
+
+#ifdef SIGPIPE
+	case SIGPIPE:
+	    /* no action, app will get EPIPE */
 	    break;
 #endif
 
@@ -203,6 +211,20 @@ static int download(const struct optstruct *opts, const char *datadir, const cha
     }
 
     return ret;
+}
+
+void msg_callback(enum cl_msg severity, const char *fullmsg, const char *msg, void *ctx)
+{
+    switch (severity) {
+	case CL_MSG_ERROR:
+	    logg("^[LibClamAV] %s", msg);
+	    break;
+	case CL_MSG_WARN:
+	    logg("~[LibClamAV] %s", msg);
+	default:
+	    logg("*[LibClamAV] %s", msg);
+	    break;
+    }
 }
 
 int main(int argc, char **argv)
@@ -385,6 +407,7 @@ int main(int argc, char **argv)
     }
 #endif
 
+    cl_set_clcb_msg(msg_callback);
     /* change the current working directory */
     if(chdir(optget(opts, "DatabaseDirectory")->strarg)) {
 	logg("!Can't change dir to %s\n", optget(opts, "DatabaseDirectory")->strarg);
@@ -418,6 +441,7 @@ int main(int argc, char **argv)
     memset(&sigact, 0, sizeof(struct sigaction));
     sigact.sa_handler = sighandler;
     sigaction(SIGINT, &sigact, NULL);
+    sigaction(SIGPIPE, &sigact, NULL);
 #endif
     if(optget(opts, "daemon")->enabled) {
 	    int bigsleep, checks;

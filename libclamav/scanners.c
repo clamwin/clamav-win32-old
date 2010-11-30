@@ -767,7 +767,7 @@ static int cli_scanmscab(int desc, cli_ctx *ctx, off_t sfx_offset)
 
 static int cli_vba_scandir(const char *dirname, cli_ctx *ctx, struct uniq *U)
 {
-    int ret = CL_CLEAN, i, j, fd, data_len;
+	int ret = CL_CLEAN, i, j, fd, data_len, hasmacros = 0;
 	vba_project_t *vba_project;
 	DIR *dd;
 	struct dirent *dent;
@@ -798,7 +798,7 @@ static int cli_vba_scandir(const char *dirname, cli_ctx *ctx, struct uniq *U)
 		cli_dbgmsg("VBADir: Decompress VBA project '%s_%u'\n", vba_project->name[i], j);
 		data = (unsigned char *)cli_vba_inflate(fd, vba_project->offset[i], &data_len);
 		close(fd);
-
+		hasmacros++;
 		if(!data) {
 		    cli_dbgmsg("VBADir: WARNING: VBA project '%s_%u' decompressed to NULL\n", vba_project->name[i], j);
 		} else {
@@ -830,6 +830,7 @@ static int cli_vba_scandir(const char *dirname, cli_ctx *ctx, struct uniq *U)
 	    fd = open(vbaname, O_RDONLY|O_BINARY);
 	    if (fd == -1) continue;
 	    if ((fullname = cli_ppt_vba_read(fd, ctx))) {
+		hasmacros++;
 		if(cli_scandir(fullname, ctx) == CL_VIRUS) {
 		    ret = CL_VIRUS;
 		}
@@ -856,7 +857,7 @@ static int cli_vba_scandir(const char *dirname, cli_ctx *ctx, struct uniq *U)
 	    for (i = 0; i < vba_project->count; i++) {
 		cli_dbgmsg("VBADir: Decompress WM project macro:%d key:%d length:%d\n", i, vba_project->key[i], vba_project->length[i]);
 		data = (unsigned char *)cli_wm_decrypt_macro(fd, vba_project->offset[i], vba_project->length[i], vba_project->key[i]);
-		
+		hasmacros++;
 		if(!data) {
 			cli_dbgmsg("VBADir: WARNING: WM project '%s' macro %d decrypted to NULL\n", vba_project->name[i], i);
 		} else {
@@ -945,6 +946,10 @@ static int cli_vba_scandir(const char *dirname, cli_ctx *ctx, struct uniq *U)
     }
 
     closedir(dd);
+    if(BLOCK_MACROS && hasmacros) {
+	*ctx->virname = "Heuristics.OLE2.ContainsMacros";
+	ret = CL_VIRUS;
+    }
     return ret;
 }
 
@@ -1922,7 +1927,7 @@ static void emax_reached(cli_ctx *ctx) {
 	default:										\
 	    cli_warnmsg("cli_magic_scandesc: ignoring bad return code from callback\n");	\
 	}											\
-    }												\
+    }\
     return retcode;										\
     } while(0)
 
@@ -2351,8 +2356,11 @@ static int magic_scandesc(int desc, cli_ctx *ctx, cli_file_t type)
 	 * in raw mode. Now we will try to unpack them
 	 */
 	case CL_TYPE_MSEXE:
-	    if(SCAN_PE && ctx->dconf->pe)
+	    if(SCAN_PE && ctx->dconf->pe) {
+		unsigned int corrupted_input = ctx->corrupted_input;
 		ret = cli_scanpe(ctx);
+		ctx->corrupted_input = corrupted_input;
+	    }
 	    break;
 	default:
 	    break;
@@ -2390,62 +2398,10 @@ int cli_magic_scandesc_type(int desc, cli_ctx *ctx, cli_file_t type)
     return magic_scandesc(desc, ctx, type);
 }
 
-int cli_scandesc_stats(int desc, const char **virname, char *virhash, unsigned int *virsize, unsigned long int *scanned, const struct cl_engine *engine, unsigned int scanoptions)
-{
-    cli_ctx ctx;
-    int rc;
-
-    memset(&ctx, '\0', sizeof(cli_ctx));
-    ctx.engine = engine;
-    ctx.virname = virname;
-    if(virsize) {
-	*virsize = 0;
-	ctx.virsize = virsize;
-	ctx.virhash = virhash;
-    }
-    ctx.scanned = scanned;
-    ctx.options = scanoptions;
-    ctx.found_possibly_unwanted = 0;
-    ctx.container_type = CL_TYPE_ANY;
-    ctx.container_size = 0;
-    ctx.dconf = (struct cli_dconf *) engine->dconf;
-    ctx.fmap = cli_calloc(sizeof(fmap_t *), ctx.engine->maxreclevel + 2);
-    if(!ctx.fmap)
-	return CL_EMEM;
-    if (!(ctx.hook_lsig_matches = cli_bitset_init())) {
-	free(ctx.fmap);
-	return CL_EMEM;
-    }
-
-#ifdef HAVE__INTERNAL__SHA_COLLECT
-    if(scanoptions & CL_SCAN_INTERNAL_COLLECT_SHA) {
-	char link[32];
-	ssize_t linksz;
-
-	snprintf(link, sizeof(link), "/proc/self/fd/%u", desc);
-	link[sizeof(link)-1]='\0';
-	if((linksz=readlink(link, ctx.entry_filename, sizeof(ctx.entry_filename)))==-1) {
-	    cli_errmsg("failed to resolve filename for descriptor %d (%s)\n", desc, link);
-	    strcpy(ctx.entry_filename, "NO_IDEA");
-	} else
-	    ctx.entry_filename[linksz]='\0';
-    } while(0);
-#endif
-
-    rc = cli_magic_scandesc(desc, &ctx);
-
-    cli_bitset_free(ctx.hook_lsig_matches);
-    free(ctx.fmap);
-    if(rc == CL_CLEAN && ctx.found_possibly_unwanted)
-    	rc = CL_VIRUS;
-    return rc;
-}
-
 int cl_scandesc(int desc, const char **virname, unsigned long int *scanned, const struct cl_engine *engine, unsigned int scanoptions)
 {
-    return cli_scandesc_stats(desc, virname, NULL, NULL, scanned, engine, scanoptions);
+    return cl_scandesc_callback(desc, virname, scanned, engine, scanoptions, NULL);
 }
-
 
 int cl_scandesc_callback(int desc, const char **virname, unsigned long int *scanned, const struct cl_engine *engine, unsigned int scanoptions, void *context)
 {
@@ -2485,12 +2441,14 @@ int cl_scandesc_callback(int desc, const char **virname, unsigned long int *scan
     } while(0);
 #endif
 
+    cli_logg_setup(&ctx);
     rc = cli_magic_scandesc(desc, &ctx);
 
     cli_bitset_free(ctx.hook_lsig_matches);
     free(ctx.fmap);
     if(rc == CL_CLEAN && ctx.found_possibly_unwanted)
-    	rc = CL_VIRUS;
+	rc = CL_VIRUS;
+    cli_logg_unsetup();
     return rc;
 }
 
@@ -2532,25 +2490,17 @@ static int cli_scanfile(const char *filename, cli_ctx *ctx)
 
 int cl_scanfile(const char *filename, const char **virname, unsigned long int *scanned, const struct cl_engine *engine, unsigned int scanoptions)
 {
-	int fd, ret;
-
-    if((fd = safe_open(filename, O_RDONLY|O_BINARY)) == -1)
-	return CL_EOPEN;
-
-    ret = cl_scandesc(fd, virname, scanned, engine, scanoptions);
-    close(fd);
-
-    return ret;
+    return cl_scanfile_callback(filename, virname, scanned, engine, scanoptions, NULL);
 }
 
-int cli_scanfile_stats(const char *filename, const char **virname, char *virhash, unsigned int *virsize, unsigned long int *scanned, const struct cl_engine *engine, unsigned int scanoptions)
+int cl_scanfile_callback(const char *filename, const char **virname, unsigned long int *scanned, const struct cl_engine *engine, unsigned int scanoptions, void *context)
 {
 	int fd, ret;
 
     if((fd = safe_open(filename, O_RDONLY|O_BINARY)) == -1)
 	return CL_EOPEN;
 
-    ret = cli_scandesc_stats(fd, virname, virhash, virsize, scanned, engine, scanoptions);
+    ret = cl_scandesc_callback(fd, virname, scanned, engine, scanoptions, context);
     close(fd);
 
     return ret;

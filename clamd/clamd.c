@@ -69,6 +69,7 @@
 #include "localserver.h"
 #include "others.h"
 #include "shared.h"
+#include "scanner.h"
 
 short debug_mode = 0, logok = 0;
 short foreground = 0;
@@ -268,6 +269,8 @@ int main(int argc, char **argv)
     } else
 	logg_file = NULL;
 
+    if (optget(opts,"DevLiblog")->enabled)
+	cl_set_clcb_msg(msg_callback);
     if((ret = cl_init(CL_INIT_DEFAULT))) {
 	logg("!Can't initialize libclamav: %s\n", cl_strerror(ret));
 	ret = 1;
@@ -329,14 +332,13 @@ int main(int argc, char **argv)
         * too soon (after ~120 MB).
         * Set limit lower than 2G if on 32-bit */
        uint64_t lim = rlim.rlim_cur;
-       lim = (int32_t) lim;
        if (sizeof(void*) == 4 &&
-           lim != rlim.rlim_cur) {
-           rlim.rlim_cur = 2048*1024-1;
+           lim > (1ULL << 31)) {
+           rlim.rlim_cur = 1ULL << 31;
            if (setrlimit(RLIMIT_DATA, &rlim) < 0)
                logg("!setrlimit(RLIMIT_DATA) failed: %s\n", strerror(errno));
            else
-               logg("^Running on 32-bit system, and RLIMIT_DATA > 2GB, lowering to 2GB!\n");
+               logg("Running on 32-bit system, and RLIMIT_DATA > 2GB, lowering to 2GB!\n");
        }
     }
 #endif
@@ -447,6 +449,9 @@ int main(int argc, char **argv)
 	    break;
 	}
     }
+
+    cl_engine_set_clcb_hash(engine, hash_callback);
+    detstats_clear();
 
     if(optget(opts, "LeaveTemporaryFiles")->enabled)
 	cl_engine_set_num(engine, CL_ENGINE_KEEPTMP, 1);

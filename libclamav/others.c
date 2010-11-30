@@ -248,9 +248,9 @@ const char *cl_strerror(int clerror)
 	case CL_EFORMAT:
 	    return "CL_EFORMAT: Bad format or broken data";
 	case CL_EBYTECODE:
-	    return "CL_EBYTECODE: error during bytecode execution";
+	    return "Error during bytecode execution";
 	case CL_EBYTECODE_TESTFAIL:
-	    return "CL_EBYTECODE_TESTFAIL: failure in bytecode testmode";
+	    return "Failure in bytecode testmode";
 	default:
 	    return "Unknown error code";
     }
@@ -355,6 +355,9 @@ struct cl_engine *cl_engine_new(void)
 	return NULL;
     }
 
+#ifdef _WIN32
+    cl_engine_set_clcb_post_scan(new, cw_postscan_check);
+#endif
     cli_dbgmsg("Initialized %s engine\n", cl_retver());
     return new;
 }
@@ -430,8 +433,11 @@ int cl_engine_set_num(struct cl_engine *engine, enum cl_engine_field field, long
 	    }
 	    if (num == CL_BYTECODE_MODE_OFF) {
 		cli_errmsg("cl_engine_set_num: CL_BYTECODE_MODE_OFF is not settable, use dboptions to turn off!\n");
+		return CL_EARG;
 	    }
 	    engine->bytecode_mode = num;
+	    if (num == CL_BYTECODE_MODE_TEST)
+		cli_infomsg(NULL, "bytecode engine in test mode\n");
 	    break;
 	default:
 	    cli_errmsg("cl_engine_set_num: Incorrect field number\n");
@@ -1065,4 +1071,9 @@ void cl_engine_set_clcb_progress(struct cl_engine *engine, clcb_progress callbac
 void cl_engine_set_clcb_sigload(struct cl_engine *engine, clcb_sigload callback, void *context) {
     engine->cb_sigload = callback;
     engine->cb_sigload_ctx = callback ? context : NULL;
+}
+
+void cl_engine_set_clcb_hash(struct cl_engine *engine, clcb_hash callback)
+{
+    engine->cb_hash = callback;
 }

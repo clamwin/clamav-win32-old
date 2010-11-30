@@ -440,6 +440,14 @@
 			Name="Shared"
 			>
 			<File
+				RelativePath="..\..\..\..\shared\clamdcom.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\shared\clamdcom.h"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\..\shared\getopt.c"
 				>
 			</File>

@@ -66,6 +66,11 @@
 #include "llvm/System/Signals.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/System/Threading.h"
+
+extern "C" {
+void LLVMInitializeX86AsmPrinter();
+void LLVMInitializePowerPCAsmPrinter();
+}
 #include "llvm/Target/TargetSelect.h"
 #include "llvm/Target/TargetData.h"
 #include "llvm/Target/TargetOptions.h"
@@ -135,6 +140,10 @@ struct cli_bcengine {
 extern "C" BCAPI uint8_t cli_debug_flag;
 namespace {
 
+#ifndef LLVM28
+#define LLVM28
+#endif
+
 #ifdef LLVM28
 #define llvm_report_error(x) report_fatal_error(x)
 #define llvm_install_error_handler(x) install_fatal_error_handler(x)
@@ -155,25 +164,90 @@ static void UpgradeCall(CallInst *&C, Function *Intr)
     UpgradeIntrinsicCall(C, New);
 }
 
+extern "C" {
+#ifdef __GNUC__
+void cli_errmsg(const char *str, ...) __attribute__((format(printf, 1, 2)));
+#else
+void cli_errmsg(const char *str, ...);
+#endif
+
+#ifdef __GNUC__
+void cli_warnmsg(const char *str, ...) __attribute__((format(printf, 1, 2)));
+#else
+void cli_warnmsg(const char *str, ...);
+#endif
+
+#ifdef __GNUC__
+void cli_dbgmsg_internal(const char *str, ...) __attribute__((format(printf, 1, 2)));
+#else
+void cli_dbgmsg_internal(const char *str, ...);
+#endif
+}
+
+class ScopedExceptionHandler {
+    public:
+	jmp_buf &getEnv() { return env;}
+	void Set() {
+	    /* set the exception handler's return location to here for the
+	     * current thread */
+	    ExceptionReturn.set((const jmp_buf*)&env);
+	}
+	~ScopedExceptionHandler() {
+	    /* leaving scope, remove exception handler for current thread */
+	    ExceptionReturn.erase();
+	}
+    private:
+	jmp_buf env;
+};
+#define HANDLER_TRY(handler) \
+    if (setjmp(handler.getEnv()) == 0) {\
+	handler.Set();
+
+#define HANDLER_END(handler) \
+    } else cli_warnmsg("[Bytecode JIT]: recovered from error\n");
+
+
 void do_shutdown() {
-    llvm_shutdown();
+    ScopedExceptionHandler handler;
+    HANDLER_TRY(handler) {
+	// TODO: be on the safe side, and clear errors here,
+	// otherwise destructor calls report_fatal_error
+	((class raw_fd_ostream&)errs()).clear_error();
+
+	llvm_shutdown();
+
+	((class raw_fd_ostream&)errs()).clear_error();
+    }
+    HANDLER_END(handler);
+    remove_fatal_error_handler();
 }
 
 static void NORETURN jit_exception_handler(void)
 {
-    longjmp(*(jmp_buf*)(ExceptionReturn.get()), 1);
+    jmp_buf* buf = const_cast<jmp_buf*>(ExceptionReturn.get());
+    if (buf) {
+	// For errors raised during bytecode generation and execution.
+	longjmp(*buf, 1);
+    } else {
+	// Oops, got no error recovery pointer set up,
+	// this is probably an error raised during shutdown.
+	cli_errmsg("[Bytecode JIT]: exception handler called, but no recovery point set up");
+	// should never happen, we remove the error handler when we don't use
+	// LLVM anymore, and when we use it, we do set an error recovery point.
+	llvm_unreachable("Bytecode JIT]: no exception handler recovery installed, but exception hit!");
+    }
 }
 
 static void NORETURN jit_ssp_handler(void)
 {
-    errs() << "Bytecode JIT: *** stack smashing detected, bytecode aborted\n";
+    cli_errmsg("[Bytecode JIT]: *** stack smashing detected, bytecode aborted\n");
     jit_exception_handler();
 }
 
 void llvm_error_handler(void *user_data, const std::string &reason)
 {
     // Output it to stderr, it might exceed the 1k/4k limit of cli_errmsg
-    errs() << MODULE << reason;
+    cli_errmsg("[Bytecode JIT]: [LLVM error] %s\n", reason.c_str());
     jit_exception_handler();
 }
 
@@ -230,6 +304,13 @@ static void rtlib_bzero(void *s, size_t n)
     memset(s, 0, n);
 }
 
+#ifdef _WIN32
+#ifdef _WIN64
+extern "C" void __chkstk(void);
+#else
+extern "C" void _chkstk(void);
+#endif
+#endif
 // Resolve integer libcalls, but nothing else.
 static void* noUnknownFunctions(const std::string& name) {
     void *addr =
@@ -247,6 +328,13 @@ static void* noUnknownFunctions(const std::string& name) {
 	.Case("memcpy", (void*)(intptr_t)memcpy)
 	.Case("memset", (void*)(intptr_t)memset)
 	.Case("abort", (void*)(intptr_t)jit_exception_handler)
+#ifdef _WIN32
+#ifdef _WIN64
+	.Case("_chkstk", (void*)(intptr_t)__chkstk)
+#else
+	.Case("_chkstk", (void*)(intptr_t)_chkstk)
+#endif
+#endif
 	.Default(0);
     if (addr)
 	return addr;
@@ -264,10 +352,8 @@ public:
     {
 	if (!cli_debug_flag)
 	    return;
-	errs() << "bytecode JIT: emitted function " << F.getName() << 
-	    " of " << Size << " bytes at 0x";
-	errs().write_hex((uintptr_t)Code);
-	errs() << "\n";
+	cli_dbgmsg_internal("[Bytecode JIT]: emitted function %s of %ld bytes at %p\n",
+			    F.getNameStr().c_str(), (long)Size, Code);
     }
 };
 
@@ -715,9 +801,14 @@ private:
 		isa<PointerType>(Ty))
 		V = Builder.CreateBitCast(V, Ty);
 	    if (V->getType() != Ty) {
-		errs() << operand << " ";
-		V->dump();
-		Ty->dump();
+		if (cli_debug_flag) {
+		    std::string str;
+		    raw_string_ostream ostr(str);
+		    ostr << operand << " " ;
+		    V->print(ostr);
+		    Ty->print(ostr);
+		    cli_dbgmsg_internal("[Bytecode JIT]: %s\n", ostr.str().c_str());
+		}
 		llvm_report_error("(libclamav) Type mismatch converting operand");
 	    }
 	    return V;
@@ -878,17 +969,25 @@ public:
     Value* createGEP(Value *Base, const Type *ETy, InputIterator Start, InputIterator End) {
 	const Type *Ty = GetElementPtrInst::getIndexedType(Base->getType(), Start, End);
 	if (!Ty || (ETy && (Ty != ETy && (!isa<IntegerType>(Ty) || !isa<IntegerType>(ETy))))) {
-	    errs() << MODULE << "Wrong indices for GEP opcode: "
-		<< " expected type: " << *ETy;
-	    if (Ty)
-		errs() << " actual type: " << *Ty;
-	    errs() << " base: " << *Base << ";";
-	    Base->getType()->dump();
-	    errs() << "\n indices: ";
-	    for (InputIterator I=Start; I != End; I++) {
-		errs() << **I << ", ";
+	    if (cli_debug_flag) {
+		std::string str;
+		raw_string_ostream ostr(str);
+
+		ostr << "Wrong indices for GEP opcode: "
+		    << " expected type: " << *ETy;
+		if (Ty)
+		    ostr << " actual type: " << *Ty;
+		ostr << " base: " << *Base << ";";
+		Base->getType()->print(ostr);
+		ostr << "\n indices: ";
+		for (InputIterator I=Start; I != End; I++) {
+		    ostr << **I << ", ";
+		}
+		ostr << "\n";
+		cli_dbgmsg_internal("[Bytecode JIT]: %s\n", ostr.str().c_str());
+	    } else {
+		cli_warnmsg("[Bytecode JIT]: Wrong indices for GEP opcode\n");
 	    }
-	    errs() << "\n";
 	    return 0;
 	}
 	return Builder.CreateGEP(Base, Start, End);
@@ -900,7 +999,8 @@ public:
 	const Type *ETy = cast<PointerType>(cast<PointerType>(Values[dest]->getType())->getElementType())->getElementType();
 	Value *V = createGEP(Base, ETy, Start, End);
 	if (!V) {
-	    errs() << "@ " << dest << "\n";
+	    if (cli_debug_flag)
+		cli_dbgmsg_internal("[Bytecode JIT] @%d\n", dest);
 	    return false;
 	}
 	V = Builder.CreateBitCast(V, PointerType::getUnqual(ETy));
@@ -1112,8 +1212,13 @@ public:
 		    };
 		    globals[i] = createGEP(SpecialGV, 0, C, C+1);
 		    if (!globals[i]) {
-			errs() << i << ":" << g << ":" << bc->globals[i][0] <<"\n";
-			Ty->dump();
+			if (cli_debug_flag) {
+			    std::string str;
+			    raw_string_ostream ostr(str);
+			    ostr << i << ":" << g << ":" << bc->globals[i][0] <<"\n";
+			    Ty->print(ostr);
+			    cli_dbgmsg_internal("[Bytecode JIT]: %s\n", ostr.str().c_str());
+			}
 			llvm_report_error("(libclamav) unable to create fake global");
 		    }
 		    globals[i] = Builder.CreateBitCast(globals[i], Ty);
@@ -1269,7 +1374,7 @@ public:
 			    BasicBlock *True = BB[inst->u.branch.br_true];
 			    BasicBlock *False = BB[inst->u.branch.br_false];
 			    if (Cond->getType() != Type::getInt1Ty(Context)) {
-				errs() << MODULE << "type mismatch in condition\n";
+				cli_warnmsg("[Bytecode JIT]: type mismatch in condition");
 				return 0;
 			    }
 			    Builder.CreateCondBr(Cond, True, False);
@@ -1527,17 +1632,22 @@ public:
 				break;
 			    }
 			default:
-			    errs() << MODULE << "JIT doesn't implement opcode " <<
-				inst->opcode << " yet!\n";
+			    cli_warnmsg("[Bytecode JIT]: JIT doesn't implement opcode %d yet!\n",
+					inst->opcode);
 			    return 0;
 		    }
 		}
 	    }
 
 	    if (verifyFunction(*F, PrintMessageAction)) {
-		errs() << MODULE << "Verification failed\n";
-		F->dump();
 		// verification failed
+		cli_warnmsg("[Bytecode JIT]: Verification failed\n");
+		if (cli_debug_flag) {
+		    std::string str;
+		    raw_string_ostream ostr(str);
+		    F->print(ostr);
+		    cli_dbgmsg_internal("[Bytecode JIT]: %s\n", ostr.str().c_str());
+		}
 		return 0;
 	    }
 	    delete [] Values;
@@ -1571,7 +1681,7 @@ public:
 
 	// If prototype matches, add to callable functions
 	if (Functions[0]->getFunctionType() != Callable) {
-	    errs() << "Wrong prototype for function 0 in bytecode " << bc->id << "\n";
+	    cli_warnmsg("[Bytecode JIT]: Wrong prototype for function 0 in bytecode %d\n",  bc->id);
 	    return 0;
 	}
 	// All functions have the Fast calling convention, however
@@ -1616,11 +1726,14 @@ class LLVMApiScopedLock {
 	// we need to wrap all LLVM API calls with a giant mutex lock, but
 	// only then.
 	LLVMApiScopedLock() {
-	    if (!llvm_is_multithreaded())
+	    // It is safer to just run all codegen under the mutex,
+	    // it is not like we are going to codegen from multiple threads
+	    // at a time anyway.
+//	    if (!llvm_is_multithreaded())
 		llvm_api_lock.acquire();
 	}
 	~LLVMApiScopedLock() {
-	    if (!llvm_is_multithreaded())
+//	    if (!llvm_is_multithreaded())
 		llvm_api_lock.release();
 	}
 };
@@ -1736,26 +1849,23 @@ static void *bytecode_watchdog(void *arg)
     pthread_mutex_unlock(&w->mutex);
     if (ret == ETIMEDOUT) {
 	*w->timeout = 1;
-	errs() << "Bytecode run timed out, timeout flag set\n";
+	cli_warnmsg("[Bytecode JIT]: Bytecode run timed out, timeout flag set\n");
     }
     return NULL;
 }
 
 static int bytecode_execute(intptr_t code, struct cli_bc_ctx *ctx)
 {
-    jmp_buf env;
+    ScopedExceptionHandler handler;
     // execute;
-    if (setjmp(env) == 0) {
+    HANDLER_TRY(handler) {
 	// setup exception handler to longjmp back here
-	ExceptionReturn.set((const jmp_buf*)&env);
 	uint32_t result = ((uint32_t (*)(struct cli_bc_ctx *))(intptr_t)code)(ctx);
 	*(uint32_t*)ctx->values = result;
 	return 0;
     }
-    errs() << "\n";
-    errs().changeColor(raw_ostream::RED, true) << MODULE
-	<< "*** JITed code intercepted runtime error!\n";
-    errs().resetColor();
+    HANDLER_END(handler);
+    cli_warnmsg("[Bytecode JIT]: JITed code intercepted runtime error!\n");
     return CL_EBYTECODE;
 }
 
@@ -1772,10 +1882,10 @@ int cli_vm_execute_jit(const struct cli_all_bc *bcs, struct cli_bc_ctx *ctx,
     // if needed.
     void *code = bcs->engine->compiledFunctions[func];
     if (!code) {
-	errs() << MODULE << "Unable to find compiled function\n";
+	cli_warnmsg("[Bytecode JIT]: Unable to find compiled function\n");
 	if (func->numArgs)
-	    errs() << MODULE << "Function has "
-		<< (unsigned)func->numArgs << " arguments, it must have 0 to be called as entrypoint\n";
+	    cli_warnmsg("[Bytecode JIT] Function has %d arguments, it must have 0 to be called as entrypoint\n",
+			func->numArgs);
 	return CL_EBYTECODE;
     }
     gettimeofday(&tv0, NULL);
@@ -1798,9 +1908,8 @@ int cli_vm_execute_jit(const struct cli_all_bc *bcs, struct cli_bc_ctx *ctx,
 	/* only spawn if timeout is set.
 	 * we don't set timeout for selfcheck (see bb #2235) */
 	if ((ret = pthread_create(&thread, NULL, bytecode_watchdog, &w))) {
-	    errs() << "Bytecode: failed to create new thread!";
-	    errs() << cli_strerror(ret, buf, sizeof(buf));
-	    errs() << "\n";
+	    cli_warnmsg("[Bytecode JIT]: Bytecode: failed to create new thread :%s!\n",
+			cli_strerror(ret, buf, sizeof(buf)));
 	    return CL_EBYTECODE;
 	}
     }
@@ -1815,10 +1924,12 @@ int cli_vm_execute_jit(const struct cli_all_bc *bcs, struct cli_bc_ctx *ctx,
     }
 
     if (cli_debug_flag) {
+	long diff;
 	gettimeofday(&tv1, NULL);
 	tv1.tv_sec -= tv0.tv_sec;
 	tv1.tv_usec -= tv0.tv_usec;
-	errs() << "bytecode finished in " << (tv1.tv_sec*1000000 + tv1.tv_usec) << "us\n";
+	diff = tv1.tv_sec*1000000 + tv1.tv_usec;
+	cli_dbgmsg_internal("bytecode finished in %ld us\n", diff);
     }
     return ctx->timeout ? CL_ETIMEOUT : ret;
 }
@@ -1852,17 +1963,10 @@ int cli_bytecode_prepare_jit(struct cli_all_bc *bcs)
 {
   if (!bcs->engine)
       return CL_EBYTECODE;
-  jmp_buf env;
+  ScopedExceptionHandler handler;
   LLVMApiScopedLock scopedLock;
   // setup exception handler to longjmp back here
-  ExceptionReturn.set((const jmp_buf*)&env);
-  if (setjmp(env) != 0) {
-      errs() << "\n";
-      errs().changeColor(raw_ostream::RED, true) << MODULE 
-      << "*** FATAL error encountered during bytecode generation\n";
-      errs().resetColor();
-      return CL_EBYTECODE;
-  }
+  HANDLER_TRY(handler) {
   // LLVM itself never throws exceptions, but operator new may throw bad_alloc
   try {
     Module *M = new Module("ClamAV jit module", bcs->engine->Context);
@@ -1876,9 +1980,10 @@ int cli_bytecode_prepare_jit(struct cli_all_bc *bcs)
 	ExecutionEngine *EE = bcs->engine->EE = builder.create();
 	if (!EE) {
 	    if (!ErrorMsg.empty())
-		errs() << MODULE << "error creating execution engine: " << ErrorMsg << "\n";
+		cli_errmsg("[Bytecode JIT]: error creating execution engine: %s\n",
+			   ErrorMsg.c_str());
 	    else
-		errs() << MODULE << "JIT not registered?\n";
+		cli_errmsg("[Bytecode JIT]: JIT not registered?\n");
 	    return CL_EBYTECODE;
 	}
 	bcs->engine->Listener  = new NotifyListener();
@@ -1983,7 +2088,7 @@ int cli_bytecode_prepare_jit(struct cli_all_bc *bcs)
 				OurFPM, OurFPMUnsigned, apiFuncs, apiMap);
 	    Function *F = Codegen.generate();
 	    if (!F) {
-		errs() << MODULE << "JIT codegen failed\n";
+		cli_errmsg("[Bytecode JIT]: JIT codegen failed\n");
 		return CL_EBYTECODE;
 	    }
 	    Functions[i] = F;
@@ -2038,19 +2143,24 @@ int cli_bytecode_prepare_jit(struct cli_all_bc *bcs)
     }
     return CL_SUCCESS;
   } catch (std::bad_alloc &badalloc) {
-      errs() << MODULE << badalloc.what() << "\n";
+      cli_errmsg("[Bytecode JIT]: bad_alloc: %s\n",
+		 badalloc.what());
       return CL_EMEM;
   } catch (...) {
-      errs() << MODULE << "Unexpected unknown exception occurred.\n";
+      cli_errmsg("[Bytecode JIT]: Unexpected unknown exception occured\n");
       return CL_EBYTECODE;
   }
+  return 0;
+  } HANDLER_END(handler);
+  cli_errmsg("[Bytecode JIT] *** FATAL error encountered during bytecode generation\n");
+  return CL_EBYTECODE;
 }
 
 int bytecode_init(void)
 {
     // If already initialized return
     if (llvm_is_multithreaded()) {
-	errs() << "bytecode_init: already initialized";
+	cli_warnmsg("bytecode_init: already initialized");
 	return CL_EARG;
     }
     llvm_install_error_handler(llvm_error_handler);
@@ -2181,9 +2291,9 @@ void cli_bytecode_debug_printsrc(const struct cli_bc_ctx *ctx)
     }
     assert(ctx->line < lines->linev.size());
 
+#ifndef LLVM28
     int line = (int)ctx->line ? (int)ctx->line : -1;
     int col = (int)ctx->col ? (int)ctx->col : -1;
-#ifndef LLVM28
     //TODO: print this ourselves, instead of using SMDiagnostic
     SMDiagnostic diag(ctx->file, line, col,
 		 "", std::string(lines->linev[ctx->line-1], lines->linev[ctx->line]-1));
@@ -2215,9 +2325,11 @@ void cli_printcxxver()
 namespace ClamBCModule {
 void stop(const char *msg, llvm::Function* F, llvm::Instruction* I)
 {
-    if (F && F->hasName())
-	llvm::errs() << "in function " << F->getName() << ": ";
-    llvm::errs() << msg << "\n";
+    if (F && F->hasName()) {
+	cli_warnmsg("[Bytecode JIT] in function %s: %s", F->getNameStr().c_str(), msg);
+    } else {
+	cli_warnmsg("[Bytecode JIT] %s", msg);
+    }
 }
 }
 
