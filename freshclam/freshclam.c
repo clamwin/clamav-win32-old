@@ -261,7 +261,7 @@ int main(int argc, char **argv)
 #ifdef _WIN32
     if (optget(opts, "install")->enabled)
     {
-        cw_installservice("FreshClam", "ClamWin Free Antivirus Database Updater",
+        svc_install("FreshClam", "ClamWin Free Antivirus Database Updater",
             "Updates virus pattern database for ClamWin Free Antivirus application");
         optfree(opts);
         return 0;
@@ -269,7 +269,7 @@ int main(int argc, char **argv)
 
     if (optget(opts, "uninstall")->enabled)
     {
-        cw_uninstallservice("FreshClam", 1);
+        svc_uninstall("FreshClam", 1);
         optfree(opts);
         return 0;
     }
@@ -485,7 +485,8 @@ int main(int argc, char **argv)
 
 #ifdef _WIN32
         mprintf_disabled = 1;
-        cw_registerservice("FreshClam");
+        svc_register("FreshClam");
+        svc_ready();
 #endif
 
 	if((opt = optget(opts, "PidFile"))->enabled) {
@@ -584,7 +585,7 @@ BOOL WINAPI cw_stop_ctrl_handler(DWORD CtrlType)
     {
         SetConsoleCtrlHandler(cw_stop_ctrl_handler, FALSE);
         fprintf(stderr, "[freshclam] Control+C pressed...\n");
-	    exit(2);
+	    exit(0);
     }
     return TRUE;
 }

@@ -56,13 +56,16 @@
 
 /* cw */
 extern char *cw_normalizepath(const char *path);
-extern void cw_registerservice(const char *name);
-extern int cw_installservice(const char *name, const char *dname, const char *desc);
-extern int cw_uninstallservice(const char *name, int verbose);
 extern int cw_init(void);
-
 extern BOOL cw_disablefsredir(void);
 extern BOOL cw_revertfsredir(void);
+
+/* service */
+extern void svc_register(const char *name);
+extern void svc_ready(void);
+extern int svc_checkpoint(const char *type, const char *name, void *context);
+extern int svc_install(const char *name, const char *dname, const char *desc);
+extern int svc_uninstall(const char *name, int verbose);
 
 /* ctrl + c handler */
 extern BOOL WINAPI cw_stop_ctrl_handler(DWORD CtrlType);
