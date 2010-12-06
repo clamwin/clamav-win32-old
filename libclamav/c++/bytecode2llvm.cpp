@@ -305,12 +305,11 @@ static void rtlib_bzero(void *s, size_t n)
 }
 
 #ifdef _WIN32
-#ifdef _WIN64
 extern "C" void __chkstk(void);
-#else
 extern "C" void _chkstk(void);
+extern "C" void *_alloca(void);
 #endif
-#endif
+
 // Resolve integer libcalls, but nothing else.
 static void* noUnknownFunctions(const std::string& name) {
     void *addr =
@@ -328,12 +327,14 @@ static void* noUnknownFunctions(const std::string& name) {
 	.Case("memcpy", (void*)(intptr_t)memcpy)
 	.Case("memset", (void*)(intptr_t)memset)
 	.Case("abort", (void*)(intptr_t)jit_exception_handler)
-#ifdef _WIN32
+#ifdef _MSC_VER
 #ifdef _WIN64
 	.Case("_chkstk", (void*)(intptr_t)__chkstk)
 #else
 	.Case("_chkstk", (void*)(intptr_t)_chkstk)
 #endif
+#elif defined(__MINGW32__)
+	.Case("_alloca", (void*)(intptr_t)_alloca)
 #endif
 	.Default(0);
     if (addr)
