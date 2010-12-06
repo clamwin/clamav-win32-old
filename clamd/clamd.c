@@ -183,7 +183,7 @@ int main(int argc, char **argv)
 #ifdef _WIN32
     if (optget(opts, "install")->enabled)
     {
-        cw_installservice("ClamD", "ClamWin Free Antivirus Scanner Service",
+        svc_install("ClamD", "ClamWin Free Antivirus Scanner Service",
             "Provides virus scanning facilities for ClamWin Free Antivirus application");
         optfree(opts);
         return 0;
@@ -191,7 +191,7 @@ int main(int argc, char **argv)
 
     if (optget(opts, "uninstall")->enabled)
     {
-        cw_uninstallservice("ClamD", 1);
+        svc_uninstall("ClamD", 1);
         optfree(opts);
         return 0;
     }
@@ -515,6 +515,14 @@ int main(int argc, char **argv)
 	logg("#Max A-C depth set to %u\n", (unsigned int) opt->numarg);
     }
 
+#ifdef _WIN32
+    if (optget(opts, "daemon")->enabled)
+    {
+        cl_engine_set_clcb_sigload(engine, svc_checkpoint, NULL);
+        svc_register("ClamD");
+    }
+#endif
+
     if((ret = cl_load(dbdir, engine, &sigs, dboptions))) {
 	logg("!%s\n", cl_strerror(ret));
 	ret = 1;
@@ -610,7 +618,11 @@ int main(int argc, char **argv)
     } else
         foreground = 1;
 #else
-    if (optget(opts, "daemon")->enabled) cw_registerservice("ClamD");
+    if (optget(opts, "daemon")->enabled)
+    {
+        cl_engine_set_clcb_sigload(engine, NULL, NULL);
+        svc_ready();
+    }
 #endif
 
     ret = recvloop_th(lsockets, nlsockets, engine, dboptions, opts);
@@ -648,13 +660,12 @@ BOOL WINAPI cw_stop_ctrl_handler(DWORD CtrlType)
         SetConsoleCtrlHandler(cw_stop_ctrl_handler, FALSE);
         fprintf(stderr, "[clamd] Control+C pressed...\n");
 
-        if (!event_wake_recv)
-            exit(1);
-
         pthread_mutex_lock(&exit_mutex);
         progexit = 1;
         pthread_mutex_unlock(&exit_mutex);
-        SetEvent(event_wake_recv);
+
+        if (event_wake_recv)
+            SetEvent(event_wake_recv);
     }
     return TRUE;
 }

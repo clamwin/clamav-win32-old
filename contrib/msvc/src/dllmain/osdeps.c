@@ -393,7 +393,7 @@ BOOL WINAPI cw_stop_ctrl_handler(DWORD CtrlType)
     {
         SetConsoleCtrlHandler(cw_stop_ctrl_handler, FALSE);
         fprintf(stderr, "Control+C pressed, aborting...\n");
-        exit(1);
+        exit(0);
     }
     return TRUE;
 }

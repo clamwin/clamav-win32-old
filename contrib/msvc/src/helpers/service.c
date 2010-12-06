@@ -1,7 +1,7 @@
 /*
  * NT Service Wrapper for ClamD/FreshClam
  *
- * Copyright (c) 2008 Gianluigi Tiesi <sherpya@netfarm.it>
+ * Copyright (c) 2008-2010 Gianluigi Tiesi <sherpya@netfarm.it>
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -23,17 +23,17 @@
 #include <winsvc.h>
 #include <shared/output.h>
 
-extern int gnulib_snprintf(char *str, size_t size, const char *format, ...);
-
 void WINAPI ServiceMain(DWORD dwArgc, LPSTR *lpszArgv);
 
 static SERVICE_STATUS svc;
 static SERVICE_STATUS_HANDLE svc_handle;
 static SERVICE_TABLE_ENTRYA DT[] = {{ "Service", ServiceMain }, { NULL, NULL }};
 
-static HANDLE ServiceProc;
+static HANDLE evStart;
+static HANDLE DispatcherThread;
+static int checkpoint_every = 5000;
 
-int cw_uninstallservice(const char *name, int verbose)
+int svc_uninstall(const char *name, int verbose)
 {
     SC_HANDLE sm, svc;
     int ret = 1;
@@ -77,7 +77,7 @@ int cw_uninstallservice(const char *name, int verbose)
     return ret;
 }
 
-int cw_installservice(const char *name, const char *dname, const char *desc)
+int svc_install(const char *name, const char *dname, const char *desc)
 {
     SC_HANDLE sm, svc;
     char modulepath[MAX_PATH];
@@ -90,7 +90,7 @@ int cw_installservice(const char *name, const char *dname, const char *desc)
         return 0;
     }
 
-    if (!cw_uninstallservice(name, 0)) return 0;
+    if (!svc_uninstall(name, 0)) return 0;
 
     if (!(sm = OpenSCManagerA(NULL, NULL, SC_MANAGER_CREATE_SERVICE | DELETE)))
     {
@@ -102,9 +102,9 @@ int cw_installservice(const char *name, const char *dname, const char *desc)
     }
 
     if (strchr(modulepath, ' '))
-        gnulib_snprintf(binpath, MAX_PATH - 1, "\"%s\" --daemon", modulepath);
+        snprintf(binpath, MAX_PATH - 1, "\"%s\" --daemon", modulepath);
     else
-        gnulib_snprintf(binpath, MAX_PATH - 1, "%s --daemon", modulepath);
+        snprintf(binpath, MAX_PATH - 1, "%s --daemon", modulepath);
 
     svc = CreateServiceA(sm, name, dname, SERVICE_CHANGE_CONFIG,
         SERVICE_WIN32_OWN_PROCESS,
@@ -136,49 +136,84 @@ int cw_installservice(const char *name, const char *dname, const char *desc)
     return 1;
 }
 
-void cw_registerservice(const char *name)
+static void svc_getcpvalue(const char *name)
+{
+    HKEY hKey;
+    DWORD dwType;
+    DWORD value, vlen = sizeof(DWORD);
+    char subkey[MAX_PATH];
+
+    snprintf(subkey, MAX_PATH - 1, "SYSTEM\\CurrentControlSet\\Services\\%s", name);
+
+    if (RegOpenKeyExA(HKEY_LOCAL_MACHINE, subkey, 0, KEY_QUERY_VALUE, &hKey) != ERROR_SUCCESS)
+        return;
+
+    if ((RegQueryValueExA(hKey, "Checkpoint", NULL, &dwType, (LPBYTE) &value, &vlen) == ERROR_SUCCESS) &&
+        (vlen == sizeof(DWORD) && (dwType == REG_DWORD)))
+            checkpoint_every = value;
+
+    RegCloseKey(hKey);
+}
+
+void svc_register(const char *name)
 {
     DWORD tid;
     DT->lpServiceName = (char *) name;
+    svc_getcpvalue(name);
 
-    if (!DuplicateHandle(GetCurrentProcess(), GetCurrentThread(), GetCurrentProcess(), &ServiceProc, 0, FALSE, DUPLICATE_SAME_ACCESS))
+    evStart = CreateEvent(NULL, TRUE, FALSE, NULL);
+    DispatcherThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE) StartServiceCtrlDispatcherA, (LPVOID) DT, 0, &tid);
+}
+
+void svc_ready(void)
+{
+    WaitForSingleObject(evStart, INFINITE);
+
+    svc.dwCurrentState = SERVICE_RUNNING;
+    svc.dwControlsAccepted |= SERVICE_ACCEPT_STOP | SERVICE_ACCEPT_SHUTDOWN;
+    svc.dwCheckPoint = 0;
+
+    if (!SetServiceStatus(svc_handle, &svc))
     {
-        logg("[service] DuplicateHandle() failed with %d\n", GetLastError());
+        logg("[service] SetServiceStatus() failed with %d\n", GetLastError());
         exit(1);
     }
-    CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE) StartServiceCtrlDispatcherA, (LPVOID) DT, 0, &tid);
+}
+
+int svc_checkpoint(const char *type, const char *name, void *context)
+{
+    if (svc.dwCurrentState == SERVICE_START_PENDING)
+    {
+        svc.dwCheckPoint++;
+        if ((svc.dwCheckPoint % checkpoint_every) == 0)
+            SetServiceStatus(svc_handle, &svc);
+    }
+    return 0;
 }
 
 void WINAPI ServiceCtrlHandler(DWORD code)
 {
     switch (code)
     {
-        case SERVICE_CONTROL_PAUSE:
-            svc.dwCurrentState = SERVICE_PAUSED;
-            break;
-        case SERVICE_CONTROL_CONTINUE:
-            svc.dwCurrentState = SERVICE_RUNNING;
-            break;
         case SERVICE_CONTROL_STOP:
-            svc.dwWin32ExitCode = 0;
+        case SERVICE_CONTROL_SHUTDOWN:
             svc.dwCurrentState = SERVICE_STOPPED;
-            svc.dwCheckPoint = 0;
-            svc.dwWaitHint = 0;
-            cw_stop_ctrl_handler(CTRL_C_EVENT);
+            svc.dwControlsAccepted &= ~(SERVICE_ACCEPT_STOP | SERVICE_ACCEPT_SHUTDOWN);
             SetServiceStatus(svc_handle, &svc);
-            break;
+            return;
         case SERVICE_CONTROL_INTERROGATE:
             break;
     }
-    return;
+
+    SetServiceStatus(svc_handle, &svc);
 }
 
 void WINAPI ServiceMain(DWORD dwArgc, LPSTR *lpszArgv)
 {
     svc.dwServiceType = SERVICE_WIN32;
     svc.dwCurrentState = SERVICE_START_PENDING;
-    svc.dwControlsAccepted = SERVICE_ACCEPT_STOP;
-    svc.dwWin32ExitCode = 0;
+    svc.dwControlsAccepted = 0;
+    svc.dwWin32ExitCode = NO_ERROR;
     svc.dwServiceSpecificExitCode = 0;
     svc.dwCheckPoint = 0;
     svc.dwWaitHint = 0;
@@ -189,15 +224,13 @@ void WINAPI ServiceMain(DWORD dwArgc, LPSTR *lpszArgv)
         exit(1);
     }
 
-    svc.dwCurrentState = SERVICE_RUNNING;
-    svc.dwCheckPoint = 0;
-    svc.dwWaitHint = 0;
-
     if (!SetServiceStatus(svc_handle, &svc))
     {
         logg("[service] SetServiceStatus() failed with %d\n", GetLastError());
         exit(1);
     }
 
-    WaitForSingleObject(ServiceProc, INFINITE);
+    SetEvent(evStart);
+    WaitForSingleObject(DispatcherThread, INFINITE);
+    cw_stop_ctrl_handler(CTRL_C_EVENT);
 }
