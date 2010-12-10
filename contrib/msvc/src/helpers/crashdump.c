@@ -1,7 +1,7 @@
 /*
  * Clamav Native Windows Port: Crash Dumper Helper
  *
- * Copyright (c) 2005-2008 Gianluigi Tiesi <sherpya@netfarm.it>
+ * Copyright (c) 2005-2010 Gianluigi Tiesi <sherpya@netfarm.it>
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -133,6 +133,7 @@ DWORD WINAPI CrashMiniDumpWriteDumpProc(LPVOID lpParam)
         lpMapAddress[i] ^= 42;
 
     FlushViewOfFile(lpMapAddress, 0);
+    UnmapViewOfFile(lpMapAddress);
 #endif
     fprintf(stderr, "[ClamWin] Crash Dump saved as %s, please report\n", dumpfile);
     retval = 0;
