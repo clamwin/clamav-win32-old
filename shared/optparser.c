@@ -213,7 +213,7 @@ const struct clam_option __clam_options[] = {
     /* FIXME: add a regex for IP addr */
     { "TCPAddr", NULL, 0, TYPE_STRING, NULL, -1, NULL, 0, OPT_CLAMD, "By default clamd binds to INADDR_ANY.\nThis option allows you to restrict the TCP address and provide\nsome degree of protection from the outside world.", "127.0.0.1" },
 
-    { "MaxConnectionQueueLength", NULL, 0, TYPE_NUMBER, MATCH_NUMBER, 15, NULL, 0, OPT_CLAMD, "Maximum length the queue of pending connections may grow to.", "30" },
+    { "MaxConnectionQueueLength", NULL, 0, TYPE_NUMBER, MATCH_NUMBER, 200, NULL, 0, OPT_CLAMD, "Maximum length the queue of pending connections may grow to.", "30" },
 
     { "StreamMaxLength", NULL, 0, TYPE_SIZE, MATCH_SIZE, CLI_DEFAULT_MAXFILESIZE, NULL, 0, OPT_CLAMD, "Close the STREAM session when the data size limit is exceeded.\nThe value should match your MTA's limit for the maximum attachment size.", "25M" },
 
@@ -457,6 +457,8 @@ const struct clam_option __clam_options[] = {
     { "SkipAuthenticated", NULL, 0, TYPE_STRING, NULL, -1, NULL, 0, OPT_MILTER, "Messages from authenticated SMTP users matching this extended POSIX\nregular expression (egrep-like) will not be scanned.\nAs an alternative, a file containing a plain (not regex) list of names (one\nper line) can be specified using the prefix \"file:\".\ne.g. SkipAuthenticated file:/etc/good_guys\n\nNote: this is the AUTH login name!", "SkipAuthenticated ^(tom|dick|henry)$" },
 
     { "LogInfected", NULL, 0, TYPE_STRING, NULL, -1, NULL, 0, OPT_MILTER, "This option allows to tune what is logged when a message is infected.\nPossible values are Off (the default - nothing is logged),\nBasic (minimal info logged), Full (verbose info logged)\nNote:\nFor this to work properly in sendmail, make sure the msg_id, mail_addr,\nrcpt_addr and i macroes are available in eom. In other words add a line like:\nMilter.macros.eom={msg_id}, {mail_addr}, {rcpt_addr}, i\nto your .cf file. Alternatively use the macro:\ndefine(`confMILTER_MACROS_EOM', `{msg_id}, {mail_addr}, {rcpt_addr}, i')\nPostfix should be working fine with the default settings.", "Basic" },
+
+    { "LogClean", NULL, 0, TYPE_STRING, NULL, -1, NULL, 0, OPT_MILTER, "This option allows to tune what is logged when no threat is found in a scanned message.\nSee LogInfected for possible values and caveats.\nUseful in debugging but drastically increases the log size.", "Basic" },
 
     /* Deprecated milter options */
 
