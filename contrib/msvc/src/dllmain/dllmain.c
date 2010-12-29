@@ -246,6 +246,12 @@ static void dynLoad(void)
         IMPORT_FUNC_OR_FAIL(wt, CryptCATAdminCalcHashFromFileHandle);
         IMPORT_FUNC_OR_FAIL(wt, CryptCATCatalogInfoFromContext);
 
+        cw_helpers.wt.hLib = cw_helpers.wt.hLib_crypt32 = LoadLibraryA("crypt32.dll");
+        IMPORT_FUNC_OR_FAIL(wt, CryptQueryObject);
+        IMPORT_FUNC_OR_FAIL(wt, CryptMsgGetParam);
+        IMPORT_FUNC_OR_FAIL(wt, CertGetNameStringA);
+        IMPORT_FUNC_OR_FAIL(wt, CertFindCertificateInStore);
+
         /* Digital signature verification is disabled for now on old platforms,
            typically win9x. For an unknown reason the process locks the checked
            file in a way only a reboot can unlock it again */
@@ -290,7 +296,9 @@ static void dynUnLoad(void)
     if (cw_helpers.wt.hLib_wt)
         FreeLibrary(cw_helpers.wt.hLib_wt);
     if (cw_helpers.wt.hLib_mscat32)
-        FreeLibrary(cw_helpers.wt.hLib);
+        FreeLibrary(cw_helpers.wt.hLib_mscat32);
+    if (cw_helpers.wt.hLib_crypt32)
+        FreeLibrary(cw_helpers.wt.hLib_crypt32);
 
     if (cw_helpers.k32.hLib)
         FreeLibrary(cw_helpers.k32.hLib);

@@ -82,6 +82,11 @@ typedef struct CATALOG_INFO_
     DWORD cbStruct;
     WCHAR wszCatalogFile[MAX_PATH];
 } CATALOG_INFO;
+
+typedef void *HCERTSTORE, *HCRYPTMSG;
+typedef struct _CERT_CONTEXT CERT_CONTEXT, *PCERT_CONTEXT;
+typedef const CERT_CONTEXT *PCCERT_CONTEXT;
+
 #include <poppack.h>
 
 typedef HCATINFO (WINAPI *imp_CryptCATAdminAddCatalog)(HCATADMIN, WCHAR *, WCHAR *, DWORD);
@@ -91,6 +96,11 @@ typedef BOOL (WINAPI *imp_CryptCATAdminReleaseContext)(HCATADMIN, DWORD);
 typedef BOOL (WINAPI *imp_CryptCATAdminReleaseCatalogContext)(HCATADMIN, HCATINFO, DWORD);
 typedef BOOL (WINAPI *imp_CryptCATAdminCalcHashFromFileHandle)(HANDLE, DWORD *, BYTE *, DWORD);
 typedef BOOL (WINAPI *imp_CryptCATCatalogInfoFromContext)(HCATINFO, CATALOG_INFO *, DWORD);
+typedef BOOL (WINAPI *imp_CryptQueryObject)(DWORD, const void *, DWORD, DWORD, DWORD, DWORD *, DWORD *, DWORD *, HCERTSTORE *, HCRYPTMSG *, const void **);
+typedef BOOL (WINAPI *imp_CryptMsgGetParam)(HCRYPTMSG, DWORD, DWORD, void *, DWORD *);
+typedef DWORD (WINAPI *imp_CertGetNameStringA)(PCCERT_CONTEXT, DWORD, DWORD, void *, LPSTR, DWORD);
+typedef PCCERT_CONTEXT (WINAPI *imp_CertFindCertificateInStore)(HCERTSTORE, DWORD, DWORD, DWORD, const void *, PCCERT_CONTEXT);
+
 typedef LONG (WINAPI *imp_WinVerifyTrust)(HWND, GUID *, LPVOID);
 
 /* dbghelp32 */
@@ -168,6 +178,7 @@ typedef struct _wintrust_t
     HINSTANCE hLib;
     HINSTANCE hLib_wt;
     HINSTANCE hLib_mscat32;
+    HINSTANCE hLib_crypt32;
     HCATADMIN hCatAdmin;
     imp_CryptCATAdminAddCatalog CryptCATAdminAddCatalog;
     imp_CryptCATAdminEnumCatalogFromHash CryptCATAdminEnumCatalogFromHash;
@@ -176,6 +187,10 @@ typedef struct _wintrust_t
     imp_CryptCATAdminReleaseCatalogContext CryptCATAdminReleaseCatalogContext;
     imp_CryptCATAdminCalcHashFromFileHandle CryptCATAdminCalcHashFromFileHandle;
     imp_CryptCATCatalogInfoFromContext CryptCATCatalogInfoFromContext;
+    imp_CryptQueryObject CryptQueryObject;
+    imp_CryptMsgGetParam CryptMsgGetParam;
+    imp_CertGetNameStringA CertGetNameStringA;
+    imp_CertFindCertificateInStore CertFindCertificateInStore;
     imp_WinVerifyTrust WinVerifyTrust;
 } wintrust_t;
 
