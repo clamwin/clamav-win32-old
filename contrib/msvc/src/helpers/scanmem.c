@@ -25,7 +25,6 @@
 #include <output.h>
 #include <others.h>
 #include <clamscan/manager.h>
-#include <clamscan/others.h>
 #include <shared/actions.h>
 
 #ifndef TH32CS_SNAPMODULE32
