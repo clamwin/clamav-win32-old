@@ -1,7 +1,7 @@
 /*
  * Clamav Native Windows Port: actions replacement for win32
  *
- * Copyright (c) 2009 Gianluigi Tiesi <sherpya@netfarm.it>
+ * Copyright (c) 2009-2011 Gianluigi Tiesi <sherpya@netfarm.it>
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -99,12 +99,37 @@ int getdest(const char *fullpath, char **newname)
 
 static void action_move(const char *filename)
 {
-    char *nuname;
-    if (!getdest(filename, &nuname)) return;
-    if (!cw_movefile(filename, nuname, 0))
-        notmoved++;
-    else
+    char *nuname, *txt;
+    FILE *f;
+
+    if (!getdest(filename, &nuname))
+        return;
+
+    if (cw_movefile(filename, nuname, 0))
         logg("~%s: moved to '%s'\n", PATH_PLAIN(filename), PATH_PLAIN(nuname));
+    else
+        notmoved++;
+
+    /* write a txt with the original location to being able to restore the file */
+    if ((txt = malloc(strlen(nuname) + 5)))
+    {
+        strcpy(txt, nuname);
+        strcat(txt, ".txt");
+
+        if ((f = fopen(txt, "w")))
+        {
+            if (fprintf(f, "%s\t%s", filename, nuname) != (strlen(filename) + 1 + strlen(nuname)))
+                logg("!Unable to write quaratine information file %s\n", strerror(errno));
+            fclose(f);
+        }
+        else
+            logg("!Unable to write quaratine information file %s\n", strerror(errno));
+
+        free(txt);
+    }
+    else
+        logg("!Unable to allocate memory for quaratine information file\n");
+
     free(nuname);
 }
 
