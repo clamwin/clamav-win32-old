@@ -39,7 +39,9 @@ ConfigEditor::ConfigEditor(const wxString& filename)
 #endif
 	    wxLogFatalError("Can't create file %s", filename);
 	}
-	file.AddLine("DatabaseMirror database.clamav.net");
+	file.AddLine("DatabaseMirror db.local.win.clamav.net");
+	file.AddLine("DNSDatabaseInfo current.cvd.win.clamav.net");
+	file.AddLine("ConnectTimeout 5");
 	file.Write(wxTextFile::typeDefault);
     } else {
 	//bb #2343
@@ -105,6 +107,8 @@ void ConfigEditor::Add(const wxString& key, const wxString &value, bool comment)
     if (value.IsEmpty())
 	return;
 
+
+
     wxString writeLine = key + " " + value;
 
     if (comment) {
@@ -120,6 +124,11 @@ void ConfigEditor::Add(const wxString& key, const wxString &value, bool comment)
 
     if (value.find_first_of(" \t\"") != wxString::npos)
 	writeLine = "\"" + writeLine + "\"";
+
+    for (wxString str = file.GetFirstLine(); !file.Eof(); str = file.GetNextLine()) {
+	if (str.IsSameAs(writeLine))
+	    return;
+    }
 
     file.InsertLine(writeLine, lastadd);
     lastadd++;

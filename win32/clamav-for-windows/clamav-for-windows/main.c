@@ -33,13 +33,17 @@ BOOL init() {
     int ret;
 
     ret = GetModuleFileName((HINSTANCE)&__ImageBase, whereami, sizeof(whereami) -1);
-    if(!ret || ret == sizeof(whereami) -1)
+    if(!ret || ret == sizeof(whereami) -1) {
+	printf("ERROR: GetModuleFileName failed\n");
 	return FALSE;
+    }
 
     whereami[sizeof(whereami)-1] = '\0';
     slash = strrchr(whereami, '\\');
-    if(!slash)
+    if(!slash) {
+	printf("ERROR: No slash found in path %s\n", whereami);
 	return FALSE;
+    }
 
     slash++;
     *slash='\0';
@@ -48,11 +52,13 @@ BOOL init() {
 	cl_set_clcb_msg(msg_callback);
 	ret = cl_init(CL_INIT_DEFAULT);
     }
-    __except(EXCEPTION_EXECUTE_HANDLER) { ret = 1; }
+    __except(EXCEPTION_EXECUTE_HANDLER) { ret = -1; }
 
     SetDllDirectory(NULL);
-    if(ret)
+    if(ret) {
+	printf("ERROR: Failed cl_init() returned %d\n", ret);
 	return FALSE;
+    }
 
     strncpy(slash, "clamav_log_verbose", sizeof(whereami) - (slash - whereami));
     whereami[sizeof(whereami)-1] = '\0';
@@ -65,22 +71,26 @@ BOOL init() {
     logg_time = 1;
     logg_size = -1;
     logg_file = strdup(whereami);
-    if(!logg_file)
+    if(!logg_file) {
+	printf("ERROR: failed to duplicate log filename\n");
 	return FALSE;
+    }
     strncpy(slash, "clamav.old.log", sizeof(whereami) - (slash - whereami));
     whereami[sizeof(whereami)-1] = '\0';
     if(!MoveFileEx(logg_file, whereami, MOVEFILE_COPY_ALLOWED | MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH))
 	DeleteFile(logg_file);
     logg_noflush = 1;/* only flush on errors and warnings */
-    if(logg("ClamAV core initialized (version %s, flevel %d)\n", cl_retver(), cl_retflevel()))
+    if(logg("ClamAV core initialized (version %s, flevel %d)\n", cl_retver(), cl_retflevel())<0) {
+	printf("ERROR: logg failed\n");
 	return FALSE;
+    }
 
     if(init_errors()) {
 	logg("!Failed to initialize errors\n");
 	return FALSE;
     }
     ret = interface_setup();
-    logg("ClamAV module %s\n", ret == TRUE ? "initialized" : "failed! Aborting...");
+    logg("ClamAV module initialization %s\n", ret == TRUE ? "succeded" : "failed! Aborting...");
     return ret;
 }
 
@@ -100,14 +110,16 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD  ul_reason_for_call, LPVOID lpReser
 	    // Can't use logg(), or logg_close() here because pthreads
 	    // may have already been shut down, and pthread_mutex_lock would
 	    // deadlock
-	    if (engine) {
-		if (uninitialize_called)
-		    fprintf(logg_fp, "Engine still active during detach!\n");
-		else
-		    fprintf(logg_fp, "Scan_Uninitialize not called, but process is terminating\n");
+	    if(logg_fp) {
+		if (engine) {
+		    if (uninitialize_called)
+			fprintf(logg_fp, "Engine still active during detach!\n");
+		    else
+			fprintf(logg_fp, "Scan_Uninitialize not called, but process is terminating\n");
+		}
+		fprintf(logg_fp, "ClamAV module shutting down\n");
+		fclose(logg_fp);
 	    }
-	    fprintf(logg_fp, "ClamAV module shutting down\n");
-	    fclose(logg_fp);
 	}
 	return TRUE;
 }
