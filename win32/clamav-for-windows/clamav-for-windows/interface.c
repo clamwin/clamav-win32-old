@@ -903,7 +903,8 @@ int CLAMAPI Scan_ScanObjectByHandle(CClamAVScanner *pScanner, HANDLE object, int
 	    si.pThreatName = NULL;
 	logg("*in final_cb with clamav context %p, instance %p, fd %d, result %d, virusname %S)\n", &sctx, inst, fd, res, si.pThreatName);
 	si.pThreatType = threat_type(virname);
-	si.object = duphdl;
+	si.object = INVALID_HANDLE_VALUE;
+	si.objectId = INVALID_HANDLE_VALUE;
 	si.pInnerObjectPath = NULL;
 	lo = SetFilePointer(duphdl, 0, &hi, FILE_CURRENT);
 	SetFilePointer(duphdl, 0, &hi2, FILE_BEGIN);
@@ -941,6 +942,8 @@ int CLAMAPI Scan_ScanObjectByHandle(CClamAVScanner *pScanner, HANDLE object, int
 	    scaninfo->scanPhase = SCAN_PHASE_FINAL;
 	    scaninfo->errorCode = CLAMAPI_SUCCESS;
 	    scaninfo->pThreatType = threat_type(virname);
+	    scaninfo->object = INVALID_HANDLE_VALUE;
+	    scaninfo->objectId = INVALID_HANDLE_VALUE;
 	    wvirname = (wchar_t *)(scaninfo + 1);
 	    scaninfo->pThreatName = wvirname;
 	    memcpy(wvirname, L"Clam.", 10);
@@ -984,12 +987,12 @@ int CLAMAPI Scan_DeleteScanInfo(CClamAVScanner *pScanner, PCLAM_SCAN_INFO_LIST p
 
 cl_error_t prescan_cb(int fd, void *context) {
     struct scan_ctx *sctx = (struct scan_ctx *)context;
+    char tmpf[4096];
     instance *inst;
     CLAM_SCAN_INFO si;
     CLAM_ACTION act;
     HANDLE fdhdl;
     DWORD perf;
-    LONG lo = 0, hi = 0, hi2 = 0;
 
     if(!context) {
 	logg("!prescan_cb called with NULL clamav context\n");
@@ -1003,18 +1006,61 @@ cl_error_t prescan_cb(int fd, void *context) {
     si.errorCode = CLAMAPI_SUCCESS;
     si.pThreatType = NULL;
     si.pThreatName = NULL;
-    fdhdl = si.object = (HANDLE)_get_osfhandle(fd);
     si.pInnerObjectPath = NULL;
 
-    lo = SetFilePointer(fdhdl, 0, &hi, FILE_CURRENT);
-    SetFilePointer(fdhdl, 0, &hi2, FILE_BEGIN);
+    if(si.scanPhase == SCAN_PHASE_PRESCAN) {
+	long fpos;
+	int rsz;
+	while(1) {
+	    static int tmpn;
+	    snprintf(tmpf, sizeof(tmpf), "%s\\%08x.tmp", tmpdir, ++tmpn);
+	    tmpf[sizeof(tmpf)-1] = '\0';
+	    fdhdl = CreateFile(tmpf, GENERIC_READ | GENERIC_WRITE, 0, NULL, CREATE_NEW, FILE_ATTRIBUTE_TEMPORARY | FILE_FLAG_DELETE_ON_CLOSE, NULL);
+	    if(fdhdl != INVALID_HANDLE_VALUE) {
+		logg("*prescan_cb: dumping content to tempfile %s (handle %p)\n", tmpf, fdhdl);
+		break;
+	    }
+	    if((perf = GetLastError()) != ERROR_FILE_EXISTS) {
+		logg("!prescan_cb: failed to create tempfile %s - error %u\n", tmpf, perf);
+		return CL_CLEAN;
+	    }
+	}
+
+	fpos = lseek(fd, 0, SEEK_CUR);
+	lseek(fd, 0, SEEK_SET);
+	while((rsz = read(fd, tmpf, sizeof(tmpf))) > 0) {
+	    int wsz = 0;
+	    while(wsz != rsz) {
+		DWORD rwsz;
+		if(!WriteFile(fdhdl, &tmpf[wsz], rsz - wsz, &rwsz, NULL)) {
+		    logg("!prescan_cb: failed to write to tempfile %s - error %u\n", GetLastError());
+		    lseek(fd, fpos, SEEK_SET);
+		    CloseHandle(fdhdl);
+		    return CL_CLEAN;
+		}
+		wsz += rwsz;
+	    }
+	}
+	if(rsz) {
+	    logg("!prescan_cb: failed to read from clamav tempfile - errno = %d\n", errno);
+	    lseek(fd, fpos, SEEK_SET);
+	    CloseHandle(fdhdl);
+	    return CL_CLEAN;
+	}
+	lseek(fd, fpos, SEEK_SET);
+	SetFilePointer(fdhdl, 0, NULL, FILE_BEGIN);
+	si.object = fdhdl;
+	si.objectId = (HANDLE)_get_osfhandle(fd);
+    } else { /* SCAN_PHASE_INITIAL */
+	si.object = INVALID_HANDLE_VALUE;
+	si.objectId = INVALID_HANDLE_VALUE;
+    }
     logg("*prescan_cb (clamav context %p, instance %p) invoking callback %p with context %p\n", context, inst, inst->scancb, inst->scancb_ctx);
     perf = GetTickCount();
     inst->scancb(&si, &act, inst->scancb_ctx);
     perf = GetTickCount() - perf;
     sctx->cb_times += perf;
     logg("*prescan_cb (clamav context %p, instance %p) callback completed with %u in %u ms\n", context, inst, act, perf);
-    SetFilePointer(fdhdl, lo, &hi, FILE_BEGIN);
     switch(act) {
 	case CLAM_ACTION_SKIP:
 	    logg("*prescan_cb (clamav context %p, instance %p) cb result: SKIP\n", context, inst);
@@ -1036,10 +1082,8 @@ cl_error_t postscan_cb(int fd, int result, const char *virname, void *context) {
     instance *inst;
     CLAM_SCAN_INFO si;
     CLAM_ACTION act;
-    HANDLE fdhdl;
     DWORD perf;
     wchar_t wvirname[MAX_VIRNAME_LEN] = L"Clam.";
-    LONG lo = 0, hi = 0, hi2 = 0;
 
     if(!context) {
 	logg("!postscan_cb called with NULL clamav context\n");
@@ -1062,17 +1106,15 @@ cl_error_t postscan_cb(int fd, int result, const char *virname, void *context) {
 	    si.pThreatName = NULL;
     logg("*in postscan_cb with clamav context %p, instance %p, fd %d, result %d, virusname %S)\n", context, inst, fd, result, si.pThreatName);
     si.pThreatType = threat_type(virname);
-    fdhdl = si.object = (HANDLE)_get_osfhandle(fd);
+    si.objectId = (HANDLE)_get_osfhandle(fd);
+    si.object = INVALID_HANDLE_VALUE;
     si.pInnerObjectPath = NULL;
-    lo = SetFilePointer(fdhdl, 0, &hi, FILE_CURRENT);
-    SetFilePointer(fdhdl, 0, &hi2, FILE_BEGIN);
     logg("*postscan_cb (clamav context %p, instance %p) invoking callback %p with context %p\n", context, inst, inst->scancb, inst->scancb_ctx);
     perf = GetTickCount();
     inst->scancb(&si, &act, inst->scancb_ctx);
     perf = GetTickCount() - perf;
     sctx->cb_times += perf;
     logg("*postscan_cb (clamav context %p, instance %p) callback completed with %u in %u ms\n", context, inst, act, perf);
-    SetFilePointer(fdhdl, lo, &hi, FILE_BEGIN);
     switch(act) {
 	case CLAM_ACTION_SKIP:
 	    logg("*postscan_cb (clamav context %p, instance %p) cb result: SKIP\n", context, inst);
