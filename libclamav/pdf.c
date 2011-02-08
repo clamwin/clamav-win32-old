@@ -114,7 +114,7 @@ static int find_stream_bounds(const char *start, off_t bytesleft, off_t byteslef
     if ((q2 = cli_memstr(start, bytesleft, "stream", 6))) {
 	q2 += 6;
 	bytesleft -= q2 - start;
-	if (bytesleft < 1)
+	if (bytesleft < 0)
 	    return 0;
 	if (bytesleft >= 2 && q2[0] == '\xd' && q2[1] == '\xa')
 	    q2 += 2;
@@ -122,7 +122,7 @@ static int find_stream_bounds(const char *start, off_t bytesleft, off_t byteslef
 	    q2++;
 	*stream = q2 - start;
 	bytesleft2 -= q2 - start;
-	if (bytesleft2 < 0)
+	if (bytesleft2 <= 0)
 	    return 0;
 	q = q2;
 	q2 = cli_memstr(q, bytesleft2, "endstream", 9);
@@ -1761,11 +1761,12 @@ static int asciihexdecode(const char *buf, off_t len, char *output)
 	    continue;
 	if (buf[i] == '>')
 	    break;
-	if (cli_hex2str_to(buf+i, output+j++, 2) == -1) {
+	if (cli_hex2str_to(buf+i, output+j, 2) == -1) {
 	    if (len - i < 4)
 		continue;
 	    return -1;
 	}
+	j++;
 	i++;
     }
     return j;
@@ -1831,7 +1832,7 @@ ascii85decode(const char *buf, off_t len, unsigned char *output)
 
 				if(quintet > 1)
 					sum += (0xFFFFFF >> ((quintet - 2) * 8));
-				ret += quintet;
+				ret += quintet-1;
 				for(i = 0; i < quintet - 1; i++)
 					*output++ = (unsigned char)((sum >> (24 - 8 * i)) & 0xFF);
 			}

@@ -83,7 +83,7 @@
 #include "libclamav/cvd.h"
 #include "libclamav/regex_list.h"
 
-extern char updtmpdir[512];
+extern char updtmpdir[512], dbdir[512];
 
 #define CHDIR_ERR(x)				\
 	if(chdir(x) == -1)			\
@@ -567,6 +567,7 @@ static char *proxyauth(const char *user, const char *pass)
     return auth;
 }
 
+#if BUILD_CLAMD
 int submitstats(const char *clamdcfg, const struct optstruct *opts)
 {
 	int sd, clamsockd, bread, cnt, ret;
@@ -744,6 +745,13 @@ int submitstats(const char *clamdcfg, const struct optstruct *opts)
     }
     return ret;
 }
+#else
+int submitstats(const char *clamdcfg, const struct optstruct *opts)
+{
+    logg("clamd not built, no statistics");
+    return 52;
+}
+#endif
 
 static int Rfc2822DateTime(char *buf, time_t mtime)
 {
@@ -1131,7 +1139,7 @@ static int getfile(const char *srcfile, const char *destfile, const char *hostna
 
     if(mdat) {
 	mirman_update_sf(mdat->currip, mdat->af, mdat, 0, 1);
-	mirman_write("mirrors.dat", optget(opts, "DatabaseDirectory")->strarg, mdat);
+	mirman_write("mirrors.dat", dbdir, mdat);
     }
 
     ret = getfile_mirman(srcfile, destfile, hostname, ip, localip, proxy, port, user, pass, uas, ctimeout, rtimeout, mdat, logerr, can_whitelist, ims, ipaddr, sd);
@@ -1139,7 +1147,7 @@ static int getfile(const char *srcfile, const char *destfile, const char *hostna
 
     if(mdat) {
 	mirman_update_sf(mdat->currip, mdat->af, mdat, 0, -1);
-	mirman_write("mirrors.dat", optget(opts, "DatabaseDirectory")->strarg, mdat);
+	mirman_write("mirrors.dat", dbdir, mdat);
     }
 
     return ret;
@@ -1475,7 +1483,7 @@ static int test_database_wrap(const char *file, const char *newdb, int bytecode)
     char lastline[256];
     int pipefd[2];
     pid_t pid;
-    int status = 0;
+    int status = 0, ret;
     FILE *f;
 
     if (pipe(pipefd) == -1) {
@@ -1512,7 +1520,8 @@ static int test_database_wrap(const char *file, const char *newdb, int bytecode)
 	    }
 	    fclose(f);
 
-	    if (waitpid(pid, &status, 0) == -1 && errno != ECHILD)
+	    while ((ret = waitpid(pid, &status, 0)) == -1 && errno == EINTR);
+	    if (ret == -1 && errno != ECHILD)
 		logg("^waitpid() failed: %s\n", strerror(errno));
 	    cli_chomp(firstline);
 	    cli_chomp(lastline);
@@ -1522,7 +1531,7 @@ static int test_database_wrap(const char *file, const char *newdb, int bytecode)
 		     lastline);
 	    }
 	    if (WIFEXITED(status)) {
-		int ret = WEXITSTATUS(status);
+		ret = WEXITSTATUS(status);
 		if (ret) {
 		    logg("^Database load exited with status %d\n", ret);
 		    return ret;
@@ -1559,6 +1568,43 @@ static int test_database_wrap(const char *file, const char *newdb, int bytecode)
     return test_database(file, newdb, bytecode);
 }
 #endif
+
+static int checkdbdir(void)
+{
+	DIR *dir;
+	struct dirent *dent;
+	char fname[512], broken[513];
+	int ret, fret = 0;
+
+    if(!(dir = opendir(dbdir))) {
+	logg("!checkdbdir: Can't open directory %s\n", dbdir);
+	return -1;
+    }
+
+    while((dent = readdir(dir))) {
+	if(dent->d_ino) {
+	    if(cli_strbcasestr(dent->d_name, ".cld") || cli_strbcasestr(dent->d_name, ".cvd")) {
+		snprintf(fname, sizeof(fname), "%s"PATHSEP"%s", dbdir, dent->d_name);
+		if((ret = cl_cvdverify(fname))) {
+		    fret = -1;
+		    mprintf("!Corrupted database file %s: %s\n", fname, cl_strerror(ret));
+		    snprintf(broken, sizeof(broken), "%s.broken", fname);
+		    if(!access(broken, R_OK))
+			unlink(broken);
+		    if(rename(fname, broken)) {
+			if(unlink(fname))
+			    mprintf("!Can't remove broken database file %s, please delete it manually and restart freshclam\n", fname);
+		    } else {
+			mprintf("Corrupted database file renamed to %s\n", broken);
+		    }
+		}
+	    }
+	}
+    }
+
+    closedir(dir);
+    return fret;
+}
 
 extern int sigchld_wait;
 
@@ -2050,7 +2096,7 @@ static int updatecustomdb(const char *url, int *signo, const struct optstruct *o
     return 0;
 }
 
-int downloadmanager(const struct optstruct *opts, const char *hostname, const char *dbdir, int logerr)
+int downloadmanager(const struct optstruct *opts, const char *hostname, int logerr)
 {
 	time_t currtime;
 	int ret, updated = 0, outdated = 0, signo = 0;
@@ -2121,11 +2167,9 @@ int downloadmanager(const struct optstruct *opts, const char *hostname, const ch
 		    logg("*Software version from DNS: %s\n", newver);
 		    strncpy(vstr, get_version(), 32);
 		    vstr[31] = 0;
-		    if((pt = strstr(vstr, "-exp")) || (pt = strstr(vstr,"-broken")))
-			*pt = 0;
-
 		    if(vwarning && !strstr(vstr, "devel") && !strstr(vstr, "rc")) {
-			if(strcmp(vstr, newver)) {
+			pt = strchr(vstr, '-');
+			if((pt && strncmp(vstr, newver, pt - vstr)) || (!pt && strcmp(vstr, newver))) {
 			    logg("^Your ClamAV installation is OUTDATED!\n");
 			    logg("^Local version: %s Recommended version: %s\n", vstr, newver);
 			    logg("DON'T PANIC! Read http://www.clamav.net/support/faq\n");
@@ -2271,6 +2315,12 @@ int downloadmanager(const struct optstruct *opts, const char *hostname, const ch
     }
 
     cli_rmdirs(updtmpdir);
+
+    if(checkdbdir() < 0) {
+	if(newver)
+	    free(newver);
+	return 54;
+    }
 
     if(updated) {
 	if(optget(opts, "HTTPProxyServer")->enabled || !ipaddr[0]) {

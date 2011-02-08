@@ -88,8 +88,12 @@ static const struct dblist_s {
     { "main.db",    1 },    { "daily.db",   1 },
     { "main.hdb",   1 },    { "daily.hdb",  1 },
     { "main.hdu",   1 },    { "daily.hdu",  1 },
+    { "main.hsb",   1 },    { "daily.hsb",  1 },
+    { "main.hsu",   1 },    { "daily.hsu",  1 },
     { "main.mdb",   1 },    { "daily.mdb",  1 },
     { "main.mdu",   1 },    { "daily.mdu",  1 },
+    { "main.msb",   1 },    { "daily.msb",  1 },
+    { "main.msu",   1 },    { "daily.msu",  1 },
     { "main.ndb",   1 },    { "daily.ndb",  1 },
     { "main.ndu",   1 },    { "daily.ndu",  1 },
     { "main.ldb",   1 },    { "daily.ldb",  1 },
@@ -99,6 +103,7 @@ static const struct dblist_s {
     { "main.rmd",   1 },    { "daily.rmd",  1 },
     { "main.idb",   0 },    { "daily.idb",  0 },
     { "main.fp",    0 },    { "daily.fp",   0 },
+    { "main.sfp",   0 },    { "daily.sfp",  0 },
     { "main.pdb",   1 },    { "daily.pdb",  1 },    { "safebrowsing.gdb", 1 },
     { "main.wdb",   0 },    { "daily.wdb",  0 },    { "safebrowsing.wdb", 0 },
 
@@ -149,9 +154,9 @@ static int hexdump(void)
     return 0;
 }
 
-static int md5sig(const struct optstruct *opts, unsigned int mdb)
+static int hashsig(const struct optstruct *opts, unsigned int mdb, int type)
 {
-	char *md5;
+	char *hash;
 	unsigned int i;
 	struct stat sb;
 
@@ -159,19 +164,19 @@ static int md5sig(const struct optstruct *opts, unsigned int mdb)
     if(opts->filename) {
 	for(i = 0; opts->filename[i]; i++) {
 	    if(stat(opts->filename[i], &sb) == -1) {
-		mprintf("!md5sig: Can't access file %s\n", opts->filename[i]);
-		perror("md5sig");
+		mprintf("!hashsig: Can't access file %s\n", opts->filename[i]);
+		perror("hashsig");
 		return -1;
 	    } else {
 		if((sb.st_mode & S_IFMT) == S_IFREG) {
-		    if((md5 = cli_md5file(opts->filename[i]))) {
+		    if((hash = cli_hashfile(opts->filename[i], type))) {
 			if(mdb)
-			    mprintf("%u:%s:%s\n", (unsigned int) sb.st_size, md5, opts->filename[i]);
+			    mprintf("%u:%s:%s\n", (unsigned int) sb.st_size, hash, opts->filename[i]);
 			else
-			    mprintf("%s:%u:%s\n", md5, (unsigned int) sb.st_size, opts->filename[i]);
-			free(md5);
+			    mprintf("%s:%u:%s\n", hash, (unsigned int) sb.st_size, opts->filename[i]);
+			free(hash);
 		    } else {
-			mprintf("!md5sig: Can't generate MD5 checksum for %s\n", opts->filename[i]);
+			mprintf("!hashsig: Can't generate hash for %s\n", opts->filename[i]);
 			return -1;
 		    }
 		}
@@ -179,13 +184,13 @@ static int md5sig(const struct optstruct *opts, unsigned int mdb)
 	}
 
     } else { /* stream */
-	md5 = cli_md5stream(stdin, NULL);
-	if(!md5) {
-	    mprintf("!md5sig: Can't generate MD5 checksum for input stream\n");
+	hash = cli_hashstream(stdin, NULL, type);
+	if(!hash) {
+	    mprintf("!hashsig: Can't generate hash for input stream\n");
 	    return -1;
 	}
-	mprintf("%s\n", md5);
-	free(md5);
+	mprintf("%s\n", hash);
+	free(hash);
     }
 
     return 0;
@@ -899,7 +904,7 @@ static int build(const struct optstruct *opts)
 	return -1;
     }
 
-    if(!(pt = cli_md5stream(fh, buffer))) {
+    if(!(pt = cli_hashstream(fh, buffer, 1))) {
 	mprintf("!build: Can't generate MD5 checksum for %s\n", tarfile);
 	fclose(fh);
 	unlink(tarfile);
@@ -1120,17 +1125,13 @@ static int cvdinfo(const struct optstruct *opts)
     if(cli_strbcasestr(pt, ".cvd")) {
 	mprintf("MD5: %s\n", cvd->md5);
 	mprintf("Digital signature: %s\n", cvd->dsig);
-	cl_cvdfree(cvd);
-	if((ret = cl_cvdverify(pt))) {
-	    mprintf("!cvdinfo: Verification: %s\n", cl_strerror(ret));
-	    return -1;
-	} else {
-	    mprintf("Verification OK.\n");
-	    return 0;
-	}
     }
-
     cl_cvdfree(cvd);
+    if((ret = cl_cvdverify(pt))) {
+	mprintf("!cvdinfo: Verification: %s\n", cl_strerror(ret));
+	return -1;
+    }
+    mprintf("Verification OK.\n");
     return 0;
 }
 
@@ -1564,12 +1565,12 @@ static int compare(const char *oldpath, const char *newpath, FILE *diff)
 {
 	FILE *old, *new;
 	char *obuff, *nbuff, *tbuff, *pt, *omd5, *nmd5;
-	unsigned int oline = 0, tline, found, i;
+	unsigned int oline = 0, tline, found, i, badxchg = 0;
 	int l1 = 0, l2;
 	long opos;
 
-    if(!access(oldpath, R_OK) && (omd5 = cli_md5file(oldpath))) {
-	if(!(nmd5 = cli_md5file(newpath))) {
+    if(!access(oldpath, R_OK) && (omd5 = cli_hashfile(oldpath, 1))) {
+	if(!(nmd5 = cli_hashfile(newpath, 1))) {
 	    mprintf("!compare: Can't get MD5 checksum of %s\n", newpath);
 	    free(omd5);
 	    return -1;
@@ -1675,6 +1676,10 @@ static int compare(const char *oldpath, const char *newpath, FILE *diff)
 			oline += tline;
 
 		    } else {
+			if(!*obuff || *obuff == ' ') {
+			    badxchg = 1;
+			    break;
+			}
 			obuff[MIN(16, l1-1)] = 0;
 			if((pt = strchr(obuff, ' ')))
 			    *pt = 0;
@@ -1688,23 +1693,34 @@ static int compare(const char *oldpath, const char *newpath, FILE *diff)
 	    }
 	}
     }
-    fclose(new);
 
     if(old) {
-	while(fgets(obuff, l1, old)) {
-	    oline++;
-	    obuff[MIN(16, l1-1)] = 0;
-	    if((pt = strchr(obuff, ' ')))
-		*pt = 0;
-	    fprintf(diff, "DEL %u %s\n", oline, obuff);
+	if(!badxchg) {
+	    while(fgets(obuff, l1, old)) {
+		oline++;
+		obuff[MIN(16, l1-1)] = 0;
+		if((pt = strchr(obuff, ' ')))
+		    *pt = 0;
+		fprintf(diff, "DEL %u %s\n", oline, obuff);
+	    }
 	}
 	fclose(old);
     }
-
     fprintf(diff, "CLOSE\n");
     free(obuff);
-    free(nbuff);
     free(tbuff);
+    if(badxchg) {
+	fprintf(diff, "UNLINK %s\n", newpath);
+	fprintf(diff, "OPEN %s\n", newpath);
+	rewind(new);
+	while(fgets(nbuff, l1, new)) {
+	    cli_chomp(nbuff);
+	    fprintf(diff, "ADD %s\n", nbuff);
+	}
+	fprintf(diff, "CLOSE\n");
+    }
+    free(nbuff);
+    fclose(new);
     return 0;
 }
 
@@ -2659,6 +2675,10 @@ static void help(void)
     mprintf("                                           string and print it on stdout\n");
     mprintf("    --md5 [FILES]                          generate MD5 checksum from stdin\n");
     mprintf("                                           or MD5 sigs for FILES\n");
+    mprintf("    --sha1 [FILES]                         generate SHA1 checksum from stdin\n");
+    mprintf("                                           or SHA1 sigs for FILES\n");
+    mprintf("    --sha256 [FILES]                       generate SHA256 checksum from stdin\n");
+    mprintf("                                           or SHA256 sigs for FILES\n");
     mprintf("    --mdb [FILES]                          generate .mdb sigs\n");
     mprintf("    --html-normalise=FILE                  create normalised parts of HTML file\n");
     mprintf("    --utf16-decode=FILE                    decode UTF16 encoded files\n");
@@ -2728,9 +2748,13 @@ int main(int argc, char **argv)
     if(optget(opts, "hex-dump")->enabled)
 	ret = hexdump();
     else if(optget(opts, "md5")->enabled)
-	ret = md5sig(opts, 0);
+	ret = hashsig(opts, 0, 1);
+    else if(optget(opts, "sha1")->enabled)
+	ret = hashsig(opts, 0, 2);
+    else if(optget(opts, "sha256")->enabled)
+	ret = hashsig(opts, 0, 3);
     else if(optget(opts, "mdb")->enabled)
-	ret = md5sig(opts, 1);
+	ret = hashsig(opts, 1, 1);
     else if(optget(opts, "html-normalise")->enabled)
 	ret = htmlnorm(opts);
     else if(optget(opts, "utf16-decode")->enabled)

@@ -1092,16 +1092,16 @@ static const struct OPCODES x86ops[2][256] = {{
   PUSHOP(0xb3, ADDR_MRM_GEN_EG, SIZE_WD, ADDR_NOADDR, SIZE_NOSIZE, OP_BTR),
   PUSHOP(0xb4, ADDR_MRM_GEN_GM, SIZE_WD, ADDR_NOADDR, SIZE_NOSIZE, OP_LFS), /* FIXME: mem size is F/D */
   PUSHOP(0xb5, ADDR_MRM_GEN_GM, SIZE_WD, ADDR_NOADDR, SIZE_NOSIZE, OP_LGS), /* FIXME: mem size is F/D */
-  PUSHOP(0xb6, ADDR_MRM_GEN_GE, SIZE_BYTE, ADDR_NOADDR, SIZE_NOSIZE, OP_MOVZX), /* FIXME: dsize is always B */
-  PUSHOP(0xb7, ADDR_MRM_GEN_GE, SIZE_WD, ADDR_NOADDR, SIZE_NOSIZE, OP_MOVZX), /* FIXME: dsize is always W */
+  PUSHOP(0xb6, ADDR_MRM_GEN_GE, SIZE_WD, ADDR_NOADDR, SIZE_NOSIZE, OP_MOVZX),
+  PUSHOP(0xb7, ADDR_MRM_GEN_GE, SIZE_WD, ADDR_NOADDR, SIZE_NOSIZE, OP_MOVZX),
   PUSHOP(0xb8, ADDR_NOADDR, SIZE_NOSIZE, ADDR_NOADDR, SIZE_NOSIZE, OP_INVALID),
   PUSHOP(0xb9, ADDR_NOADDR, SIZE_NOSIZE, ADDR_NOADDR, SIZE_NOSIZE, OP_UNSUP),
   PUSHOP(0xba, ADDR_MRM_EXTRA_1A, SIZE_WD, ADDR_IMMED, SIZE_BYTE, 24),
   PUSHOP(0xbb, ADDR_MRM_GEN_EG, SIZE_WD, ADDR_NOADDR, SIZE_NOSIZE, OP_BTC),
   PUSHOP(0xbc, ADDR_MRM_GEN_GE, SIZE_WD, ADDR_NOADDR, SIZE_NOSIZE, OP_BSF),
   PUSHOP(0xbd, ADDR_MRM_GEN_GE, SIZE_WD, ADDR_NOADDR, SIZE_NOSIZE, OP_BSR),
-  PUSHOP(0xbe, ADDR_MRM_GEN_GE, SIZE_BYTE, ADDR_NOADDR, SIZE_NOSIZE, OP_MOVSX), /* FIXME: dsize is always B */
-  PUSHOP(0xbf, ADDR_MRM_GEN_GE, SIZE_WD, ADDR_NOADDR, SIZE_NOSIZE, OP_MOVSX), /* FIXME: dsize is always W */
+  PUSHOP(0xbe, ADDR_MRM_GEN_GE, SIZE_WD, ADDR_NOADDR, SIZE_NOSIZE, OP_MOVSX),
+  PUSHOP(0xbf, ADDR_MRM_GEN_GE, SIZE_WD, ADDR_NOADDR, SIZE_NOSIZE, OP_MOVSX),
 
   PUSHOP(0xc0, ADDR_MRM_GEN_EG, SIZE_BYTE, ADDR_NOADDR, SIZE_NOSIZE, OP_XADD),
   PUSHOP(0xc1, ADDR_MRM_GEN_EG, SIZE_WD, ADDR_NOADDR, SIZE_NOSIZE, OP_XADD),
@@ -1200,8 +1200,6 @@ static void spam_x86(struct DISASMED *s, char *hr) {
     case ACCESS_NOARG:
       break;
     case ACCESS_IMM:
-      hr += sprintf(hr, "%s %lx", comma, (long)s->args[i].arg.q);
-      break;
     case ACCESS_REL:
       if (s->args[i].arg.rq >=0)
 	hr += sprintf(hr, "%s %lx", comma, (long)s->args[i].arg.q);
@@ -1418,10 +1416,10 @@ static const uint8_t *disasm_x86(const uint8_t *command, unsigned int len, struc
 	  GETBYTE(b);
 	  s->args[0].arg.q+=(uint64_t)b<<(i*8);
 	}
-	if (x86ops[table][s->table_op].dmethod==ADDR_RELJ) {
+	/* if (x86ops[table][s->table_op].dmethod==ADDR_RELJ) { */
 	  s->args[0].arg.q<<=((8-sz)*8);
 	  s->args[0].arg.rq>>=((8-sz)*8);
-	}
+	/* } */
 	s->state = STATE_CHECKSTYPE;
 	continue;
       }
@@ -1489,6 +1487,10 @@ static const uint8_t *disasm_x86(const uint8_t *command, unsigned int len, struc
 
 	s->args[reversed^1].access = ACCESS_REG;
 	if ((s->args[reversed^1].reg = p[s->args[reversed].size][rop]) == REG_INVALID) INVALIDATE;
+
+	/* MOVZX size fixxup */
+	if(s->real_op == OP_MOVZX || s->real_op == OP_MOVSX)
+	    s->args[reversed].size = SIZEB + (s->table_op & 1);
 
 	if(mod==3) {
 	  if(x86ops[table][s->table_op].dmethod==ADDR_MRM_GEN_GM || x86ops[table][s->table_op].dmethod==ADDR_MRM_EXTRA_1A_M) INVALIDATE;
@@ -1623,6 +1625,8 @@ static const uint8_t *disasm_x86(const uint8_t *command, unsigned int len, struc
 	  GETBYTE(b);
 	  s->args[s->cur].arg.q+=b<<(i*8);
 	}
+	  s->args[s->cur].arg.q<<=((8-sz)*8);
+	  s->args[s->cur].arg.rq>>=((8-sz)*8);
 	s->state = STATE_FINALIZE;
 	continue;
       }

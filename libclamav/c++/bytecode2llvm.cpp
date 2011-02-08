@@ -1471,6 +1471,11 @@ public:
 			    assert(inst->u.ops.funcid < cli_apicall_maxapi && "APICall out of range");
 			    std::vector<Value*> args;
 			    Function *DestF = apiFuncs[inst->u.ops.funcid];
+			    if (!strcmp(cli_apicalls[inst->u.ops.funcid].name, "engine_functionality_level")) {
+				Store(inst->dest,
+				      ConstantInt::get(Type::getInt32Ty(Context),
+						       cl_retflevel()));
+			    } else {
 			    args.push_back(&*F->arg_begin()); // pass hidden arg
 			    for (unsigned a=0;a<inst->u.ops.numOps;a++) {
 				operand_t op = inst->u.ops.ops[a];
@@ -1479,6 +1484,7 @@ public:
 			    CallInst *CI = Builder.CreateCall(DestF, args.begin(), args.end());
 			    CI->setDoesNotThrow(true);
 			    Store(inst->dest, CI);
+			    }
 			    break;
 			}
 			case OP_BC_GEP1:
@@ -2123,8 +2129,8 @@ int cli_bytecode_prepare_jit(struct cli_all_bc *bcs)
 	// TODO: only run this on the untrusted bytecodes, not all of them...
 	if (has_untrusted)
 	    PM.add(createClamBCRTChecks());
-	PM.add(createCFGSimplificationPass());
 	PM.add(createSCCPPass());
+	PM.add(createCFGSimplificationPass());
 	PM.add(createGlobalOptimizerPass());
 	PM.add(createConstantMergePass());
 	PM.add(new RuntimeLimits());
@@ -2141,8 +2147,9 @@ int cli_bytecode_prepare_jit(struct cli_all_bc *bcs)
 	    // compile all functions now, not lazily!
 	    for (Module::iterator I = M->begin(), E = M->end(); I != E; ++I) {
 		Function *Fn = &*I;
-		if (!Fn->isDeclaration())
+		if (!Fn->isDeclaration()) {
 		    EE->getPointerToFunction(Fn);
+		}
 	    }
 	    codegenTimer.stopTimer();
 	}
@@ -2175,7 +2182,7 @@ int bytecode_init(void)
 {
     // If already initialized return
     if (llvm_is_multithreaded()) {
-	cli_warnmsg("bytecode_init: already initialized");
+	cli_warnmsg("bytecode_init: already initialized\n");
 	return CL_EARG;
     }
     llvm_install_error_handler(llvm_error_handler);

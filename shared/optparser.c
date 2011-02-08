@@ -82,6 +82,8 @@ const struct clam_option __clam_options[] = {
     { NULL, "stream", 0, TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_CLAMDSCAN, "", "" },
     { NULL, "database", 'd', TYPE_STRING, NULL, -1, DATADIR, FLAG_REQUIRED | FLAG_MULTIPLE, OPT_CLAMSCAN, "", "" }, /* merge it with DatabaseDirectory (and fix conflict with --datadir */
     { NULL, "recursive", 'r', TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_CLAMSCAN, "", "" },
+    { NULL, "follow-dir-symlinks", 0, TYPE_NUMBER, MATCH_NUMBER, 1, NULL, 0, OPT_CLAMSCAN, "", "" },
+    { NULL, "follow-file-symlinks", 0, TYPE_NUMBER, MATCH_NUMBER, 1, NULL, 0, OPT_CLAMSCAN, "", "" },
     { NULL, "bell", 0, TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_CLAMSCAN, "", "" },
     { NULL, "no-summary", 0, TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_CLAMSCAN | OPT_CLAMDSCAN, "", "" },
     { NULL, "file-list", 'f', TYPE_STRING, NULL, -1, NULL, 0, OPT_CLAMSCAN | OPT_CLAMDSCAN, "", "" },
@@ -96,6 +98,8 @@ const struct clam_option __clam_options[] = {
     { NULL, "structured-ssn-format", 0, TYPE_NUMBER, MATCH_NUMBER, 0, NULL, 0, OPT_CLAMSCAN, "", "" },
     { NULL, "hex-dump", 0, TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_SIGTOOL, "", "" },
     { NULL, "md5", 0, TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_SIGTOOL, "", "" },
+    { NULL, "sha1", 0, TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_SIGTOOL, "", "" },
+    { NULL, "sha256", 0, TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_SIGTOOL, "", "" },
     { NULL, "mdb", 0, TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_SIGTOOL, "", "" },
     { NULL, "html-normalise", 0, TYPE_STRING, NULL, -1, NULL, 0, OPT_SIGTOOL, "", "" },
     { NULL, "utf16-decode", 0, TYPE_STRING, NULL, -1, NULL, 0, OPT_SIGTOOL, "", "" },
@@ -213,7 +217,7 @@ const struct clam_option __clam_options[] = {
     /* FIXME: add a regex for IP addr */
     { "TCPAddr", NULL, 0, TYPE_STRING, NULL, -1, NULL, 0, OPT_CLAMD, "By default clamd binds to INADDR_ANY.\nThis option allows you to restrict the TCP address and provide\nsome degree of protection from the outside world.", "127.0.0.1" },
 
-    { "MaxConnectionQueueLength", NULL, 0, TYPE_NUMBER, MATCH_NUMBER, 15, NULL, 0, OPT_CLAMD, "Maximum length the queue of pending connections may grow to.", "30" },
+    { "MaxConnectionQueueLength", NULL, 0, TYPE_NUMBER, MATCH_NUMBER, 200, NULL, 0, OPT_CLAMD, "Maximum length the queue of pending connections may grow to.", "30" },
 
     { "StreamMaxLength", NULL, 0, TYPE_SIZE, MATCH_SIZE, CLI_DEFAULT_MAXFILESIZE, NULL, 0, OPT_CLAMD, "Close the STREAM session when the data size limit is exceeded.\nThe value should match your MTA's limit for the maximum attachment size.", "25M" },
 
@@ -265,8 +269,8 @@ const struct clam_option __clam_options[] = {
     { "Bytecode", "bytecode", 0, TYPE_BOOL, MATCH_BOOL, 1, NULL, 0, OPT_CLAMD | OPT_CLAMSCAN, "With this option enabled ClamAV will load bytecode from the database. It is highly recommended you keep this option on, otherwise you'll miss detections for many new viruses.", "yes" },
     { "BytecodeSecurity", NULL, 0, TYPE_STRING, "^(None|TrustSigned|Paranoid)$", -1, "TrustSigned", 0, OPT_CLAMD, 
 	"Set bytecode security level.\nPossible values:\n\tNone - no security at all, meant for debugging. DO NOT USE THIS ON PRODUCTION SYSTEMS\n\tTrustSigned - trust bytecode loaded from signed .c[lv]d files,\n\t\t insert runtime safety checks for bytecode loaded from other sources\n\tParanoid - don't trust any bytecode, insert runtime checks for all\nRecommended: TrustSigned, because bytecode in .cvd files already has these checks\n","TrustSigned"},
-    { "BytecodeTimeout", "bytecode-timeout", 0, TYPE_NUMBER, MATCH_NUMBER, 60000, NULL, 0, OPT_CLAMD | OPT_CLAMSCAN, 
-	"Set bytecode timeout in miliseconds.\n","60000"},
+    { "BytecodeTimeout", "bytecode-timeout", 0, TYPE_NUMBER, MATCH_NUMBER, 5000, NULL, 0, OPT_CLAMD | OPT_CLAMSCAN, 
+	"Set bytecode timeout in miliseconds.\n","5000"},
     { "BytecodeMode", "bytecode-mode", 0, TYPE_STRING, "^(Auto|ForceJIT|ForceInterpreter|Test)$", -1, "Auto", FLAG_REQUIRED, OPT_CLAMD | OPT_CLAMSCAN,
 	"Set bytecode execution mode.\nPossible values:\n\tAuto - automatically choose JIT if possible, fallback to interpreter\nForceJIT - always choose JIT, fail if not possible\nForceIntepreter - always choose interpreter\nTest - run with both JIT and interpreter and compare results. Make all failures fatal\n","Auto"},
     { "DetectPUA", "detect-pua", 0, TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_CLAMD | OPT_CLAMSCAN, "Detect Potentially Unwanted Applications.", "yes" },
@@ -457,6 +461,8 @@ const struct clam_option __clam_options[] = {
     { "SkipAuthenticated", NULL, 0, TYPE_STRING, NULL, -1, NULL, 0, OPT_MILTER, "Messages from authenticated SMTP users matching this extended POSIX\nregular expression (egrep-like) will not be scanned.\nAs an alternative, a file containing a plain (not regex) list of names (one\nper line) can be specified using the prefix \"file:\".\ne.g. SkipAuthenticated file:/etc/good_guys\n\nNote: this is the AUTH login name!", "SkipAuthenticated ^(tom|dick|henry)$" },
 
     { "LogInfected", NULL, 0, TYPE_STRING, NULL, -1, NULL, 0, OPT_MILTER, "This option allows to tune what is logged when a message is infected.\nPossible values are Off (the default - nothing is logged),\nBasic (minimal info logged), Full (verbose info logged)\nNote:\nFor this to work properly in sendmail, make sure the msg_id, mail_addr,\nrcpt_addr and i macroes are available in eom. In other words add a line like:\nMilter.macros.eom={msg_id}, {mail_addr}, {rcpt_addr}, i\nto your .cf file. Alternatively use the macro:\ndefine(`confMILTER_MACROS_EOM', `{msg_id}, {mail_addr}, {rcpt_addr}, i')\nPostfix should be working fine with the default settings.", "Basic" },
+
+    { "LogClean", NULL, 0, TYPE_STRING, NULL, -1, NULL, 0, OPT_MILTER, "This option allows to tune what is logged when no threat is found in a scanned message.\nSee LogInfected for possible values and caveats.\nUseful in debugging but drastically increases the log size.", "Basic" },
 
     /* Deprecated milter options */
 
@@ -1016,7 +1022,7 @@ struct optstruct *optparse(const char *cfgfile, int argc, char **argv, int verbo
 		    lnumarg = UINT_MAX;
 		}
 
-		numarg = lnumarg;
+		numarg = lnumarg ? lnumarg : UINT_MAX;
 		break;
 
 	    case TYPE_BOOL:

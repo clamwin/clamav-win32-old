@@ -96,7 +96,8 @@ class HostnameValidator : public wxTextValidator
 
 SigUIFrame::~SigUIFrame()
 {
-    delete watcher;
+    if (watcher)
+        delete watcher;
     delete icon;
     delete editor;
 }
@@ -347,13 +348,25 @@ static wxString GetExecPath()
     return exec.GetPathWithSep();
 }
 
-static wxFileSystemWatcher *watcher;
-void SigUIApp::OnEventLoopEnter(wxEventLoopBase *WXUNUSED(loop))
+static wxFileSystemWatcher *watcher = 0;
+static bool watcher_deleted = false;
+void SigUIApp::OnEventLoopEnter(wxEventLoopBase *loop)
 {
-    watcher = new wxFileSystemWatcher();
-    watcher->SetOwner(GetTopWindow());
-    watcher->Add(GetExecPath(), wxFSW_EVENT_CREATE | wxFSW_EVENT_MODIFY |
-		 wxFSW_EVENT_WARNING | wxFSW_EVENT_ERROR);
+    if (!watcher && !watcher_deleted) {
+        watcher = new wxFileSystemWatcher();
+        watcher->SetOwner(GetTopWindow());
+        watcher->Add(GetExecPath(), wxFSW_EVENT_CREATE | wxFSW_EVENT_MODIFY |
+            wxFSW_EVENT_WARNING | wxFSW_EVENT_ERROR);
+    }
+}
+
+void SigUIApp::OnEventLoopExit(wxEventLoopBase *WXUNUSED(loop))
+{
+    if (watcher) {
+        delete watcher;
+        watcher_deleted = true;
+        watcher = 0;
+    }
 }
 
 void SigUIFrame::m_save_settingsOnButtonClick( wxCommandEvent& WXUNUSED(event) )
@@ -398,7 +411,7 @@ SigUIFrame::SigUIFrame(wxFrame *frame)
     editor->RegisterText("HTTPProxyUsername", &val_proxy_username, m_proxy_user);
     editor->RegisterText("HTTPProxyPassword", &val_proxy_password, m_proxy_password);
     editor->RegisterText("DatabaseMirror", &val_mirror, m_mirror, "db.COUNTRYCODE.clamav.net");
-    editor->RegisterStatic("DatabaseMirror", "database.clamav.net");
+    editor->RegisterStatic("DatabaseMirror", "db.local.win.clamav.net");
     editor->RegisterBool("Bytecode", &val_bytecode, m_bytecode);
     editor->RegisterList("DatabaseCustomURL", m_urls);
 

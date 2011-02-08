@@ -516,7 +516,7 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\..\libclamav\matcher-md5.c"
+				RelativePath="..\..\..\..\libclamav\matcher-hash.c"
 				>
 			</File>
 			<File
@@ -1118,7 +1118,7 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\..\libclamav\matcher-md5.h"
+				RelativePath="..\..\..\..\libclamav\matcher-hash.h"
 				>
 			</File>
 			<File

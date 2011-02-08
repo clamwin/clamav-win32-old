@@ -351,10 +351,6 @@
 				RelativePath="..\..\..\..\clamscan\manager.c"
 				>
 			</File>
-			<File
-				RelativePath="..\..\..\..\clamscan\others.c"
-				>
-			</File>
 		</Filter>
 		<Filter
 			Name="Header Files"

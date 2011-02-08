@@ -53,7 +53,7 @@
  * in re-enabling affected modules.
  */
 
-#define CL_FLEVEL 58
+#define CL_FLEVEL 60
 #define CL_FLEVEL_DCONF	CL_FLEVEL
 #define CL_FLEVEL_SIGTOOL CL_FLEVEL
 
@@ -120,6 +120,7 @@ typedef struct cli_ctx_tag {
     unsigned int corrupted_input;
     cli_file_t container_type; /* FIXME: to be made into a stack or array - see bb#1579 & bb#1293 */
     size_t container_size;
+    unsigned char handlertype_hash[16];
     struct cli_dconf *dconf;
     fmap_t **fmap;
     bitset_t* hook_lsig_matches;
@@ -207,14 +208,13 @@ struct cl_engine {
     /* Roots table */
     struct cli_matcher **root;
 
-    /* B-M matcher for standard MD5 sigs */
-    struct cli_matcher *md5_hdb;
+    /* hash matcher for standard MD5 sigs */
+    struct cli_matcher *hm_hdb;
+    /* hash matcher for MD5 sigs for PE sections */
+    struct cli_matcher *hm_mdb;
+    /* hash matcher for whitelist db */
+    struct cli_matcher *hm_fp;
 
-    /* B-M matcher for MD5 sigs for PE sections */
-    struct cli_matcher *md5_mdb;
-
-    /* B-M matcher for whitelist db */
-    struct cli_matcher *md5_fp;
 
     /* Container metadata */
     struct cli_cdb *cdb;
@@ -509,9 +509,8 @@ void *cli_realloc(void *ptr, size_t size);
 void *cli_realloc2(void *ptr, size_t size);
 char *cli_strdup(const char *s);
 int cli_rmdirs(const char *dirname);
-unsigned char *cli_md5digest(int desc);
-char *cli_md5stream(FILE *fs, unsigned char *digcpy);
-char *cli_md5file(const char *filename);
+char *cli_hashstream(FILE *fs, unsigned char *digcpy, int type);
+char *cli_hashfile(const char *filename, int type);
 int cli_unlink(const char *pathname);
 int cli_readn(int fd, void *buff, unsigned int count);
 int cli_writen(int fd, const void *buff, unsigned int count);

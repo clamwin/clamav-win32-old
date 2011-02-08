@@ -28,7 +28,6 @@
 #include "others.h"
 #include "execs.h"
 #include "cltypes.h"
-#include "md5.h"
 
 struct cli_target_info {
     off_t fsize;
@@ -38,7 +37,7 @@ struct cli_target_info {
 
 #include "matcher-ac.h"
 #include "matcher-bm.h"
-#include "hashtab.h"
+#include "matcher-hash.h"
 #include "fmap.h"
 #include "mpool.h"
 
@@ -89,13 +88,11 @@ struct cli_matcher {
     /* Extended Boyer-Moore */
     uint8_t *bm_shift;
     struct cli_bm_patt **bm_suffix, **bm_pattab;
-    struct cli_hashset md5_sizes_hs;
     uint32_t *soff, soff_len; /* for PE section sigs */
     uint32_t bm_offmode, bm_patterns, bm_reloff_num, bm_absoff_num;
 
-    /* MD5 */
-    struct cli_md5m_patt **md5tab;
-    uint32_t md5_patterns;
+    /* HASH */
+    struct cli_hash_patt hm;
 
     /* Extended Aho-Corasick */
     uint32_t ac_partsigs, ac_nodes, ac_patterns, ac_lsigs;
@@ -169,7 +166,7 @@ int cli_scanbuff(const unsigned char *buffer, uint32_t length, uint32_t offset, 
 
 int cli_scandesc(int desc, cli_ctx *ctx, cli_file_t ftype, uint8_t ftonly, struct cli_matched_type **ftoffset, unsigned int acmode, struct cli_ac_result **acres);
 int cli_fmap_scandesc(cli_ctx *ctx, cli_file_t ftype, uint8_t ftonly, struct cli_matched_type **ftoffset, unsigned int acmode, struct cli_ac_result **acres, unsigned char *refhash);
-int cli_lsig_eval(cli_ctx *ctx, struct cli_matcher *root, struct cli_ac_data *acdata, struct cli_target_info *target_info);
+int cli_lsig_eval(cli_ctx *ctx, struct cli_matcher *root, struct cli_ac_data *acdata, struct cli_target_info *target_info, const char *hash);
 int cli_caloff(const char *offstr, const struct cli_target_info *info, unsigned int target, uint32_t *offdata, uint32_t *offset_min, uint32_t *offset_max);
 
 int cli_checkfp(unsigned char *digest, size_t size, cli_ctx *ctx);

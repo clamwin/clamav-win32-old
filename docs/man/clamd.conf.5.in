@@ -122,7 +122,7 @@ Default: no
 \fBMaxConnectionQueueLength NUMBER\fR
 Maximum length the queue of pending connections may grow to.
 .br 
-Default: 15
+Default: 200
 .TP 
 \fBMaxThreads NUMBER\fR
 Maximum number of threads running at the same time.
@@ -257,7 +257,7 @@ Default: TrustSigned
 \fBBytecodeTimeout NUMBER\fR
 Set bytecode timeout in milliseconds.
 .br
-Default: 60000
+Default: 5000
 .TP 
 \fBDetectPUA BOOL\fR
 Detect Possibly Unwanted Applications.
