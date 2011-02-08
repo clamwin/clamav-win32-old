@@ -516,7 +516,7 @@
 #undef USE_SYSLOG
 
 /* Stable releases tag */
-#define CLAMWIN_RELEASE "0.96.5"
+#define CLAMWIN_RELEASE "0.97"
 
 /* Version number of package */
 #ifdef CLAMWIN_RELEASE
