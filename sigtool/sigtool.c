@@ -110,12 +110,6 @@ static const struct dblist_s {
     { NULL,	    0 }
 };
 
-struct dblist_scan
-{
-    char *name;
-    struct dblist_scan *next;
-};
-
 static const char *getdbname(const char *str)
 {
     if(strstr(str, "main"))
@@ -413,7 +407,7 @@ static char *sha256file(const char *file, unsigned int *size)
     return sha;
 }
 
-static int writeinfo(const char *dbname, const char *builder, const char *header, const struct optstruct *opts, const struct dblist_scan *dbl)
+static int writeinfo(const char *dbname, const char *builder, const char *header, const struct optstruct *opts, char * const *dblist2, unsigned int dblist2cnt)
 {
 	FILE *fh;
 	unsigned int i, bytes;
@@ -440,21 +434,20 @@ static int writeinfo(const char *dbname, const char *builder, const char *header
 	return -1;
     }
 
-    if(dbl) {
-	while(dbl) {
-	    if(!(pt = sha256file(dbl->name, &bytes))) {
+    if(dblist2cnt) {
+	for(i = 0; i < dblist2cnt; i++) {
+	    if(!(pt = sha256file(dblist2[i], &bytes))) {
 		mprintf("!writeinfo: Can't generate SHA256 for %s\n", file);
 		fclose(fh);
 		return -1;
 	    }
-	    if(fprintf(fh, "%s:%u:%s\n", dbl->name, bytes, pt) < 0) {
+	    if(fprintf(fh, "%s:%u:%s\n", dblist2[i], bytes, pt) < 0) {
 		mprintf("!writeinfo: Can't write to info file\n");
 		fclose(fh);
 		free(pt);
 		return -1;
 	    }
 	    free(pt);
-	    dbl = dbl->next;
 	}
     } else {
 	for(i = 0; dblist[i].name; i++) {
@@ -612,6 +605,11 @@ static int script2cdiff(const char *script, const char *builder, const struct op
     return 0;
 }
 
+static int qcompare(const void *a, const void *b)
+{
+    return strcmp(*(char * const *) a, *(char * const *) b);
+}
+
 static int build(const struct optstruct *opts)
 {
 	int ret, bc = 0;
@@ -627,17 +625,15 @@ static int build(const struct optstruct *opts)
 	time_t timet;
 	struct tm *brokent;
 	struct cl_cvd *oldcvd;
-	struct dblist_scan *dblist2 = NULL, *lspt;
+	char **dblist2 = NULL;
+	unsigned int dblist2cnt = 0;
 	DIR *dd;
 	struct dirent *dent;
 
-#define FREE_LS(x)	    \
-    while(x) {		    \
-	lspt = x;	    \
-	x = x->next;	    \
-	free(lspt->name);   \
-	free(lspt);	    \
-    }
+#define FREE_LS(x)		    \
+    for(i = 0; i < dblist2cnt; i++) \
+	free(x[i]);		    \
+    free(x);
 
     if(!optget(opts, "server")->enabled) {
 	mprintf("!build: --server is required for --build\n");
@@ -679,46 +675,42 @@ static int build(const struct optstruct *opts)
 	    while((dent = readdir(dd))) {
 		if(dent->d_ino) {
 		    if(cli_strbcasestr(dent->d_name, ".cbc")) {
-			lspt = (struct dblist_scan *) malloc(sizeof(struct dblist_scan));
-			if(!lspt) {
+			dblist2 = (char **) realloc(dblist2, (dblist2cnt + 1) * sizeof(char *));
+			if(!dblist2) { /* dblist2 leaked but we don't really care */
+			    mprintf("!build: Memory allocation error\n");
+			    return -1;
+			}
+			dblist2[dblist2cnt] = strdup(dent->d_name);
+			if(!dblist2[dblist2cnt]) {
 			    FREE_LS(dblist2);
 			    mprintf("!build: Memory allocation error\n");
 			    return -1;
 			}
-			lspt->name = strdup(dent->d_name);
-			if(!lspt->name) {
-			    FREE_LS(dblist2);
-			    mprintf("!build: Memory allocation error\n");
-			    return -1;
-			}
-			lspt->next = dblist2;
-			dblist2 = lspt;
-			entries++;
+			dblist2cnt++;
 		    }
 		}
 	    }
 	    closedir(dd);
+	    entries += dblist2cnt;
+	    qsort(dblist2, dblist2cnt, sizeof(char *), qcompare);
+
 	    if(!access("last.hdb", R_OK)) {
-		if(!dblist2) {
+		if(!dblist2cnt) {
 		    mprintf("!build: dblist2 == NULL (no .cbc files?)\n");
 		    return -1;
 		}
-		lspt = dblist2;
-		while(lspt->next)
-		    lspt = lspt->next;
-		lspt->next = (struct dblist_scan *) malloc(sizeof(struct dblist_scan));
-		if(!lspt->next) {
+		dblist2 = (char **) realloc(dblist2, (dblist2cnt + 1) * sizeof(char *));
+		if(!dblist2) {
+		    mprintf("!build: Memory allocation error\n");
+		    return -1;
+		}
+		dblist2[dblist2cnt] = strdup("last.hdb");
+		if(!dblist2[dblist2cnt]) {
 		    FREE_LS(dblist2);
 		    mprintf("!build: Memory allocation error\n");
 		    return -1;
 		}
-		lspt->next->name = strdup("last.hdb");
-		lspt->next->next = NULL;
-		if(!lspt->next->name) {
-		    FREE_LS(dblist2);
-		    mprintf("!build: Memory allocation error\n");
-		    return -1;
-		}
+		dblist2cnt++;
 		entries += countlines("last.hdb");
 	    }
 	} else {
@@ -831,7 +823,7 @@ static int build(const struct optstruct *opts)
     /* add current time */
     sprintf(header + strlen(header), ":%u", (unsigned int) timet);
 
-    if(writeinfo(dbname, builder, header, opts, dblist2) == -1) {
+    if(writeinfo(dbname, builder, header, opts, dblist2, dblist2cnt) == -1) {
 	mprintf("!build: Can't generate info file\n");
 	FREE_LS(dblist2);
 	return -1;
@@ -869,16 +861,14 @@ static int build(const struct optstruct *opts)
 	    FREE_LS(dblist2);
 	    return -1;
 	}
-	lspt = dblist2;
-	while(lspt) {
-	    if(tar_addfile(-1, tar, lspt->name) == -1) {
+	for(i = 0; i < dblist2cnt; i++) {
+	    if(tar_addfile(-1, tar, dblist2[i]) == -1) {
 		gzclose(tar);
 		unlink(tarfile);
 		free(tarfile);
 		FREE_LS(dblist2);
 		return -1;
 	    }
-	    lspt = lspt->next;
 	}
     } else {
 	for(i = 0; dblist[i].name; i++) {
@@ -1155,8 +1145,12 @@ static int listdir(const char *dirname, const regex_t *regex)
 	    (cli_strbcasestr(dent->d_name, ".db")  ||
 	     cli_strbcasestr(dent->d_name, ".hdb") ||
 	     cli_strbcasestr(dent->d_name, ".hdu") ||
+	     cli_strbcasestr(dent->d_name, ".hsb") ||
+	     cli_strbcasestr(dent->d_name, ".hsu") ||
 	     cli_strbcasestr(dent->d_name, ".mdb") ||
 	     cli_strbcasestr(dent->d_name, ".mdu") ||
+	     cli_strbcasestr(dent->d_name, ".msb") ||
+	     cli_strbcasestr(dent->d_name, ".msu") ||
 	     cli_strbcasestr(dent->d_name, ".ndb") ||
 	     cli_strbcasestr(dent->d_name, ".ndu") ||
 	     cli_strbcasestr(dent->d_name, ".ldb") ||
@@ -1164,6 +1158,8 @@ static int listdir(const char *dirname, const regex_t *regex)
 	     cli_strbcasestr(dent->d_name, ".sdb") ||
 	     cli_strbcasestr(dent->d_name, ".zmd") ||
 	     cli_strbcasestr(dent->d_name, ".rmd") ||
+	     cli_strbcasestr(dent->d_name, ".cdb") ||
+	     cli_strbcasestr(dent->d_name, ".cbc") ||
 	     cli_strbcasestr(dent->d_name, ".cld") ||
 	     cli_strbcasestr(dent->d_name, ".cvd"))) {
 
@@ -1315,7 +1311,7 @@ static int listdb(const char *filename, const regex_t *regex)
 	    free(start);
 	}
 
-    } else if(cli_strbcasestr(filename, ".ndb") || cli_strbcasestr(filename, ".ndu") || cli_strbcasestr(filename, ".ldb") || cli_strbcasestr(filename, ".ldu") || cli_strbcasestr(filename, ".sdb") || cli_strbcasestr(filename, ".zmd") || cli_strbcasestr(filename, ".rmd")) {
+    } else if(cli_strbcasestr(filename, ".ndb") || cli_strbcasestr(filename, ".ndu") || cli_strbcasestr(filename, ".ldb") || cli_strbcasestr(filename, ".ldu") || cli_strbcasestr(filename, ".sdb") || cli_strbcasestr(filename, ".zmd") || cli_strbcasestr(filename, ".rmd") || cli_strbcasestr(filename, ".cdb")) {
 
 	while(fgets(buffer, FILEBUFF, fh)) {
 	    cli_chomp(buffer);
@@ -1327,22 +1323,40 @@ static int listdb(const char *filename, const regex_t *regex)
 	    line++;
 
 	    if(cli_strbcasestr(filename, ".ldb") || cli_strbcasestr(filename, ".ldu"))
-		start = cli_strtok(buffer, 0, ";");
+		pt = strchr(buffer, ';');
 	    else
-		start = cli_strtok(buffer, 0, ":");
+		pt = strchr(buffer, ':');
 
-	    if(!start) {
+	    if(!pt) {
 		mprintf("!listdb: Malformed pattern line %u (file %s)\n", line, filename);
 		fclose(fh);
 		free(buffer);
 		return -1;
 	    }
+	    *pt = 0;
 
-	    if((pt = strstr(start, " (Clam)")))
+	    if((pt = strstr(buffer, " (Clam)")))
 		*pt = 0;
 
-	    mprintf("%s\n", start);
-	    free(start);
+	    mprintf("%s\n", buffer);
+	}
+
+    } else if(cli_strbcasestr(filename, ".cbc")) {
+	if(fgets(buffer, FILEBUFF, fh) && fgets(buffer, FILEBUFF, fh)) {
+	    pt = strchr(buffer, ';');
+	    if(!pt) { /* not a real sig */
+		fclose(fh);
+		free(buffer);
+		return 0;
+	    }
+	    if(regex) {
+		if(!cli_regexec(regex, buffer, 0, NULL, 0)) {
+		    mprintf("[%s BYTECODE] %s", dbname, buffer);
+		}
+	    } else {
+		*pt = 0;
+		mprintf("%s\n", buffer);
+	    }
 	}
     }
     fclose(fh);

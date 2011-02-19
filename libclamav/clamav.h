@@ -92,6 +92,7 @@ typedef enum {
 #define CL_DB_OFFICIAL_ONLY 0x1000
 #define CL_DB_BYTECODE      0x2000
 #define CL_DB_SIGNED	    0x4000  /* internal */
+#define CL_DB_BYTECODE_UNSIGNED	0x8000
 
 /* recommended db settings */
 #define CL_DB_STDOPT	    (CL_DB_PHISHING | CL_DB_PHISHING_URLS | CL_DB_BYTECODE)
@@ -119,6 +120,7 @@ typedef enum {
 #define CL_SCAN_HEURISTIC_PRECEDENCE    0x80000
 #define CL_SCAN_BLOCKMACROS		0x100000
 
+#define CL_SCAN_PERFORMANCE_INFO        0x40000000 /* collect performance timings */
 #define CL_SCAN_INTERNAL_COLLECT_SHA    0x80000000 /* Enables hash output in sha-collect builds - for internal use only */
 
 /* recommended scan settings */
@@ -159,7 +161,7 @@ enum cl_engine_field {
 };
 
 enum bytecode_security {
-    CL_BYTECODE_TRUST_ALL=0, /* insecure, debug setting */
+    CL_BYTECODE_TRUST_ALL=0, /* obsolete */
     CL_BYTECODE_TRUST_SIGNED, /* default */
     CL_BYTECODE_TRUST_NOTHING /* paranoid setting */
 };

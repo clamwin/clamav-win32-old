@@ -7,7 +7,7 @@ COMMON_LDFLAGS = -Wl,--nxcompat -Wl,--dynamicbase -s
 
 # -----------------------------------------
 # wxWidgets location
-WX = ~/clam/git/sigui/wxWidgets-2.9.1
+WX = ../wxWidgets-2.9.1
 
 # -----------------------------------------
 # Toolchain
@@ -31,7 +31,7 @@ PCH_H = wx_pch.h
 WINDRES=`$(WX)/wx-config --rescomp`
 CXXFLAGS = `$(WX)/wx-config --cxxflags` $(COMMON_CPPFLAGS) $(COMMON_CXXFLAGS)
 CPPFLAGS = `$(WX)/wx-config --cppflags` $(COMMON_CPPFLAGS)
-LDFLAGS = `$(WX)/wx-config --libs core,base,adv` $(COMMON_LDFLAGS)
+LDFLAGS = `$(WX)/wx-config --libs base,core,adv` $(COMMON_LDFLAGS)
 RCFLAGS = `$(WX)/wx-config --cppflags`
 
 OBJ = $(addprefix $(OBJDIR)/,$(subst .rc,.o,$(subst .cpp,.o,$(SRC))))
@@ -62,6 +62,40 @@ $(OBJDIR)/%.o : %.rc
 clean :
 	rm -fv $(BIN) $(OBJ) $(PCH)
 	rm -fv $(DEPFILES) $(DEPFILES:.P=.d)
+
+CPPFILES_1=`find . -name '*.cpp' -print -o -name '*.h' -a ! -name bak -print`
+CPPFILES_2=`find ../../ -name '*.cpp' -print -o -name '*.h' -a ! -name bak -print`
+LANGDIRS=`find -type d ! -name . -print`
+
+generate-pot:
+	xgettext -x exclude.po -C -n -k_ -kwxPLURAL:1,2 -kwxTRANSLATE -o sigui.pot --foreign-user --package-name=SigUI --package-version=0.97w --copyright-holder="Sourcefire, Inc." $(CPPFILES_1)
+
+mklang: generate-pot
+	mkdir -p lang/$(LANG)
+	mkdir -p po/$(LANG)
+	cp sigui.pot po/$(LANG)/sigui.po
+	cp $(HOME)/wxWidgets-2.9.1/locale/$(LANG).po po/$(LANG)/wxstd.pot
+	git add po/$(LANG)/sigui.po
+	git add po/$(LANG)/wxstd.pot
+
+compile-po:
+	(cd po;\
+	for i in $(LANGDIRS); do\
+	    (cd $$i;\
+	    msgfmt -c --check-accelerators -o ../../lang/$$i/sigui.mo sigui.po;\
+	    msgfmt -o ../../lang/$$i/wxstd.mo wxstd.pot;\
+	    git add ../../lang/$$i/sigui.mo;\
+	    git add ../../lang/$$i/wxstd.mo;\
+	    )\
+	done)
+
+update-po:
+	for i in `find po ! -name po -type d -print`; do\
+	    (cd $$i;\
+	     xgettext -j -C -n -k_ -kwxPLURAL:1,2 -kwxTRANSLATE -o sigui.po $(CPPFILES_2)\
+	    )\
+	done
+
 
 .SUFFIXES: .o .d .cpp .rc .gch
 .PHONY: all clean sigui.rc

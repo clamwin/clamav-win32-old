@@ -467,7 +467,7 @@ int CLAMAPI Scan_CreateInstance(CClamAVScanner **ppScanner) {
 	FAIL(CL_EMEM, "add_instance failed");
     }
     unlock_engine();
-    inst->scanopts = CL_SCAN_STDOPT;
+    inst->scanopts = CL_SCAN_STDOPT | CL_SCAN_PERFORMANCE_INFO;
     *ppScanner = (CClamAVScanner *)inst;
     logg("Created new instance %p\n", inst);
     WIN();
@@ -831,6 +831,7 @@ struct scan_ctx {
     int entryfd;
     instance *inst;
     DWORD cb_times;
+    DWORD copy_times;
 };
 
 int CLAMAPI Scan_ScanObjectByHandle(CClamAVScanner *pScanner, HANDLE object, int *pScanStatus, PCLAM_SCAN_INFO_LIST *pInfoList) {
@@ -879,6 +880,7 @@ int CLAMAPI Scan_ScanObjectByHandle(CClamAVScanner *pScanner, HANDLE object, int
     sctx.entryfd = fd;
     sctx.inst = inst;
     sctx.cb_times = 0;
+    sctx.copy_times = 0;
     logg("*Scan_ScanObjectByHandle (instance %p) invoking cl_scandesc with clamav context %p\n", inst, &sctx);
     perf = GetTickCount();
     res = cl_scandesc_callback(fd, &virname, NULL, engine, inst->scanopts, &sctx);
@@ -919,7 +921,7 @@ int CLAMAPI Scan_ScanObjectByHandle(CClamAVScanner *pScanner, HANDLE object, int
 
     perf = GetTickCount() - perf;
     close(fd);
-    logg("*Scan_ScanObjectByHandle (instance %p): cl_scandesc returned %d in %u ms (%d ms own)\n", inst, res, perf, perf - sctx.cb_times);
+    logg("*Scan_ScanObjectByHandle (instance %p): cl_scandesc returned %d in %u ms (%d ms own, %d ms copy)\n", inst, res, perf, perf - sctx.cb_times - sctx.copy_times, sctx.copy_times);
 
     if(lock_instances())
 	FAIL(CL_ELOCK, "failed to lock instances for instance %p", pScanner);
@@ -992,7 +994,7 @@ cl_error_t prescan_cb(int fd, void *context) {
     CLAM_SCAN_INFO si;
     CLAM_ACTION act;
     HANDLE fdhdl;
-    DWORD perf;
+    DWORD perf, perf2 = 0;
 
     if(!context) {
 	logg("!prescan_cb called with NULL clamav context\n");
@@ -1011,11 +1013,12 @@ cl_error_t prescan_cb(int fd, void *context) {
     if(si.scanPhase == SCAN_PHASE_PRESCAN) {
 	long fpos;
 	int rsz;
+	perf2 = GetTickCount();
 	while(1) {
 	    static int tmpn;
 	    snprintf(tmpf, sizeof(tmpf), "%s\\%08x.tmp", tmpdir, ++tmpn);
 	    tmpf[sizeof(tmpf)-1] = '\0';
-	    fdhdl = CreateFile(tmpf, GENERIC_READ | GENERIC_WRITE, 0, NULL, CREATE_NEW, FILE_ATTRIBUTE_TEMPORARY | FILE_FLAG_DELETE_ON_CLOSE, NULL);
+	    fdhdl = CreateFile(tmpf, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_DELETE, NULL, CREATE_NEW, FILE_ATTRIBUTE_TEMPORARY | FILE_FLAG_DELETE_ON_CLOSE, NULL);
 	    if(fdhdl != INVALID_HANDLE_VALUE) {
 		logg("*prescan_cb: dumping content to tempfile %s (handle %p)\n", tmpf, fdhdl);
 		break;
@@ -1051,6 +1054,8 @@ cl_error_t prescan_cb(int fd, void *context) {
 	SetFilePointer(fdhdl, 0, NULL, FILE_BEGIN);
 	si.object = fdhdl;
 	si.objectId = (HANDLE)_get_osfhandle(fd);
+	perf2 = GetTickCount() - perf2;
+	sctx->copy_times += perf2;
     } else { /* SCAN_PHASE_INITIAL */
 	si.object = INVALID_HANDLE_VALUE;
 	si.objectId = INVALID_HANDLE_VALUE;
@@ -1060,7 +1065,7 @@ cl_error_t prescan_cb(int fd, void *context) {
     inst->scancb(&si, &act, inst->scancb_ctx);
     perf = GetTickCount() - perf;
     sctx->cb_times += perf;
-    logg("*prescan_cb (clamav context %p, instance %p) callback completed with %u in %u ms\n", context, inst, act, perf);
+    logg("*prescan_cb (clamav context %p, instance %p) callback completed with %u in %u + %u ms\n", context, inst, act, perf, perf2);
     switch(act) {
 	case CLAM_ACTION_SKIP:
 	    logg("*prescan_cb (clamav context %p, instance %p) cb result: SKIP\n", context, inst);

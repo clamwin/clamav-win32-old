@@ -408,7 +408,7 @@ AM_CONDITIONAL([VERSIONSCRIPT], test "x$ac_cv_ld_version_script" = "xyes")
 AM_MISSING_PROG(GPERF, gperf)
 AC_SUBST(GPERF)
 
-AC_CHECK_HEADERS([stdint.h unistd.h sys/int_types.h dlfcn.h inttypes.h sys/inttypes.h memory.h ndir.h stdlib.h strings.h string.h sys/mman.h sys/param.h sys/stat.h sys/types.h malloc.h poll.h limits.h sys/filio.h sys/uio.h termios.h stdbool.h pwd.h grp.h])
+AC_CHECK_HEADERS([stdint.h unistd.h sys/int_types.h dlfcn.h inttypes.h sys/inttypes.h sys/times.h memory.h ndir.h stdlib.h strings.h string.h sys/mman.h sys/param.h sys/stat.h sys/types.h malloc.h poll.h limits.h sys/filio.h sys/uio.h termios.h stdbool.h pwd.h grp.h])
 AC_CHECK_HEADER([syslog.h],AC_DEFINE([USE_SYSLOG],1,[use syslog]),)
 
 AC_TYPE_OFF_T
@@ -854,15 +854,6 @@ if test "$enable_debug" = "yes"; then
   AC_DEFINE([CL_DEBUG],1,[enable debugging])
 else
   AC_DEFINE([NDEBUG],1,[disable assertions])
-fi
-
-AC_ARG_ENABLE([unsigned-bytecode],
-[  --enable-unsigned-bytecode	  enable load of unsigned bytecode],
-enable_unsignedbytecode="$enableval", enable_unsignedbytecode="no")
-
-if test "$enable_unsignedbytecode" = "yes"; then
-  VERSION_SUFFIX="$VERSION_SUFFIX-unsigned-bc"
-  AC_DEFINE([CL_BCUNSIGNED],1,[enable loading of unsigned bytecode])
 fi
 
 AC_ARG_ENABLE([no-cache],
