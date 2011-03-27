@@ -1,7 +1,7 @@
 /*
  * Clamav Native Windows Port: tls helper
  *
- * Copyright (c) 2010 Gianluigi Tiesi <sherpya@netfarm.it>
+ * Copyright (c) 2010-2011 Gianluigi Tiesi <sherpya@netfarm.it>
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -92,7 +92,7 @@ BOOL cw_disablefsredir(void)
         return FALSE;
     }
 
-    state = malloc(sizeof(PVOID));
+    state = VirtualAlloc(NULL, sizeof(PVOID), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
     TlsSetValue(__fsredir_idx, state);
     return cw_helpers.k32.Wow64DisableWow64FsRedirection(state);
 }
@@ -113,7 +113,7 @@ BOOL cw_revertfsredir(void)
     }
 
     result = cw_helpers.k32.Wow64RevertWow64FsRedirection(state);
-    free(state);
+    VirtualFree(state, sizeof(PVOID), MEM_RELEASE);
     TlsSetValue(__fsredir_idx, NULL);
     return result;
 }
