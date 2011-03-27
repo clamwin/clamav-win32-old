@@ -216,7 +216,7 @@ static int sigcheck(int fd, const char *virname, int warnfp)
     GUID pgActionID = WINTRUST_ACTION_GENERIC_VERIFY_V2;
     DWORD cbHash = sizeof(bHash);
 
-    if (!scanning)
+    if (!scanning || (GetFileAttributesA(scanning) == INVALID_FILE_ATTRIBUTES))
         return TRUST_E_NOSIGNATURE;
 
     do
