@@ -496,6 +496,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\..\libclamav\jpeg.c"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\..\libclamav\line.c"
 				>
 			</File>
@@ -645,6 +649,10 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\libclamav\str.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\swf.c"
 				>
 			</File>
 			<File
@@ -1098,6 +1106,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\..\libclamav\jpeg.h"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\..\libclamav\line.h"
 				>
 			</File>
@@ -1243,6 +1255,10 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\libclamav\str.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\swf.h"
 				>
 			</File>
 			<File
