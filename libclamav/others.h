@@ -54,7 +54,7 @@
  * in re-enabling affected modules.
  */
 
-#define CL_FLEVEL 60
+#define CL_FLEVEL 61
 #define CL_FLEVEL_DCONF	CL_FLEVEL
 #define CL_FLEVEL_SIGTOOL CL_FLEVEL
 
@@ -119,6 +119,7 @@ typedef struct cli_ctx_tag {
     unsigned int scannedfiles;
     unsigned int found_possibly_unwanted;
     unsigned int corrupted_input;
+    unsigned int img_validate;
     cli_file_t container_type; /* FIXME: to be made into a stack or array - see bb#1579 & bb#1293 */
     size_t container_size;
     unsigned char handlertype_hash[16];
