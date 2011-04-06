@@ -1,10 +1,6 @@
 /* config.h.  Generated from config.h.in by configure.  */
 /* config.h.in.  Generated from configure.ac by autoheader.  */
 
-/* Define if the compiler is building for multiple architectures of Apple
-   platforms at once. */
-/* #undef AA_APPLE_UNIVERSAL_BUILD */
-
 /* Define to the number of bits in type 'ptrdiff_t'. */
 #ifdef _WIN64
 #define BITSIZEOF_PTRDIFF_T 64
@@ -35,6 +31,10 @@
 
 /* Define to 1 if using `alloca.c'. */
 /* #undef C_ALLOCA */
+
+/* Define to a C preprocessor expression that evaluates to 1 or 0, depending
+   whether the gnulib module snprintf shall be considered present. */
+#define GNULIB_SNPRINTF 1
 
 /* Define to 1 when the gnulib module ftruncate should be tested. */
 #define GNULIB_TEST_FTRUNCATE 1
@@ -71,6 +71,10 @@
 /* Define to 1 if you have the `chsize' function. */
 #define HAVE_CHSIZE 1
 
+/* Define to 1 if you have the declaration of `localtime_r', and to 0 if you
+   don't. */
+#define HAVE_DECL_LOCALTIME_R 0
+
 /* Define to 1 if you have the declaration of `snprintf', and to 0 if you
    don't. */
 #define HAVE_DECL_SNPRINTF 0
@@ -91,11 +95,8 @@
    don't. */
 #define HAVE_DECL__SNPRINTF 1
 
-/* Define to 1 if you have the <errno.h> header file. */
-#define HAVE_ERRNO_H 1
-
-/* Define to 1 if you have the <float.h> header file. */
-#define HAVE_FLOAT_H 1
+/* Define to 1 if you have the <features.h> header file. */
+/* #undef HAVE_FEATURES_H */
 
 /* Define to 1 if you have the `ftruncate' function. */
 /* #undef HAVE_FTRUNCATE */
@@ -142,7 +143,7 @@
 /* #undef HAVE_RAW_DECL_DPRINTF */
 
 /* Define to 1 if dup2 is declared even after undefining macros. */
-#define HAVE_RAW_DECL_DUP2 1
+/* #undef HAVE_RAW_DECL_DUP2 */
 
 /* Define to 1 if dup3 is declared even after undefining macros. */
 /* #undef HAVE_RAW_DECL_DUP3 */
@@ -178,7 +179,7 @@
 /* #undef HAVE_RAW_DECL_FTELLO */
 
 /* Define to 1 if ftruncate is declared even after undefining macros. */
-#define HAVE_RAW_DECL_FTRUNCATE 1
+/* #undef HAVE_RAW_DECL_FTRUNCATE */
 
 /* Define to 1 if getcwd is declared even after undefining macros. */
 /* #undef HAVE_RAW_DECL_GETCWD */
@@ -226,7 +227,7 @@
 /* #undef HAVE_RAW_DECL_LINKAT */
 
 /* Define to 1 if lseek is declared even after undefining macros. */
-#define HAVE_RAW_DECL_LSEEK 1
+/* #undef HAVE_RAW_DECL_LSEEK */
 
 /* Define to 1 if mbrlen is declared even after undefining macros. */
 #define HAVE_RAW_DECL_MBRLEN 1
@@ -251,6 +252,9 @@
 
 /* Define to 1 if memrchr is declared even after undefining macros. */
 /* #undef HAVE_RAW_DECL_MEMRCHR */
+
+/* Define to 1 if pipe is declared even after undefining macros. */
+/* #undef HAVE_RAW_DECL_PIPE */
 
 /* Define to 1 if pipe2 is declared even after undefining macros. */
 /* #undef HAVE_RAW_DECL_PIPE2 */
@@ -306,6 +310,9 @@
 /* Define to 1 if strdup is declared even after undefining macros. */
 #define HAVE_RAW_DECL_STRDUP 1
 
+/* Define to 1 if strerror_r is declared even after undefining macros. */
+/* #undef HAVE_RAW_DECL_STRERROR_R */
+
 /* Define to 1 if strncasecmp is declared even after undefining macros. */
 /* #undef HAVE_RAW_DECL_STRNCASECMP */
 
@@ -316,10 +323,11 @@
 /* #undef HAVE_RAW_DECL_STRNDUP */
 
 /* Define to 1 if strnlen is declared even after undefining macros. */
+/* Sherpya: no strnlen on MinGW */
 /* #undef HAVE_RAW_DECL_STRNLEN */
 
 /* Define to 1 if strpbrk is declared even after undefining macros. */
-/* #undef HAVE_RAW_DECL_STRPBRK */
+#define HAVE_RAW_DECL_STRPBRK 1
 
 /* Define to 1 if strsep is declared even after undefining macros. */
 /* #undef HAVE_RAW_DECL_STRSEP */
@@ -346,7 +354,7 @@
 /* #undef HAVE_RAW_DECL_TTYNAME_R */
 
 /* Define to 1 if unlink is declared even after undefining macros. */
-#define HAVE_RAW_DECL_UNLINK 1
+/* #undef HAVE_RAW_DECL_UNLINK */
 
 /* Define to 1 if unlinkat is declared even after undefining macros. */
 /* #undef HAVE_RAW_DECL_UNLINKAT */
@@ -360,20 +368,104 @@
 /* Define to 1 if vsnprintf is declared even after undefining macros. */
 #define HAVE_RAW_DECL_VSNPRINTF 1
 
+/* Define to 1 if wcpcpy is declared even after undefining macros. */
+/* #undef HAVE_RAW_DECL_WCPCPY */
+
+/* Define to 1 if wcpncpy is declared even after undefining macros. */
+/* #undef HAVE_RAW_DECL_WCPNCPY */
+
 /* Define to 1 if wcrtomb is declared even after undefining macros. */
 #define HAVE_RAW_DECL_WCRTOMB 1
+
+/* Define to 1 if wcscasecmp is declared even after undefining macros. */
+/* #undef HAVE_RAW_DECL_WCSCASECMP */
+
+/* Define to 1 if wcscat is declared even after undefining macros. */
+#define HAVE_RAW_DECL_WCSCAT 1
+
+/* Define to 1 if wcschr is declared even after undefining macros. */
+#define HAVE_RAW_DECL_WCSCHR 1
+
+/* Define to 1 if wcscmp is declared even after undefining macros. */
+#define HAVE_RAW_DECL_WCSCMP 1
+
+/* Define to 1 if wcscoll is declared even after undefining macros. */
+#define HAVE_RAW_DECL_WCSCOLL 1
+
+/* Define to 1 if wcscpy is declared even after undefining macros. */
+#define HAVE_RAW_DECL_WCSCPY 1
+
+/* Define to 1 if wcscspn is declared even after undefining macros. */
+#define HAVE_RAW_DECL_WCSCSPN 1
+
+/* Define to 1 if wcsdup is declared even after undefining macros. */
+#define HAVE_RAW_DECL_WCSDUP 1
+
+/* Define to 1 if wcslen is declared even after undefining macros. */
+#define HAVE_RAW_DECL_WCSLEN 1
+
+/* Define to 1 if wcsncasecmp is declared even after undefining macros. */
+/* #undef HAVE_RAW_DECL_WCSNCASECMP */
+
+/* Define to 1 if wcsncat is declared even after undefining macros. */
+#define HAVE_RAW_DECL_WCSNCAT 1
+
+/* Define to 1 if wcsncmp is declared even after undefining macros. */
+#define HAVE_RAW_DECL_WCSNCMP 1
+
+/* Define to 1 if wcsncpy is declared even after undefining macros. */
+#define HAVE_RAW_DECL_WCSNCPY 1
+
+/* Define to 1 if wcsnlen is declared even after undefining macros. */
+#define HAVE_RAW_DECL_WCSNLEN 1
 
 /* Define to 1 if wcsnrtombs is declared even after undefining macros. */
 /* #undef HAVE_RAW_DECL_WCSNRTOMBS */
 
+/* Define to 1 if wcspbrk is declared even after undefining macros. */
+#define HAVE_RAW_DECL_WCSPBRK 1
+
+/* Define to 1 if wcsrchr is declared even after undefining macros. */
+#define HAVE_RAW_DECL_WCSRCHR 1
+
 /* Define to 1 if wcsrtombs is declared even after undefining macros. */
 #define HAVE_RAW_DECL_WCSRTOMBS 1
+
+/* Define to 1 if wcsspn is declared even after undefining macros. */
+#define HAVE_RAW_DECL_WCSSPN 1
+
+/* Define to 1 if wcsstr is declared even after undefining macros. */
+#define HAVE_RAW_DECL_WCSSTR 1
+
+/* Define to 1 if wcstok is declared even after undefining macros. */
+#define HAVE_RAW_DECL_WCSTOK 1
+
+/* Define to 1 if wcswidth is declared even after undefining macros. */
+/* #undef HAVE_RAW_DECL_WCSWIDTH */
+
+/* Define to 1 if wcsxfrm is declared even after undefining macros. */
+#define HAVE_RAW_DECL_WCSXFRM 1
 
 /* Define to 1 if wctob is declared even after undefining macros. */
 #define HAVE_RAW_DECL_WCTOB 1
 
 /* Define to 1 if wcwidth is declared even after undefining macros. */
 /* #undef HAVE_RAW_DECL_WCWIDTH */
+
+/* Define to 1 if wmemchr is declared even after undefining macros. */
+#define HAVE_RAW_DECL_WMEMCHR 1
+
+/* Define to 1 if wmemcmp is declared even after undefining macros. */
+#define HAVE_RAW_DECL_WMEMCMP 1
+
+/* Define to 1 if wmemcpy is declared even after undefining macros. */
+#define HAVE_RAW_DECL_WMEMCPY 1
+
+/* Define to 1 if wmemmove is declared even after undefining macros. */
+#define HAVE_RAW_DECL_WMEMMOVE 1
+
+/* Define to 1 if wmemset is declared even after undefining macros. */
+#define HAVE_RAW_DECL_WMEMSET 1
 
 /* Define to 1 if 'sig_atomic_t' is a signed integer type. */
 #define HAVE_SIGNED_SIG_ATOMIC_T 1
@@ -392,21 +484,12 @@
    buffer had been large enough. */
 /* #undef HAVE_SNPRINTF_RETVAL_C99 */
 
-/* Define to 1 if stdbool.h conforms to C99. */
-/* #undef HAVE_STDBOOL_H */
-
-/* Define to 1 if you have the <stddef.h> header file. */
-#define HAVE_STDDEF_H 1
-
 /* Define to 1 if you have the <stdint.h> header file. */
 /* #undef HAVE_STDINT_H */
 
 /* Define if <stdint.h> exists, doesn't clash with <sys/types.h>, and declares
    uintmax_t. */
 /* #undef HAVE_STDINT_H_WITH_UINTMAX */
-
-/* Define to 1 if you have the <stdio.h> header file. */
-#define HAVE_STDIO_H 1
 
 /* Define to 1 if you have the <stdlib.h> header file. */
 #define HAVE_STDLIB_H 1
@@ -424,6 +507,7 @@
 /* #undef HAVE_STRNCASECMP */
 
 /* Define to 1 if you have the `strnlen' function. */
+/* Sherpya: no strnlen on MinGW */
 /* #undef HAVE_STRNLEN */
 
 /* Define to 1 if you have the `strptime' function. */
@@ -449,9 +533,6 @@
 
 /* Define to 1 if you have the <sys/types.h> header file. */
 #define HAVE_SYS_TYPES_H 1
-
-/* Define to 1 if you have the <time.h> header file. */
-#define HAVE_TIME_H 1
 
 /* Define if struct tm has the tm_gmtoff member. */
 /* #undef HAVE_TM_GMTOFF */
@@ -553,10 +634,6 @@
 /* Define to 1 if you have the ANSI C header files. */
 #define STDC_HEADERS 1
 
-/* Define to the prefix of C symbols at the assembler and linker level, either
-   an underscore or empty. */
-#define USER_LABEL_PREFIX 
-
 /* Version number of package */
 #define VERSION "0"
 
@@ -655,16 +732,15 @@
    is a misnomer outside of parameter lists.  */
 #define _UNUSED_PARAMETER_ _GL_UNUSED
 
-/* clamav-win32 port specific */
-#undef CLEANUP
+/* Sherpya: missing on win32 */
 #define EOVERFLOW E2BIG
 
-/* not my own code */
+/* I'm not going to fix warning in gnulib */
 #ifdef _MSC_VER
-#pragma warning(disable: 4244 4267)     /* Conversion, possible loss of data */
+#pragma warning(disable: 4244 4267) /* Conversion, possible loss of data */
 #endif
 
 #include <osdeps.h>
 
-/* fake to avoid stdint.h include */
+/* Sherpya: hack to avoid stdint.h inclusion */
 #define IN_LIBINTL
