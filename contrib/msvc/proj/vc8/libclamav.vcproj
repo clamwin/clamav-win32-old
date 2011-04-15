@@ -600,6 +600,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\..\libclamav\png.c"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\..\libclamav\qsort.c"
 				>
 			</File>
@@ -1207,6 +1211,10 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\libclamav\phishcheck.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\png.h"
 				>
 			</File>
 			<File

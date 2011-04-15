@@ -397,15 +397,7 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\..\shared\cdiff.h"
-				>
-			</File>
-			<File
 				RelativePath="..\..\..\..\shared\getopt.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\shared\getopt.h"
 				>
 			</File>
 			<File
@@ -413,11 +405,7 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\..\shared\misc.h"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\shared\optparser.h"
+				RelativePath="..\..\..\..\shared\misc_libclamav.c"
 				>
 			</File>
 			<File
@@ -425,15 +413,7 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\..\shared\output.h"
-				>
-			</File>
-			<File
 				RelativePath="..\..\..\..\shared\tar.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\shared\tar.h"
 				>
 			</File>
 		</Filter>

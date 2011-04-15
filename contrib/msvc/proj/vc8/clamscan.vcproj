@@ -408,15 +408,7 @@
 			Name="Shared"
 			>
 			<File
-				RelativePath="..\..\..\..\shared\actions.h"
-				>
-			</File>
-			<File
 				RelativePath="..\..\..\..\shared\getopt.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\shared\getopt.h"
 				>
 			</File>
 			<File
@@ -424,15 +416,11 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\..\shared\optparser.h"
+				RelativePath="..\..\..\..\shared\misc_libclamav.c"
 				>
 			</File>
 			<File
 				RelativePath="..\..\..\..\shared\output.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\shared\output.h"
 				>
 			</File>
 		</Filter>

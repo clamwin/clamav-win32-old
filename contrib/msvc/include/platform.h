@@ -167,7 +167,6 @@ typedef unsigned int in_addr_t;
 #define LIBCLAMAV_API
 #else
 #define LIBCLAMAV_API __declspec(dllimport)
-#define CL_NOLIBCLAMAV
 #endif
 
 LIBCLAMAV_API extern const char *DATADIR;
