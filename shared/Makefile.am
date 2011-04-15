@@ -1,4 +1,4 @@
-AM_CPPFLAGS = -I$(top_srcdir)
+AM_CPPFLAGS = -I$(top_srcdir) -I$(top_srcdir)/libclamav
 
 libshared_la_SOURCES=actions.c\
 	       cdiff.c\
