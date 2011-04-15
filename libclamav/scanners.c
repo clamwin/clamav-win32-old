@@ -92,6 +92,7 @@
 #include "events.h"
 #include "swf.h"
 #include "jpeg.h"
+#include "png.h"
 
 #ifdef HAVE_BZLIB_H
 #include <bzlib.h>
@@ -2329,8 +2330,8 @@ static int magic_scandesc(int desc, cli_ctx *ctx, cli_file_t type)
 	    break;
 
 	case CL_TYPE_SWF:
-	    /* FIXME: add dconf&co. */
-	    ret = cli_scanswf(ctx);
+	    if(DCONF_DOC & DOC_CONF_SWF)
+		ret = cli_scanswf(ctx);
 	    break;
 
 	case CL_TYPE_RTF:
@@ -2441,6 +2442,12 @@ static int magic_scandesc(int desc, cli_ctx *ctx, cli_file_t type)
 
 	    if(ctx->img_validate && SCAN_ALGO && ret != CL_VIRUS)
 		ret = cli_parsejpeg(ctx);
+
+	    if(ctx->img_validate && SCAN_ALGO && ret != CL_VIRUS && ret != CL_EPARSE)
+		ret = cli_parsepng(ctx);
+
+	    if(ctx->img_validate && SCAN_ALGO && ret != CL_VIRUS && ret != CL_EPARSE)
+		ret = cli_parsegif(ctx);
 	    break;
 
         case CL_TYPE_PDF: /* FIXMELIMITS: pdf should be an archive! */

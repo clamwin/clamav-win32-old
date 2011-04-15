@@ -1,3 +1,28 @@
+Thu Apr 14 21:29:36 EEST 2011 (edwin)
+-------------------------------------
+ * libclamav/others.c: make sure TLS key is initializer (bb #2588).
+    Thanks to Cameron Brown for the detailed analysis of the bug.
+
+Thu Apr 14 13:19:38 EEST 2011 (edwin)
+-------------------------------------
+ * configure: check for enable_extended_FILE_stdio (bb #2542)
+
+Mon Apr 11 17:22:46 CEST 2011 (tk)
+----------------------------------
+ * libclamav: add basic GIF validator
+
+Sat Apr  9 17:20:35 CEST 2011 (acab)
+------------------------------------
+ * libclamav/pe_icons.c: don't sigbus on sparc (bb#2695)
+
+Sat Apr  9 03:56:17 CEST 2011 (acab)
+------------------------------------
+ * libclamav/pe.c: reset corrupted status before bytecode hooks (bb#2544)
+
+Thu Apr  7 18:17:56 CEST 2011 (tk)
+----------------------------------
+ * libclamav: add PNG validator based on pngcheck
+
 Tue Apr  5 16:33:15 CEST 2011 (tk)
 ----------------------------------
  * libclamav: add basic JPEG validator
