@@ -22,6 +22,14 @@ if HAVE_MILTER
 sbin_PROGRAMS = clamav-milter
 
 clamav_milter_SOURCES = \
+    $(top_srcdir)/shared/optparser.c \
+    $(top_srcdir)/shared/optparser.h \
+    $(top_srcdir)/shared/output.c \
+    $(top_srcdir)/shared/output.h \
+    $(top_srcdir)/shared/getopt.c \
+    $(top_srcdir)/shared/getopt.h \
+    $(top_srcdir)/shared/misc.c \
+    $(top_srcdir)/shared/misc.h \
     whitelist.c \
     whitelist.h \
     connpool.c \
@@ -37,6 +45,7 @@ AM_CFLAGS=@WERR_CFLAGS_MILTER@
 endif
 endif
 
-LIBS = $(top_builddir)/shared/libshared_minimal_threads.la $(top_builddir)/libclamav/libclamav_internal_utils.la @CLAMAV_MILTER_LIBS@ @THREAD_LIBS@
+DEFS = @DEFS@ -DCL_NOLIBCLAMAV
+LIBS = $(top_builddir)/libclamav/libclamav_internal_utils.la @CLAMAV_MILTER_LIBS@ @THREAD_LIBS@
 AM_CPPFLAGS = -I$(top_srcdir)/clamd -I$(top_srcdir)/libclamav -I$(top_srcdir)/shared -I$(top_srcdir)
 CLEANFILES=*.gcda *.gcno

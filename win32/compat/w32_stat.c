@@ -29,6 +29,7 @@
 
 wchar_t *uncpath(const char *path) {
     DWORD len = 0;
+    char utf8[PATH_MAX+1];
     wchar_t *stripme, *strip_from, *dest = cli_malloc((PATH_MAX + 1) * sizeof(wchar_t));
 
     if(!dest)
@@ -61,7 +62,12 @@ wchar_t *uncpath(const char *path) {
 	/* UNC already */
 	len = 0;
     }
-    if(!(len = MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, path, -1, &dest[len], PATH_MAX - len)) || len > PATH_MAX - len) {
+
+    /* TODO: DROP THE ACP STUFF ONCE WE'RE ALL CONVERTED TO UTF-8 */
+    if(MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, path, -1, &dest[len], PATH_MAX - len) &&
+	WideCharToMultiByte(CP_UTF8, 0, &dest[len], -1, utf8, PATH_MAX, NULL, NULL) &&
+	!strcmp(path, utf8)) {
+    } else if(!(len = MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, path, -1, &dest[len], PATH_MAX - len)) || len > PATH_MAX - len) {
         free(dest);
 	errno = (len || (GetLastError() == ERROR_INSUFFICIENT_BUFFER)) ? ENAMETOOLONG : ENOENT;
         return NULL;
@@ -142,18 +148,19 @@ int safe_open(const char *path, int flags, ... ) {
 }
 
 
-w32_stat(const char *path, struct stat *buf) {
+int w32_stat(const char *path, struct stat *buf) {
     int len;
     wchar_t *wpath = uncpath(path);
     WIN32_FILE_ATTRIBUTE_DATA attrs;
 
-    if(!wpath)
+    if(!wpath) {
+	errno = ENOMEM;
 	return -1;
+    }
 
     len = GetFileAttributesExW(wpath, GetFileExInfoStandard, &attrs);
     free(wpath);
     if(!len) {
-	len = GetLastError();
 	errno = ENOENT;
 	return -1;
     }
@@ -170,4 +177,18 @@ w32_stat(const char *path, struct stat *buf) {
     buf->st_nlink = 1;
     buf->st_size = ((uint64_t)attrs.nFileSizeHigh << (sizeof(attrs.nFileSizeLow)*8)) | attrs.nFileSizeLow;
     return 0;
+}
+
+int w32_access(const char *pathname, int mode) {
+    wchar_t *wpath = uncpath(pathname);
+    int ret;
+
+    if(!wpath) {
+	errno = ENOMEM;
+	return -1;
+    }
+
+    ret = _waccess(wpath, mode);
+    free(wpath);
+    return ret;
 }
