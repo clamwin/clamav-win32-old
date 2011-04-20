@@ -2701,7 +2701,7 @@ int cl_scanfile(const char *filename, const char **virname, unsigned long int *s
 int cl_scanfile_callback(const char *filename, const char **virname, unsigned long int *scanned, const struct cl_engine *engine, unsigned int scanoptions, void *context)
 {
 	int fd, ret;
-#ifdef _WIN32
+#ifdef NOCLAMWIN
 	char utf8[PATH_MAX+1];
 	wchar_t tmpw[PATH_MAX+1];
 

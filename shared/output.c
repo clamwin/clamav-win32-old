@@ -445,7 +445,7 @@ void mprintf(const char *str, ...)
     va_end(args);
     buff[len - 1] = 0;
 
-#ifdef _WIN32
+#ifdef NOCLAMWIN
     do {
 	int tmplen = len + 1;
 	wchar_t *tmpw = malloc(tmplen*sizeof(wchar_t));

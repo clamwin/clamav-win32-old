@@ -383,10 +383,6 @@
 				RelativePath="..\..\..\..\shared\misc.c"
 				>
 			</File>
-			<File
-				RelativePath="..\..\..\..\shared\misc_libclamav.c"
-				>
-			</File>
 		</Filter>
 	</Files>
 	<Globals>
