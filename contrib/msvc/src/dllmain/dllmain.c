@@ -24,8 +24,10 @@
 uint32_t cw_platform = 0;
 helpers_t cw_helpers;
 
-extern void tls_alloc(void);
-extern void tls_free(void);
+extern void tls_index_alloc(void);
+extern void tls_index_free(void);
+extern void tls_storage_alloc(void);
+extern void tls_storage_free(void);
 
 extern void jit_init(void);
 extern void jit_uninit(void);
@@ -409,14 +411,18 @@ BOOL APIENTRY DllMain(HANDLE hModule, DWORD reason, LPVOID lpReserved)
             cwi_processattach();
             _set_invalid_parameter_handler(clamavInvalidParameterHandler);
             fix_paths();
-            tls_alloc();
+            tls_index_alloc();
+            tls_storage_alloc();
             break;
         case DLL_THREAD_ATTACH:
+            tls_storage_alloc();
             return pthread_win32_thread_attach_np();
         case DLL_THREAD_DETACH:
+            tls_storage_free();
             return pthread_win32_thread_detach_np();
         case DLL_PROCESS_DETACH:
-            tls_free();
+            tls_storage_free();
+            tls_index_free();
             pthread_win32_thread_detach_np();
             pthread_win32_process_detach_np();
             WSACleanup();
