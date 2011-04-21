@@ -106,7 +106,7 @@ const char *cw_get_currentfile(void)
 void cw_set_currentfile(const char *filename)
 {
     char *fptr = TlsGetValue(__currentfile_idx);
-    TRACE("get_currentfile() T:%d F:IDX:%d fptr:0x%p\n", GetCurrentThreadId(), __currentfile_idx, fptr);
+    TRACE("set_currentfile() T:%d F:IDX:%d fptr:0x%p\n", GetCurrentThreadId(), __currentfile_idx, fptr);
 
     if (!fptr)
     {
