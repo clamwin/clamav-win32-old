@@ -20,52 +20,100 @@
 
 #include <osdeps.h>
 #include <others.h>
+#include <assert.h>
+
+#define REDIR_COOKIE (PVOID) 0xdeedee13
+//#define DEBUG_TLS
+
+#ifdef DEBUG_TLS
+#define TRACE(format, ...) fprintf(stderr, "[tls] " format, ##__VA_ARGS__)
+#else
+#define TRACE(format, ...)
+#endif
 
 static DWORD __currentfile_idx = TLS_OUT_OF_INDEXES;
 static DWORD __fsredir_idx = TLS_OUT_OF_INDEXES;
 
-void tls_alloc(void)
+void tls_index_alloc(void)
 {
-    char *fptr;
+    assert(__currentfile_idx == TLS_OUT_OF_INDEXES);
+    assert(__fsredir_idx == TLS_OUT_OF_INDEXES);
 
-    __currentfile_idx = TlsAlloc();
-    if (__currentfile_idx == TLS_OUT_OF_INDEXES)
+    if ((__currentfile_idx = TlsAlloc()) == TLS_OUT_OF_INDEXES)
     {
         cli_errmsg("[tls] Unable to allocate Tls slot for currentfile storage: %d\n", GetLastError());
         exit(1);
     }
 
-    if (!(fptr = VirtualAlloc(NULL, MAX_PATH, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE)))
+    if ((__fsredir_idx = TlsAlloc()) == TLS_OUT_OF_INDEXES)
+    {
+        cli_errmsg("[tls] Unable to allocate Tls slot for fsredir state storage: %d\n", GetLastError());
+        exit(1);
+    }
+
+    TRACE("tls_index_alloc() T:%d F:IDX:%d R:IDX\n", GetCurrentThreadId(), __currentfile_idx, __fsredir_idx);
+}
+
+void tls_storage_alloc(void)
+{
+    PVOID *ptr;
+
+    if (!(ptr = VirtualAlloc(NULL, MAX_PATH, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE)))
     {
         cli_errmsg("[tls] Unable to allocate memory for currentfile storage: %d\n", GetLastError());
         exit(1);
     }
 
-    TlsSetValue(__currentfile_idx, (LPVOID) fptr);
+    TlsSetValue(__currentfile_idx, ptr);
 
-    __fsredir_idx = TlsAlloc();
-    if (__fsredir_idx == TLS_OUT_OF_INDEXES)
+    if (!(ptr = VirtualAlloc(NULL, sizeof(PVOID), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE)))
     {
-        cli_errmsg("[tls] Unable to allocate Tls slot for fsredir state storage: %d\n", GetLastError());
+        cli_errmsg("[tls] Unable to allocate memory for fsredir state storage: %d\n", GetLastError());
         exit(1);
     }
+
+    *ptr = REDIR_COOKIE;
+    TlsSetValue(__fsredir_idx, ptr);
+
+    TRACE("tls_storage_alloc() T:%d F:IDX:%d R:IDX\n", GetCurrentThreadId(), __currentfile_idx, __fsredir_idx);
 }
 
-void tls_free(void)
+void tls_index_free(void)
 {
-    VirtualFree(TlsGetValue(__currentfile_idx), MAX_PATH, MEM_RELEASE);
+    assert(__currentfile_idx != TLS_OUT_OF_INDEXES);
+    assert(__fsredir_idx != TLS_OUT_OF_INDEXES);
+
+    TRACE("tls_index_free() T:%d F:IDX:%d R:IDX\n", GetCurrentThreadId(), __currentfile_idx, __fsredir_idx);
+
     TlsFree(__currentfile_idx);
     TlsFree(__fsredir_idx);
 }
 
+void tls_storage_free(void)
+{
+    VirtualFree(TlsGetValue(__currentfile_idx), MAX_PATH, MEM_RELEASE);
+    VirtualFree(TlsGetValue(__fsredir_idx), sizeof(PVOID), MEM_RELEASE);
+    TRACE("tls_storage_free() T:%d F:IDX:%d R:IDX\n", GetCurrentThreadId(), __currentfile_idx, __fsredir_idx);
+}
+
 const char *cw_get_currentfile(void)
 {
-    return TlsGetValue(__currentfile_idx);
+    const char *fptr = TlsGetValue(__currentfile_idx);
+    TRACE("get_currentfile() T:%d F:IDX:%d fptr:0x%p\n", GetCurrentThreadId(), __currentfile_idx, fptr);
+    return fptr;
 }
 
 void cw_set_currentfile(const char *filename)
 {
     char *fptr = TlsGetValue(__currentfile_idx);
+    TRACE("get_currentfile() T:%d F:IDX:%d fptr:0x%p\n", GetCurrentThreadId(), __currentfile_idx, fptr);
+
+    if (!fptr)
+    {
+        cli_errmsg("[tls] cw_set_currentfile() TlsGetValue() failed %d\n", GetLastError());
+        return;
+    }
+
     if (filename)
     {
         strncpy(fptr, filename, MAX_PATH - 1);
@@ -77,10 +125,12 @@ void cw_set_currentfile(const char *filename)
 
 BOOL cw_disablefsredir(void)
 {
+    BOOL result;
     PVOID *state = TlsGetValue(__fsredir_idx);
-    cli_dbgmsg("[tls] DISABLED REDIR for %d\n", GetCurrentThreadId());
 
-    if (state)
+    TRACE("disablefsredir() T:%d R:IDX:%d S:0x%p\n", GetCurrentThreadId(), __fsredir_idx, state);
+
+    if (*state != REDIR_COOKIE)
     {
         cli_errmsg("[tls] cw_disablefsredir() called multiple times\n");
         return FALSE;
@@ -92,28 +142,32 @@ BOOL cw_disablefsredir(void)
         return FALSE;
     }
 
-    state = VirtualAlloc(NULL, sizeof(PVOID), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
-    TlsSetValue(__fsredir_idx, state);
-    return cw_helpers.k32.Wow64DisableWow64FsRedirection(state);
+    result = cw_helpers.k32.Wow64DisableWow64FsRedirection(state);
+    return result;
 }
 
 BOOL cw_revertfsredir(void)
 {
     BOOL result;
     PVOID *state = TlsGetValue(__fsredir_idx);
-    cli_dbgmsg("[tls] REVERTED REDIR for %d\n", GetCurrentThreadId());
+    TRACE("revertfsredir() T:%d R:IDX:%d S:0x%p\n", GetCurrentThreadId(), __fsredir_idx, state);
 
     if (!state)
     {
         if (GetLastError() == ERROR_SUCCESS)
-            cli_errmsg("[tls] cw_revertfsredir() called without first calling cw_disablefsredir()\n");
+            cli_errmsg("[tls] %d cw_revertfsredir() called without first calling cw_disablefsredir()\n", GetCurrentThreadId());
         else
             cli_errmsg("[tls] cw_revertfsredir() TlsGetValue failed %d\n", GetLastError());
         return FALSE;
     }
 
+    if (*state == REDIR_COOKIE)
+    {
+        cli_errmsg("[tls] %d cw_revertfsredir() called multiple times\n", GetCurrentThreadId());
+        return FALSE;
+    }
+
     result = cw_helpers.k32.Wow64RevertWow64FsRedirection(state);
-    VirtualFree(state, sizeof(PVOID), MEM_RELEASE);
-    TlsSetValue(__fsredir_idx, NULL);
+    *state = REDIR_COOKIE;
     return result;
 }
