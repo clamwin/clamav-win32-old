@@ -175,4 +175,7 @@ LIBCLAMAV_API extern const char *CONFDIR_CLAMD;
 LIBCLAMAV_API extern const char *CONFDIR_FRESHCLAM;
 LIBCLAMAV_API extern const char *CONFDIR_MILTER;
 
+#define cli_to_utf8_maybe_alloc(x) (x)
+#define cli_strdup_to_utf8(x) strdup(x)
+
 #endif /* _PLATFORM_H */
