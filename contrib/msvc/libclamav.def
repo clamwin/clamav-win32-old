@@ -104,6 +104,7 @@ readdir                             @72 NONAME
 mkstemp                             @73 NONAME
 tcgetattr                           @74 NONAME
 tcsetattr                           @75 NONAME
+basename                            @76 NONAME
 
 ; gnulib @ 90
 gnulib_snprintf                     @90 NONAME

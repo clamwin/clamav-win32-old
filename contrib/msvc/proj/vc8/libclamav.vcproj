@@ -1395,6 +1395,10 @@
 					>
 				</File>
 				<File
+					RelativePath="..\..\include\libgen.h"
+					>
+				</File>
+				<File
 					RelativePath="..\..\include\ltdl.h"
 					>
 				</File>
@@ -1456,6 +1460,10 @@
 				</File>
 				<File
 					RelativePath="..\..\src\dllmain\jit-dynload.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\src\dllmain\libgen.c"
 					>
 				</File>
 				<File
