@@ -18,6 +18,7 @@
 
 # script deps: python-lxml
 
+import os
 import lxml.etree
 from lxml import objectify
 
@@ -61,7 +62,9 @@ def relpath(path):
     return rel.replace('/', '\\')
 
 def gen_vcproj(path, mksources):
-    proj = objectify.parse(open(path))
+    projfd = open(path)
+    header = projfd.readline()
+    proj = objectify.parse(projfd)
     root = proj.getroot()
     source_files = root.xpath('Files/Filter[@Name="Source Files"]')[0]
     files = source_files.xpath('File')
@@ -82,9 +85,12 @@ def gen_vcproj(path, mksources):
             newfile = newfile.replace('/', '\\')
             f = lxml.etree.fromstring('<File RelativePath="%s"></File>' % newfile)
             source_files.append(f)
-        out = open(path, 'w')
-        out.write('<?xml version="1.0" encoding="Windows-1252"?>\n')
+        out = open(path + '.new', 'w')
+        out.write(header)
         proj.write(out, pretty_print=True)
+        out.close()
+        os.unlink(path)
+        os.rename(path + '.new', path)
 
 def gen_mingwmake(path, sources):
     print 'Writing mingw makefile'

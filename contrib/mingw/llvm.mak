@@ -2,6 +2,7 @@
 # DO NOT EDIT! llvm-sync.py will overwrite this file
 
 libclamav_llvm_SOURCES=$(addprefix $(top)/libclamav/c++/,ClamBCRTChecks.cpp \
+	PointerTracking.cpp \
 	bytecode2llvm.cpp \
 	detect.cpp \
 	llvm/lib/Analysis/AliasAnalysis.cpp \
