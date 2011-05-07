@@ -28,6 +28,11 @@
 
 #define TCPIP_PARAMS "SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters"
 
+/* I can't believe the vs2010 preprocessor pastes a macro after a dot */
+#ifdef DnsRecordListFree
+#undef DnsRecordListFree
+#endif
+
 char *txtquery_dnsapi(const char *domain, unsigned int *ttl);
 char *txtquery_compat(const char *domain, unsigned int *ttl);
 
