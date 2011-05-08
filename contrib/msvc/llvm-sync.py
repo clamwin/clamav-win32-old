@@ -27,6 +27,7 @@ vcprefix = '../../' + llvm_base
 vcproj = 'proj/vc8/libclamav_llvm.vcproj'
 mingwmake = '../mingw/llvm.mak'
 projects = [ 'libclamavcxx', 'libllvmsystem', 'libllvmcodegen', 'libllvmx86codegen', 'libllvmjit' ]
+blacklist = [ 'llvm/config.status', 'PointerTracking.cpp' ]
 
 def skip_line(line):
     line = line.strip()
@@ -54,7 +55,18 @@ def parse_makefile_am(path):
         for source in values:
             if source.endswith('.h'): continue
             sources.add(source)
-    sources.remove('llvm/config.status')
+
+    map(sources.remove, blacklist)
+
+    # vc2005 makes wrong with object files when more sources share same basename
+    # so it needs to be excluded or renamed somehow, I had luck 'PointerTracking.cpp'
+    basenames = []
+    for source in sources:
+        source = source.split('/').pop()
+        if source in basenames:
+            raise Exception('Duplicate basename for %s' % source)
+        basenames.append(source)
+
     return sorted(sources)
 
 def relpath(path):
@@ -73,11 +85,10 @@ def gen_vcproj(path, mksources):
         s = f.attrib['RelativePath'].replace('\\', '/').replace(vcprefix, '')
         sources.append(s)
     sources.sort()
-    print 'Files in vcproj: %d - files in Makefile.am: %d' % (len(sources), len(mksources))
+    print 'Needed files: %d - in vcproj: %d' % (len(mksources), len(sources))
     if sources == mksources:
         print 'VC Project unchanged'
     else:
-        print 'Updating VC Project'
         source_files.clear()
         source_files.attrib['Name'] = "Source Files"
         for newfile in mksources:
@@ -91,6 +102,7 @@ def gen_vcproj(path, mksources):
         out.close()
         os.unlink(path)
         os.rename(path + '.new', path)
+        print 'VC Project was updated (%d sources now)' % len(mksources)
 
 def gen_mingwmake(path, sources):
     print 'Writing mingw makefile'

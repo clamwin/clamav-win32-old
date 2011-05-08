@@ -1078,10 +1078,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\..\libclamav\c++\PointerTracking.cpp"
-				>
-			</File>
-			<File
 				RelativePath="..\..\..\..\libclamav\c++\llvm\lib\CodeGen\PostRAHazardRecognizer.cpp"
 				>
 			</File>
