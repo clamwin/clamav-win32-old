@@ -368,6 +368,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\..\libclamav\arc4.c"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\..\libclamav\aspack.c"
 				>
 			</File>
@@ -907,6 +911,10 @@
 			>
 			<File
 				RelativePath="..\..\..\..\libclamav\7z.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\arc4.h"
 				>
 			</File>
 			<File
