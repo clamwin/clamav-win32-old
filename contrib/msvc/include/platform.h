@@ -165,6 +165,7 @@ typedef unsigned int in_addr_t;
 
 #ifdef _WINDLL
 #define LIBCLAMAV_API
+#undef OUT
 #else
 #define LIBCLAMAV_API __declspec(dllimport)
 #endif

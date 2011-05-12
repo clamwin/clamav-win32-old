@@ -22,6 +22,12 @@
 #define _OSDEPS_H_
 
 #include <platform.h>
+
+/* undefined in platform.h to avoid redefinition, but needed again for win32 specific stuff */
+#ifndef OUT
+#define OUT
+#endif
+
 #include <assert.h>
 #include <stdarg.h>
 #include <string.h>
