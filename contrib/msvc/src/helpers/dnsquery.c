@@ -429,8 +429,6 @@ char *dnsquery_dnsapi(const char *domain, int qtype, unsigned int *ttl)
             {
                 case DNS_TYPE_TEXT:
                 {
-                    /* int len = DNS_TEXT_RECORD_LENGTH(pRec->Data.TXT.dwStringCount); */ /* returns 12 instead of 22? */
-                    /* yes strlen is unsafe but win32 doesn't tell me the right length */
                     size_t len;
                     if ((pRec->wDataLength == 0) || (pRec->Data.TXT.dwStringCount == 0) || !pRec->Data.TXT.pStringArray[0])
                         break;
