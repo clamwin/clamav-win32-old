@@ -133,12 +133,12 @@ DWORD WINAPI CrashMiniDumpWriteDumpProc(LPVOID lpParam)
         lpMapAddress[i] ^= 42;
 
     FlushViewOfFile(lpMapAddress, 0);
-    UnmapViewOfFile(lpMapAddress);
 #endif
     fprintf(stderr, "[ClamWin] Crash Dump saved as %s, please report\n", dumpfile);
     retval = 0;
 
 cleanup:
+    if (lpMapAddress) UnmapViewOfFile(lpMapAddress);
     if (hMapFile) CloseHandle(hMapFile);
     if (hFile != INVALID_HANDLE_VALUE) CloseHandle(hFile);
     FreeLibrary(hDll);
