@@ -1265,7 +1265,7 @@ static int cli_scantar(int desc, cli_ctx *ctx, unsigned int posix)
     return ret;
 }
 
-static int cli_scanmschm(int desc, cli_ctx *ctx)
+static int cli_scanmschm(cli_ctx *ctx)
 {
 	int ret = CL_CLEAN, rc;
 	chm_metadata_t metadata;
@@ -1283,7 +1283,7 @@ static int cli_scanmschm(int desc, cli_ctx *ctx)
 	return CL_ETMPDIR;
     }
 
-    ret = cli_chm_open(desc, dir, &metadata, ctx);
+    ret = cli_chm_open(dir, &metadata, ctx);
     if (ret != CL_SUCCESS) {
 	if(!ctx->engine->keeptmp)
 	    cli_rmdirs(dir);
@@ -1945,7 +1945,7 @@ static int cli_scanraw(cli_ctx *ctx, cli_file_t type, uint8_t typercg, cli_file_
 			    ctx->container_type = CL_TYPE_NULSFT;
 			    ctx->container_size = map->len - fpt->offset; /* not precise */
 			    cli_dbgmsg("NSIS signature found at %u\n", (unsigned int) fpt->offset-4);
-			    nret = cli_scannulsft(map->fd, ctx, fpt->offset - 4);
+			    nret = cli_scannulsft(ctx, fpt->offset - 4);
 			}
 			break;
 
@@ -2292,7 +2292,7 @@ static int magic_scandesc(int desc, cli_ctx *ctx, cli_file_t type)
 	    ctx->container_type = CL_TYPE_NULSFT;
 	    ctx->container_size = sb.st_size;
 	    if(SCAN_ARCHIVE && (DCONF_ARCH & ARCH_CONF_NSIS))
-		ret = cli_scannulsft(desc, ctx, 0);
+		ret = cli_scannulsft(ctx, 0);
 	    break;
 
         case CL_TYPE_AUTOIT:
@@ -2362,7 +2362,7 @@ static int magic_scandesc(int desc, cli_ctx *ctx, cli_file_t type)
 	    ctx->container_type = CL_TYPE_MSCHM;
 	    ctx->container_size = sb.st_size;
 	    if(SCAN_ARCHIVE && (DCONF_ARCH & ARCH_CONF_CHM))
-		ret = cli_scanmschm(desc, ctx);
+		ret = cli_scanmschm(ctx);
 	    break;
 
 	case CL_TYPE_MSOLE2:
