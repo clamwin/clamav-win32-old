@@ -61,6 +61,7 @@ DIST_COMMON = README $(am__configure_deps) $(srcdir)/Makefile.am \
 	$(srcdir)/platform.h.in $(top_srcdir)/configure \
 	$(top_srcdir)/docs/man/clamav-milter.8.in \
 	$(top_srcdir)/docs/man/clamav-milter.conf.5.in \
+	$(top_srcdir)/docs/man/clambc.1.in \
 	$(top_srcdir)/docs/man/clamconf.1.in \
 	$(top_srcdir)/docs/man/clamd.8.in \
 	$(top_srcdir)/docs/man/clamd.conf.5.in \
@@ -93,10 +94,10 @@ mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = clamav-config.h
 CONFIG_CLEAN_FILES = clamav-config libclamav.pc platform.h \
 	docs/man/clamav-milter.8 docs/man/clamav-milter.conf.5 \
-	docs/man/clamconf.1 docs/man/clamd.8 docs/man/clamd.conf.5 \
-	docs/man/clamdscan.1 docs/man/clamscan.1 docs/man/freshclam.1 \
-	docs/man/freshclam.conf.5 docs/man/sigtool.1 \
-	docs/man/clamdtop.1
+	docs/man/clambc.1 docs/man/clamconf.1 docs/man/clamd.8 \
+	docs/man/clamd.conf.5 docs/man/clamdscan.1 docs/man/clamscan.1 \
+	docs/man/freshclam.1 docs/man/freshclam.conf.5 \
+	docs/man/sigtool.1 docs/man/clamdtop.1
 CONFIG_CLEAN_VPATH_FILES =
 am__vpath_adj_setup = srcdirstrip=`echo "$(srcdir)" | sed 's|.|.|g'`;
 am__vpath_adj = case $$p in \
@@ -209,6 +210,7 @@ CYGPATH_W = @CYGPATH_W@
 DBDIR = @DBDIR@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
+DLLTOOL = @DLLTOOL@
 DSYMUTIL = @DSYMUTIL@
 DUMPBIN = @DUMPBIN@
 ECHO_C = @ECHO_C@
@@ -257,6 +259,7 @@ LT_DLLOADERS = @LT_DLLOADERS@
 LT_DLPREOPEN = @LT_DLPREOPEN@
 MAINT = @MAINT@
 MAKEINFO = @MAKEINFO@
+MANIFEST_TOOL = @MANIFEST_TOOL@
 MKDIR_P = @MKDIR_P@
 NM = @NM@
 NMEDIT = @NMEDIT@
@@ -281,10 +284,13 @@ THREAD_LIBS = @THREAD_LIBS@
 TH_SAFE = @TH_SAFE@
 VERSION = @VERSION@
 VERSIONSCRIPTFLAG = @VERSIONSCRIPTFLAG@
+WERR_CFLAGS = @WERR_CFLAGS@
+WERR_CFLAGS_MILTER = @WERR_CFLAGS_MILTER@
 abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@
 abs_top_builddir = @abs_top_builddir@
 abs_top_srcdir = @abs_top_srcdir@
+ac_ct_AR = @ac_ct_AR@
 ac_ct_CC = @ac_ct_CC@
 ac_ct_DUMPBIN = @ac_ct_DUMPBIN@
 am__include = @am__include@
@@ -317,7 +323,6 @@ libdir = @libdir@
 libexecdir = @libexecdir@
 localedir = @localedir@
 localstatedir = @localstatedir@
-lt_ECHO = @lt_ECHO@
 ltdl_LIBOBJS = @ltdl_LIBOBJS@
 ltdl_LTLIBOBJS = @ltdl_LTLIBOBJS@
 mandir = @mandir@
@@ -416,6 +421,8 @@ platform.h: $(top_builddir)/config.status $(srcdir)/platform.h.in
 docs/man/clamav-milter.8: $(top_builddir)/config.status $(top_srcdir)/docs/man/clamav-milter.8.in
 	cd $(top_builddir) && $(SHELL) ./config.status $@
 docs/man/clamav-milter.conf.5: $(top_builddir)/config.status $(top_srcdir)/docs/man/clamav-milter.conf.5.in
+	cd $(top_builddir) && $(SHELL) ./config.status $@
+docs/man/clambc.1: $(top_builddir)/config.status $(top_srcdir)/docs/man/clambc.1.in
 	cd $(top_builddir) && $(SHELL) ./config.status $@
 docs/man/clamconf.1: $(top_builddir)/config.status $(top_srcdir)/docs/man/clamconf.1.in
 	cd $(top_builddir) && $(SHELL) ./config.status $@

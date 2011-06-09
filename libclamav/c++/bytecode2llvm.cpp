@@ -59,13 +59,29 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/IRBuilder.h"
 #include "llvm/Support/PrettyStackTrace.h"
+
+#ifdef LLVM29
+#include "llvm/Support/DataTypes.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Host.h"
+#include "llvm/Support/Memory.h"
+#include "llvm/Support/Mutex.h"
+#include "llvm/Support/Signals.h"
+#include "llvm/Support/Threading.h"
+#include "llvm/Support/ThreadLocal.h"
+#include "llvm/IntrinsicInst.h"
+#include "llvm/PassRegistry.h"
+#else
 #include "llvm/System/DataTypes.h"
 #include "llvm/System/Host.h"
 #include "llvm/System/Memory.h"
 #include "llvm/System/Mutex.h"
 #include "llvm/System/Signals.h"
-#include "llvm/Support/Timer.h"
 #include "llvm/System/Threading.h"
+#include "llvm/System/ThreadLocal.h"
+#endif
+
+#include "llvm/Support/Timer.h"
 
 extern "C" {
 void LLVMInitializeX86AsmPrinter();
@@ -78,7 +94,6 @@ void LLVMInitializePowerPCAsmPrinter();
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
-#include "llvm/System/ThreadLocal.h"
 #include <cstdlib>
 #include <csetjmp>
 #include <new>
@@ -138,6 +153,11 @@ struct cli_bcengine {
 };
 
 extern "C" BCAPI uint8_t cli_debug_flag;
+#ifdef LLVM29
+namespace llvm {
+    void initializeRuntimeLimitsPass(PassRegistry&);
+};
+#endif
 namespace {
 
 #ifndef LLVM28
@@ -152,6 +172,10 @@ namespace {
 #define DEFINEPASS(passname) passname() : FunctionPass(ID)
 #else
 #define DEFINEPASS(passname) passname() : FunctionPass(&ID)
+#endif
+
+#ifdef LLVM29
+#define NORETURN LLVM_ATTRIBUTE_NORETURN
 #endif
 
 static sys::ThreadLocal<const jmp_buf> ExceptionReturn;
@@ -546,7 +570,12 @@ class RuntimeLimits : public FunctionPass {
 
 public:
     static char ID;
-    DEFINEPASS(RuntimeLimits) {}
+    DEFINEPASS(RuntimeLimits) {
+#ifdef LLVM29
+	PassRegistry &Registry = *PassRegistry::getPassRegistry();
+	initializeRuntimeLimitsPass(Registry);
+#endif
+    }
 
     virtual bool runOnFunction(Function &F) {
 	BBSetTy BackedgeTargets;
@@ -822,7 +851,8 @@ private:
 		    ostr << operand << " " ;
 		    V->print(ostr);
 		    Ty->print(ostr);
-		    cli_dbgmsg_internal("[Bytecode JIT]: %s\n", ostr.str().c_str());
+		    M->dump();
+		    cli_dbgmsg_internal("[Bytecode JIT]: operand %d: %s\n", operand,ostr.str().c_str());
 		}
 		llvm_report_error("(libclamav) Type mismatch converting operand");
 	    }
@@ -1063,12 +1093,18 @@ public:
 	    // Have an alloca -> some instruction uses its address otherwise
 	    // mem2reg would have converted it to an SSA register.
 	    // Enable stack protector for this function.
+#ifndef LLVM29
+	    // LLVM 2.9 has broken SSP, it does a 'mov 0x28, $rax', which tries
+	    // to read from the address 0x28 and crashes
 	    F->addFnAttr(Attribute::StackProtectReq);
+#endif
 	}
 	// always add stackprotect attribute (bb #2239), so we know this
 	// function was verified. If there is no alloca it won't actually add
 	// stack protector in emitted code so this won't slow down the app.
+#ifndef LLVM29
 	F->addFnAttr(Attribute::StackProtect);
+#endif
     }
 
     Value *GEPOperand(Value *V) {
@@ -1850,29 +1886,125 @@ static void addFunctionProtos(struct CommonFunctions *CF, ExecutionEngine *EE, M
 }
 
 }
+#ifdef LLVM29
+INITIALIZE_PASS_BEGIN(RuntimeLimits, "rl", "Runtime Limits", false, false)
+INITIALIZE_PASS_DEPENDENCY(LoopInfo)
+INITIALIZE_PASS_DEPENDENCY(ScalarEvolution)
+INITIALIZE_PASS_DEPENDENCY(DominatorTree)
+INITIALIZE_PASS_END(RuntimeLimits, "rl" ,"Runtime Limits", false, false)
+#endif
 
-struct bc_watchdog {
+static pthread_mutex_t watchdog_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t watchdog_cond = PTHREAD_COND_INITIALIZER;
+static int watchdog_running = 0;
+
+struct watchdog_item {
     volatile uint8_t* timeout;
-    struct timespec * abstimeout;
-    pthread_mutex_t   mutex;
-    pthread_cond_t    cond;
-    int finished;
+    struct timespec abstimeout;
+    struct watchdog_item *next;
 };
 
+static struct watchdog_item* watchdog_head = NULL;
+static struct watchdog_item* watchdog_tail = NULL;
+
+#define WATCHDOG_IDLE 10
 static void *bytecode_watchdog(void *arg)
 {
-    int ret = 0;
-    struct bc_watchdog *w = (struct bc_watchdog*)arg;
-    pthread_mutex_lock(&w->mutex);
-    while (!w->finished && ret != ETIMEDOUT) {
-	ret = pthread_cond_timedwait(&w->cond, &w->mutex, w->abstimeout);
-    }
-    pthread_mutex_unlock(&w->mutex);
-    if (ret == ETIMEDOUT) {
-	*w->timeout = 1;
+    struct timeval tv;
+    struct timespec out;
+
+    pthread_mutex_lock(&watchdog_mutex);
+    watchdog_running = 1;
+    if (cli_debug_flag)
+	cli_dbgmsg_internal("bytecode watchdog is running\n");
+    do {
+	struct watchdog_item *item;
+	gettimeofday(&tv, NULL);
+	out.tv_sec = tv.tv_sec + WATCHDOG_IDLE;
+	out.tv_nsec = tv.tv_usec*1000;
+	/* wait for some work, up to WATCHDOG_IDLE time */
+	while (watchdog_head == NULL &&
+	       pthread_cond_timedwait(&watchdog_cond, &watchdog_mutex,
+				      &out) != ETIMEDOUT) {}
+	if (watchdog_head == NULL)
+	    break;
+	/* wait till timeout is reached on this item */
+	item = watchdog_head;
+	while (item == watchdog_head &&
+	       pthread_cond_timedwait(&watchdog_cond, &watchdog_mutex,
+				      &item->abstimeout) != ETIMEDOUT) {}
+	if (item != watchdog_head)
+	    continue;/* got removed meanwhile */
+	/* timeout reached, signal it to bytecode */
+	*item->timeout = 1;
 	cli_warnmsg("[Bytecode JIT]: Bytecode run timed out, timeout flag set\n");
-    }
+	watchdog_head = item->next;
+	if (!watchdog_head)
+	    watchdog_tail = NULL;
+    } while (1);
+    watchdog_running = 0;
+    if (cli_debug_flag)
+	cli_dbgmsg_internal("bytecode watchdog quiting\n");
+    pthread_mutex_unlock(&watchdog_mutex);
     return NULL;
+}
+
+extern "C" const char *cli_strerror(int errnum, char* buf, size_t len);
+static void watchdog_disarm(struct watchdog_item *item)
+{
+    struct watchdog_item *q, *p = NULL;
+    if (!item)
+	return;
+    pthread_mutex_lock(&watchdog_mutex);
+    for (q=watchdog_head;q && q != item;p = q, q = q->next) {}
+    if (q == item) {
+	if (p)
+	    p->next = q->next;
+	if (q == watchdog_head)
+	    watchdog_head = q->next;
+	if (q == watchdog_tail)
+	    watchdog_tail = p;
+    }
+    pthread_mutex_unlock(&watchdog_mutex);
+}
+
+static int watchdog_arm(struct watchdog_item *item, int ms, volatile uint8_t *timeout)
+{
+    int rc = 0;
+    struct timeval tv0;
+
+    *timeout = 0;
+    item->timeout = timeout;
+    item->next = NULL;
+
+    gettimeofday(&tv0, NULL);
+    tv0.tv_usec += ms * 1000;
+    item->abstimeout.tv_sec = tv0.tv_sec + tv0.tv_usec/1000000;
+    item->abstimeout.tv_nsec = (tv0.tv_usec%1000000)*1000;
+
+    pthread_mutex_lock(&watchdog_mutex);
+    if (!watchdog_running) {
+	pthread_t thread;
+	pthread_attr_t attr;
+	pthread_attr_init(&attr);
+	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+
+	if ((rc = pthread_create(&thread, &attr, bytecode_watchdog, NULL))) {
+	    char buf[256];
+	    cli_errmsg("(watchdog) pthread_create failed: %s\n", cli_strerror(rc, buf, sizeof(buf)));
+	}
+	pthread_attr_destroy(&attr);
+    }
+    if (!rc) {
+	if (watchdog_tail)
+	    watchdog_tail->next = item;
+	watchdog_tail = item;
+	if (!watchdog_head)
+	    watchdog_head = item;
+    }
+    pthread_cond_signal(&watchdog_cond);
+    pthread_mutex_unlock(&watchdog_mutex);
+    return rc;
 }
 
 static int bytecode_execute(intptr_t code, struct cli_bc_ctx *ctx)
@@ -1890,15 +2022,12 @@ static int bytecode_execute(intptr_t code, struct cli_bc_ctx *ctx)
     return CL_EBYTECODE;
 }
 
-extern "C" const char *cli_strerror(int errnum, char* buf, size_t len);
 int cli_vm_execute_jit(const struct cli_all_bc *bcs, struct cli_bc_ctx *ctx,
 		       const struct cli_bc_func *func)
 {
-    char buf[1024];
     int ret;
-    pthread_t thread;
     struct timeval tv0, tv1;
-    uint32_t timeoutus;
+    struct watchdog_item witem;
     // no locks needed here, since LLVM automatically acquires a JIT lock
     // if needed.
     void *code = bcs->engine->compiledFunctions[func];
@@ -1909,40 +2038,20 @@ int cli_vm_execute_jit(const struct cli_all_bc *bcs, struct cli_bc_ctx *ctx,
 			func->numArgs);
 	return CL_EBYTECODE;
     }
-    gettimeofday(&tv0, NULL);
-    struct timespec abstime;
-
-    timeoutus = (ctx->bytecode_timeout%1000)*1000 + tv0.tv_usec;
-    abstime.tv_sec = tv0.tv_sec + ctx->bytecode_timeout/1000 + timeoutus/1000000;
-    abstime.tv_nsec = 1000*(timeoutus%1000000);
-    ctx->timeout = 0;
-
-    struct bc_watchdog w = {
-	&ctx->timeout,
-	&abstime,
-	PTHREAD_MUTEX_INITIALIZER,
-	PTHREAD_COND_INITIALIZER,
-	0
-    };
+    if (cli_debug_flag)
+	gettimeofday(&tv0, NULL);
 
     if (ctx->bytecode_timeout) {
 	/* only spawn if timeout is set.
 	 * we don't set timeout for selfcheck (see bb #2235) */
-	if ((ret = pthread_create(&thread, NULL, bytecode_watchdog, &w))) {
-	    cli_warnmsg("[Bytecode JIT]: Bytecode: failed to create new thread :%s!\n",
-			cli_strerror(ret, buf, sizeof(buf)));
+	if (watchdog_arm(&witem, ctx->bytecode_timeout, &ctx->timeout))
 	    return CL_EBYTECODE;
-	}
     }
 
     ret = bytecode_execute((intptr_t)code, ctx);
-    pthread_mutex_lock(&w.mutex);
-    w.finished = 1;
-    pthread_cond_signal(&w.cond);
-    pthread_mutex_unlock(&w.mutex);
-    if (ctx->bytecode_timeout) {
-	pthread_join(thread, NULL);
-    }
+
+    if (ctx->bytecode_timeout)
+	watchdog_disarm(&witem);
 
     if (cli_debug_flag) {
 	long diff;
@@ -2133,7 +2242,9 @@ int cli_bytecode_prepare_jit(struct cli_all_bc *bcs)
 	PM.add(createCFGSimplificationPass());
 	PM.add(createGlobalOptimizerPass());
 	PM.add(createConstantMergePass());
-	PM.add(new RuntimeLimits());
+
+	RuntimeLimits *RL = new RuntimeLimits();
+	PM.add(RL);
 	TimerWrapper pmTimer2("Transform passes");
 	pmTimer2.startTimer();
 	PM.run(*M);
@@ -2281,7 +2392,17 @@ void cli_bytecode_debug_printsrc(const struct cli_bc_ctx *ctx)
     if (I == LinePrinter.files.end()) {
 	lines = new linesTy;
 	std::string ErrorMessage;
+#ifdef LLVM29
+	OwningPtr<MemoryBuffer> File;
+	error_code ec = MemoryBuffer::getFile(path, File);
+	if (ec) {
+	    ErrorMessage = ec.message();
+	    lines->buffer = 0;
+	} else
+	    lines->buffer = File.take();
+#else
 	lines->buffer = MemoryBuffer::getFile(path, &ErrorMessage);
+#endif
 	if (!lines->buffer) {
 	    errs() << "Unable to open file '" << path << "'\n";
 	    return ;
@@ -2354,6 +2475,117 @@ void stop(const char *msg, llvm::Function* F, llvm::Instruction* I)
     }
 }
 }
+
+#ifdef LLVM29
+static Value *findDbgGlobalDeclare(GlobalVariable *V) {
+  const Module *M = V->getParent();
+  NamedMDNode *NMD = M->getNamedMetadata("llvm.dbg.gv");
+  if (!NMD)
+    return 0;
+
+  for (unsigned i = 0, e = NMD->getNumOperands(); i != e; ++i) {
+    DIDescriptor DIG(cast<MDNode>(NMD->getOperand(i)));
+    if (!DIG.isGlobalVariable())
+      continue;
+    if (DIGlobalVariable(DIG).getGlobal() == V)
+      return DIG;
+  }
+  return 0;
+}
+
+/// Find the debug info descriptor corresponding to this function.
+static Value *findDbgSubprogramDeclare(Function *V) {
+  const Module *M = V->getParent();
+  NamedMDNode *NMD = M->getNamedMetadata("llvm.dbg.sp");
+  if (!NMD)
+    return 0;
+
+  for (unsigned i = 0, e = NMD->getNumOperands(); i != e; ++i) {
+    DIDescriptor DIG(cast<MDNode>(NMD->getOperand(i)));
+    if (!DIG.isSubprogram())
+      continue;
+    if (DISubprogram(DIG).getFunction() == V)
+      return DIG;
+  }
+  return 0;
+}
+
+/// Finds the llvm.dbg.declare intrinsic corresponding to this value if any.
+/// It looks through pointer casts too.
+static const DbgDeclareInst *findDbgDeclare(const Value *V) {
+  V = V->stripPointerCasts();
+
+  if (!isa<Instruction>(V) && !isa<Argument>(V))
+    return 0;
+
+  const Function *F = NULL;
+  if (const Instruction *I = dyn_cast<Instruction>(V))
+    F = I->getParent()->getParent();
+  else if (const Argument *A = dyn_cast<Argument>(V))
+    F = A->getParent();
+
+  for (Function::const_iterator FI = F->begin(), FE = F->end(); FI != FE; ++FI)
+    for (BasicBlock::const_iterator BI = (*FI).begin(), BE = (*FI).end();
+         BI != BE; ++BI)
+      if (const DbgDeclareInst *DDI = dyn_cast<DbgDeclareInst>(BI))
+        if (DDI->getAddress() == V)
+          return DDI;
+
+  return 0;
+}
+static bool getLocationInfo(const Value *V, std::string &DisplayName,
+                            std::string &Type, unsigned &LineNo,
+                            std::string &File, std::string &Dir) {
+  DICompileUnit Unit;
+  DIType TypeD;
+
+  if (GlobalVariable *GV = dyn_cast<GlobalVariable>(const_cast<Value*>(V))) {
+    Value *DIGV = findDbgGlobalDeclare(GV);
+    if (!DIGV) return false;
+    DIGlobalVariable Var(cast<MDNode>(DIGV));
+
+    StringRef D = Var.getDisplayName();
+    if (!D.empty())
+      DisplayName = D;
+    LineNo = Var.getLineNumber();
+    Unit = Var.getCompileUnit();
+    TypeD = Var.getType();
+  } else if (Function *F = dyn_cast<Function>(const_cast<Value*>(V))){
+    Value *DIF = findDbgSubprogramDeclare(F);
+    if (!DIF) return false;
+    DISubprogram Var(cast<MDNode>(DIF));
+
+    StringRef D = Var.getDisplayName();
+    if (!D.empty())
+      DisplayName = D;
+    LineNo = Var.getLineNumber();
+    Unit = Var.getCompileUnit();
+    TypeD = Var.getType();
+  } else {
+    const DbgDeclareInst *DDI = findDbgDeclare(V);
+    if (!DDI) return false;
+    DIVariable Var(cast<MDNode>(DDI->getVariable()));
+
+    StringRef D = Var.getName();
+    if (!D.empty())
+      DisplayName = D;
+    LineNo = Var.getLineNumber();
+    Unit = Var.getCompileUnit();
+    TypeD = Var.getType();
+  }
+
+  StringRef T = TypeD.getName();
+  if (!T.empty())
+    Type = T;
+  StringRef F = Unit.getFilename();
+  if (!F.empty())
+    File = F;
+  StringRef D = Unit.getDirectory();
+  if (!D.empty())
+    Dir = D;
+  return true;
+}
+#endif
 
 void printValue(llvm::Value *V, bool a, bool b) {
     std::string DisplayName;

@@ -59,8 +59,8 @@ AC_ARG_WITH([system-llvm], AC_HELP_STRING([-with-system-llvm],
   *)
     llvmconfig="$withval"
     llvmver=`$llvmconfig --version`
-    if test "$llvmver" != "2.8" -a "$llvmver" != "2.8svn" -a "$llvmver" != "2.8rc"; then
-	AC_MSG_ERROR([LLVM 2.8 or 2.8svn required, but "$llvmver" found])
+    if test "$llvmver" != "2.9"; then
+	AC_MSG_ERROR([LLVM 2.9 required, but "$llvmver" found])
     fi
     AC_SUBST(LLVMCONFIG_CXXFLAGS, [`$llvmconfig --cxxflags`])
     AC_SUBST(LLVMCONFIG_LDFLAGS, [`$llvmconfig --ldflags`])
@@ -148,7 +148,7 @@ dnl bb #1971 - doesn't work with older libstdc++ version at link/runtime
 AC_MSG_CHECKING([for working libstdc++])
 AC_LANG_PUSH([C++])
 AC_RUN_IFELSE(
-    AC_LANG_SOURCE([[
+    [AC_LANG_SOURCE([
 	#include <iostream>
 	int main()
 	{
@@ -156,10 +156,10 @@ AC_RUN_IFELSE(
 	    std::cout << "test";
 	    return 0;
     }
-    ]]),[AC_MSG_RESULT([yes])],
+    ])],[AC_MSG_RESULT([yes])],
     [AC_MSG_FAILURE([failed])],
 [AC_LINK_IFELSE(
-    AC_LANG_SOURCE([[
+    [AC_LANG_SOURCE([
 	#include <iostream>
 	int main()
 	{
@@ -167,7 +167,7 @@ AC_RUN_IFELSE(
 	    std::cout << "test";
 	    return 0;
 	}
-    ]]), [AC_MSG_RESULT([yes])],
+    ])], [AC_MSG_RESULT([yes])],
     [AC_MSG_FAILURE([failed])]
 )])
 AC_LANG_POP([C++])

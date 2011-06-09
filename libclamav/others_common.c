@@ -96,7 +96,9 @@ void cli_logg_unsetup(void)
 
 static inline void *cli_getctx(void)
 {
-    cli_ctx *ctx = pthread_getspecific(cli_ctx_tls_key);
+    cli_ctx *ctx;
+    pthread_once(&cli_ctx_tls_key_once, cli_ctx_tls_key_alloc);
+    ctx = pthread_getspecific(cli_ctx_tls_key);
     return ctx ? ctx->cb_ctx : NULL;
 }
 #else

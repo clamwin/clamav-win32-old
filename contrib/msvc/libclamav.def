@@ -104,6 +104,7 @@ readdir                             @72 NONAME
 mkstemp                             @73 NONAME
 tcgetattr                           @74 NONAME
 tcsetattr                           @75 NONAME
+basename                            @76 NONAME
 
 ; gnulib @ 90
 gnulib_snprintf                     @90 NONAME
@@ -169,12 +170,6 @@ sha256_update                       @156 NONAME
 uniq_get                            @157 NONAME
 fmap                                @158 NONAME
 funmap                              @159 NONAME
-
-; shared/misc
-print_version                       @160 NONAME
-freshdbdir                          @161 NONAME
-match_regex                         @162 NONAME
-check_flevel                        @163 NONAME
 
 ; optparser
 optget                              @170 NONAME

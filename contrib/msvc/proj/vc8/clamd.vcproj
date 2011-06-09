@@ -444,15 +444,7 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\..\shared\clamdcom.h"
-				>
-			</File>
-			<File
 				RelativePath="..\..\..\..\shared\getopt.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\shared\getopt.h"
 				>
 			</File>
 			<File
@@ -460,19 +452,7 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\..\shared\misc.h"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\shared\optparser.h"
-				>
-			</File>
-			<File
 				RelativePath="..\..\..\..\shared\output.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\shared\output.h"
 				>
 			</File>
 		</Filter>

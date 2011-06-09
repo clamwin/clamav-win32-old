@@ -233,7 +233,6 @@ int command(client_conn_t *conn, int *virus)
 	    break;
 	case COMMAND_MULTISCAN: {
 	    int multiscan, max, alive;
-	    struct stat sb;
 
 	    /* use MULTISCAN only for directories (bb #1869) */
 	    if (stat(conn->filename, &sb) == 0 &&
@@ -290,7 +289,7 @@ int command(client_conn_t *conn, int *virus)
 	    if (conn->scanfd == -1)
 		conn_reply_error(conn, "FILDES: didn't receive file descriptor.");
 	    else {
-		ret = scanfd(conn->scanfd, conn, NULL, engine, options, opts, desc, 0);
+		ret = scanfd(conn, NULL, engine, options, opts, desc, 0);
 		if (ret == CL_VIRUS) {
 		    *virus = 1;
 		} else if (ret == CL_EMEM) {
@@ -328,7 +327,7 @@ int command(client_conn_t *conn, int *virus)
 	    return 0;
 	case COMMAND_INSTREAMSCAN:
 	    thrmgr_setactivetask(NULL, "INSTREAM");
-	    ret = scanfd(conn->scanfd, conn, NULL, engine, options, opts, desc, 1);
+	    ret = scanfd(conn, NULL, engine, options, opts, desc, 1);
 	    if (ret == CL_VIRUS) {
 		*virus = 1;
 	    } else if (ret == CL_EMEM) {
@@ -421,7 +420,7 @@ static int dispatch_command(client_conn_t *conn, enum commands cmd, const char *
 	case COMMAND_SCAN:
 	case COMMAND_CONTSCAN:
 	case COMMAND_MULTISCAN:
-	    dup_conn->filename = strdup(argument);
+	    dup_conn->filename = cli_strdup_to_utf8(argument);
 	    if (!dup_conn->filename) {
 		logg("!Failed to allocate memory for filename\n");
 		ret = -1;

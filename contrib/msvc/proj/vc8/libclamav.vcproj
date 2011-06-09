@@ -368,6 +368,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\..\libclamav\arc4.c"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\..\libclamav\aspack.c"
 				>
 			</File>
@@ -496,6 +500,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\..\libclamav\jpeg.c"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\..\libclamav\line.c"
 				>
 			</File>
@@ -596,6 +604,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\..\libclamav\png.c"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\..\libclamav\qsort.c"
 				>
 			</File>
@@ -645,6 +657,10 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\libclamav\str.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\swf.c"
 				>
 			</File>
 			<File
@@ -898,6 +914,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\..\libclamav\arc4.h"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\..\libclamav\aspack.h"
 				>
 			</File>
@@ -1098,6 +1118,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\..\libclamav\jpeg.h"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\..\libclamav\line.h"
 				>
 			</File>
@@ -1198,6 +1222,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\..\libclamav\png.h"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\..\libclamav\readdb.h"
 				>
 			</File>
@@ -1243,6 +1271,10 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\libclamav\str.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\swf.h"
 				>
 			</File>
 			<File
@@ -1371,6 +1403,10 @@
 					>
 				</File>
 				<File
+					RelativePath="..\..\include\libgen.h"
+					>
+				</File>
+				<File
 					RelativePath="..\..\include\ltdl.h"
 					>
 				</File>
@@ -1432,6 +1468,10 @@
 				</File>
 				<File
 					RelativePath="..\..\src\dllmain\jit-dynload.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\src\dllmain\libgen.c"
 					>
 				</File>
 				<File

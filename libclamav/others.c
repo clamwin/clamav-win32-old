@@ -212,6 +212,8 @@ const char *cl_strerror(int clerror)
 	    return "Can't verify database integrity";
 	case CL_EUNPACK:
 	    return "Can't unpack some data";
+	case CL_EPARSE: /* like CL_EFORMAT but reported outside magicscan() */
+	    return "Can't parse data";
 
 	/* I/O and memory errors */
 	case CL_EOPEN:
@@ -240,6 +242,8 @@ const char *cl_strerror(int clerror)
 	    return "Can't map file into memory";
 	case CL_EMEM:
 	    return "Can't allocate memory";
+	case CL_ETIMEOUT:
+	    return "Time limit reached";
 	/* internal (needed for debug messages) */
 	case CL_EMAXREC:
 	    return "CL_EMAXREC";
@@ -269,19 +273,6 @@ int cl_init(unsigned int initoptions)
         int rc;
 	struct timeval tv;
 	unsigned int pid = (unsigned int) getpid();
-
-	const char *zlibver = zlibVersion();
-	int cmp = cli_bcapi_version_compare(NULL, zlibver, strlen(zlibver),
-					    ZLIB_VERSION, strlen(ZLIB_VERSION));
-	if (cmp) {
-	    cli_dbgmsg("zlib version at runtime: %s, compile time: %s\n",
-		       zlibver, ZLIB_VERSION);
-	}
-	if (cmp < 0) {
-	    cli_warnmsg("zlib version at runtime is older than compile time: %s < %s\n",
-			zlibver, ZLIB_VERSION);
-	    cli_infomsg(NULL, "Make sure zlib is built as shared library, and that the new zlib library is installed in the proper place\n");
-	}
 
     {
 	unrar_main_header_t x;
@@ -419,12 +410,6 @@ int cl_engine_set_num(struct cl_engine *engine, enum cl_engine_field field, long
 	    engine->keeptmp = num;
 	    break;
 	case CL_ENGINE_BYTECODE_SECURITY:
-#ifndef CL_BCUNSIGNED
-	    if (num == CL_BYTECODE_TRUST_ALL) {
-		cli_errmsg("cl_engine_set_num: CL_BYTECODE_TRUST_ALL is only supported when ClamAV is built with ./configure --enable-unsigned-bytecode\n");
-		return CL_EARG;
-	    }
-#endif
 	    if (engine->dboptions & CL_DB_COMPILED) {
 		cli_errmsg("cl_engine_set_num: CL_ENGINE_BYTECODE_SECURITY cannot be set after engine was compiled\n");
 		return CL_EARG;
@@ -960,18 +945,18 @@ int cli_dumpscan(int fd, off_t offset, size_t size, cli_ctx *ctx)
 	if((uint32_t) (sum + bread) >= size) {
 	    if(write(newfd, buff, size - sum) == -1) {
 		cli_errmsg("cli_dumpscan: Can't write to %s\n", name);
+		close(newfd);
 		cli_unlink(name);
 		free(name);
-		close(newfd);
 		return CL_EWRITE;
 	    }
 	    break;
 	} else {
 	    if(write(newfd, buff, bread) == -1) {
 		cli_errmsg("cli_dumpscan: Can't write to %s\n", name);
+		close(newfd);
 		cli_unlink(name);
 		free(name);
-		close(newfd);
 		return CL_EWRITE;
 	    }
 	}

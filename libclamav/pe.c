@@ -210,7 +210,7 @@ struct vinfo_list {
     unsigned int count;
 };
 
-int versioninfo_cb(void *opaque, uint32_t type, uint32_t name, uint32_t lang, uint32_t rva) {
+static int versioninfo_cb(void *opaque, uint32_t type, uint32_t name, uint32_t lang, uint32_t rva) {
     struct vinfo_list *vlist = (struct vinfo_list *)opaque;
 
     cli_dbgmsg("versioninfo_cb: type: %x, name: %x, lang: %x, rva: %x\n", type, name, lang, rva);
@@ -518,7 +518,7 @@ int cli_scanpe(cli_ctx *ctx)
 	uint32_t epsize;
 	ssize_t bytes, at;
 	unsigned int i, found, upx_success = 0, min = 0, max = 0, err, overlays = 0;
-	unsigned int ssize = 0, dsize = 0, dll = 0, pe_plus = 0;
+	unsigned int ssize = 0, dsize = 0, dll = 0, pe_plus = 0, corrupted_cur;
 	int (*upxfn)(char *, uint32_t, char *, uint32_t *, uint32_t, uint32_t, uint32_t) = NULL;
 	char *src = NULL, *dest = NULL;
 	int ndesc, ret = CL_CLEAN, upack = 0, native=0;
@@ -1326,7 +1326,7 @@ int cli_scanpe(cli_ctx *ctx)
 	    if(dirs[2].Size) {
 		    struct swizz_stats *stats = cli_calloc(1, sizeof(*stats));
 		    unsigned int m = 1000;
-		    int ret = CL_CLEAN;
+		    ret = CL_CLEAN;
 
 		    if (!stats)
 			    ret = CL_EMEM;
@@ -1346,6 +1346,7 @@ int cli_scanpe(cli_ctx *ctx)
 
 
     /* !!!!!!!!!!!!!!    PACKERS START HERE    !!!!!!!!!!!!!! */
+    corrupted_cur = ctx->corrupted_input;
     ctx->corrupted_input = 2; /* caller will reset on return */
 
 
@@ -2211,11 +2212,11 @@ int cli_scanpe(cli_ctx *ctx)
 
     while (DCONF & PE_CONF_NSPACK) {
 	uint32_t eprva = vep;
-	uint32_t start_of_stuff, ssize, dsize, rep = ep;
+	uint32_t start_of_stuff, rep = ep;
 	unsigned int nowinldr;
 	char *nbuff;
-	char *src=epbuff, *dest;
 
+	src=epbuff;
 	if (*epbuff=='\xe9') { /* bitched headers */
 	    eprva = cli_readint32(epbuff+1)+vep+5;
 	    if (!(rep = cli_rawaddr(eprva, exe_sections, nsections, &err, fsize, hdr_size)) && err) break;
@@ -2271,6 +2272,12 @@ int cli_scanpe(cli_ctx *ctx)
     }
 
     /* to be continued ... */
+
+
+
+
+    /* !!!!!!!!!!!!!!    PACKERS END HERE    !!!!!!!!!!!!!! */
+    ctx->corrupted_input = corrupted_cur;
 
     /* Bytecode BC_PE_UNPACKER hook */
     bc_ctx = cli_bytecode_context_alloc();
@@ -2466,7 +2473,6 @@ int cli_peheader(fmap_t *map, struct cli_exe_info *peinfo)
 	struct vinfo_list vlist;
 	uint8_t *vptr, *baseptr;
     	uint32_t rva, res_sz;
-	unsigned int i;
 
 	memset(&vlist, 0, sizeof(vlist));
     	findres(0x10, 0xffffffff, EC32(dirs[2].VirtualAddress), map, peinfo->section, peinfo->nsections, hdr_size, versioninfo_cb, &vlist);

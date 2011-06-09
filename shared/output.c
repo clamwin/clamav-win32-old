@@ -52,6 +52,7 @@
 
 #include "output.h"
 #include "libclamav/others.h"
+#include "libclamav/str.h"
 
 #ifdef CL_NOTHREADS
 #undef CL_THREAD_SAFE
@@ -367,8 +368,14 @@ int logg(const char *str, ...)
 	}
     }
 
+    if(logg_foreground) {
+	if(buff[0] != '#')
+	    mprintf("%s", buff);
+    }
+
 #if defined(USE_SYSLOG) && !defined(C_AIX)
     if(logg_syslog) {
+	cli_chomp(buff);
 	if(buff[0] == '!') {
 	    syslog(LOG_ERR, "%s", buff + 1);
 	} else if(buff[0] == '^') {
@@ -382,11 +389,6 @@ int logg(const char *str, ...)
 
     }
 #endif
-
-    if(logg_foreground) {
-	if(buff[0] != '#')
-	    mprintf("%s", buff);
-    }
 
 #ifdef CL_THREAD_SAFE
     pthread_mutex_unlock(&logg_mutex);
@@ -443,6 +445,34 @@ void mprintf(const char *str, ...)
     va_end(args);
     buff[len - 1] = 0;
 
+#ifdef NOCLAMWIN
+    do {
+	int tmplen = len + 1;
+	wchar_t *tmpw = malloc(tmplen*sizeof(wchar_t));
+	char *nubuff;
+	if(!tmpw) break;
+	if(!MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, buff, -1, tmpw, tmplen)) {
+	    free(tmpw);
+	    break;
+	}
+	/* FIXME CHECK IT'S REALLY UTF8 */
+	nubuff = (char *)malloc(tmplen);
+	if(!nubuff) {
+	    free(tmpw);
+	    break;
+	}
+	if(!WideCharToMultiByte(CP_OEMCP, 0, tmpw, -1, nubuff, tmplen, NULL, NULL)) {
+	    free(nubuff);
+	    free(tmpw);
+	    break;
+	}
+	free(tmpw);
+	if(len > sizeof(buffer))
+	    free(abuffer);
+	abuffer = buff = nubuff;
+	len = sizeof(buffer) + 1;
+    } while(0);
+#endif
     if(buff[0] == '!') {
        if(!mprintf_stdout)
            fd = stderr;

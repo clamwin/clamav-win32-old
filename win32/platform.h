@@ -22,6 +22,7 @@ extern "C"
 #include "w32_errno.h"
 #include "w32_stat.h"
 #include "random.h"
+#include "utf8_util.h"
 
 #ifdef __cplusplus
 }
@@ -65,6 +66,8 @@ char *strptime(const char *s, const char *format, struct tm *tm);
 #define gai_strerror w32_strerror
 #define freeaddrinfo w32_freeaddrinfo
 #define inet_ntop w32_inet_ntop
+#define inet_ntoa w32_inet_ntoa
+#define getpeername w32_getpeername
 #define gethostbyname w32_gethostbyname
 #define select w32_select
 #define poll w32_poll

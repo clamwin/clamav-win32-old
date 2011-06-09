@@ -43,6 +43,7 @@
 #include "regex/regex.h"
 #include "bytecode.h"
 #include "bytecode_api.h"
+#include "events.h"
 
 /*
  * CL_FLEVEL is the signature f-level specific to the current code and
@@ -53,7 +54,7 @@
  * in re-enabling affected modules.
  */
 
-#define CL_FLEVEL 60
+#define CL_FLEVEL 62
 #define CL_FLEVEL_DCONF	CL_FLEVEL
 #define CL_FLEVEL_SIGTOOL CL_FLEVEL
 
@@ -118,6 +119,7 @@ typedef struct cli_ctx_tag {
     unsigned int scannedfiles;
     unsigned int found_possibly_unwanted;
     unsigned int corrupted_input;
+    unsigned int img_validate;
     cli_file_t container_type; /* FIXME: to be made into a stack or array - see bb#1579 & bb#1293 */
     size_t container_size;
     unsigned char handlertype_hash[16];
@@ -125,6 +127,7 @@ typedef struct cli_ctx_tag {
     fmap_t **fmap;
     bitset_t* hook_lsig_matches;
     void *cb_ctx;
+    cli_events_t* perf;
 #ifdef HAVE__INTERNAL__SHA_COLLECT
     char entry_filename[2048];
     int sha_collect;

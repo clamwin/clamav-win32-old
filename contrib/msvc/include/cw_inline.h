@@ -9,20 +9,6 @@
 #include <inttypes.h>
 #include <io.h>
 
-/* If timer represents a date before midnight, January 1, 1970,
-   gmtime returns NULL. There is no error return */
-static inline struct tm *safe_gmtime(const time_t *timer)
-{
-    struct tm *gmt = NULL;
-    if ((*timer < 0) || !(gmt = gmtime(timer)))
-    {
-        time_t t = 0;
-        gmt = gmtime(&t);
-    }
-    return gmt;
-}
-#define gmtime safe_gmtime
-
 struct timezone {
     int tz_minuteswest; /* minutes W of Greenwich */
     int tz_dsttime;     /* type of dst correction */

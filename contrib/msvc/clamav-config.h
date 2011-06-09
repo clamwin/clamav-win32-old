@@ -21,9 +21,6 @@
 /* enable clamuko */
 #undef CLAMUKO
 
-/* enable loading of unsigned bytecode */
-#undef CL_BCUNSIGNED
-
 /* enable debugging */
 #if defined(_MSC_VER) && defined(_DEBUG)
 #define CL_DEBUG 1
@@ -178,6 +175,9 @@
 
 /* Define if you have the _dyld_func_lookup function. */
 #undef HAVE_DYLD
+
+/* Define to 1 if you have the `enable_extended_FILE_stdio' function. */
+#undef HAVE_ENABLE_EXTENDED_FILE_STDIO
 
 /* Define to 1 if the system has the type `error_t'. */
 #undef HAVE_ERROR_T
@@ -389,6 +389,9 @@
 /* Define to 1 if you have the <sys/stat.h> header file. */
 #define HAVE_SYS_STAT_H 1
 
+/* Define to 1 if you have the <sys/times.h> header file. */
+#undef HAVE_SYS_TIMES_H
+
 /* Define to 1 if you have the <sys/types.h> header file. */
 #define HAVE_SYS_TYPES_H 1
 
@@ -428,6 +431,9 @@
 /* The archive extension */
 #define LT_LIBEXT "dll"
 
+/* The archive prefix */
+#undef LT_LIBPREFIX
+
 /* Define to the extension used for runtime loadable modules, say, ".so". */
 #if defined(_MSC_VER) && defined(_DEBUG)
 #define LT_MODULE_EXT "d"
@@ -444,7 +450,7 @@
 #undef LT_OBJDIR
 
 /* disable assertions */
-/* #undef NDEBUG */ /* NOTE: no undef */
+/* #undef NDEBUG */ /* NOTE: don't undef */
 
 /* Define if dlsym() requires a leading underscore in symbol names. */
 #undef NEED_USCORE
@@ -508,15 +514,13 @@
 #define SUPPORT_IPv6 1
 
 /* enable memory pools */
-#ifndef _WIN64
 #define USE_MPOOL 1
-#endif
 
 /* use syslog */
 #undef USE_SYSLOG
 
 /* Stable releases tag */
-#define CLAMWIN_RELEASE "0.97"
+/* #define CLAMWIN_RELEASE "0.97" */
 
 /* Version number of package */
 #ifdef CLAMWIN_RELEASE

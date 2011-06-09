@@ -24,6 +24,8 @@
 #include "clamav-config.h"
 #endif
 
+#define _GNU_SOURCE
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -44,6 +46,8 @@
 #include <sys/wait.h>
 #endif
 #include <dirent.h>
+#include <ctype.h>
+#include <libgen.h>
 
 #ifdef HAVE_TERMIOS_H
 #include <termios.h>
@@ -72,64 +76,62 @@
 #define MAX_DEL_LOOKAHEAD   200
 
 static const struct dblist_s {
-    const char *name;
+    const char *ext;
     unsigned int count;
 } dblist[] = {
 
     /* special files */
-    { "COPYING",    0 },
-    { "daily.cfg",  0 },
-    { "daily.ign",  0 },
-    { "daily.ign2",  0 },
-    { "daily.ftm",  0 },
-    { "main.info",  0 },    { "daily.info", 0 },    { "safebrowsing.info", 0 },
+    { "info",  0 },
+    { "cfg",  0 },
+    { "ign",  0 },
+    { "ign2",  0 },
+    { "ftm",  0 },
 
     /* databases */
-    { "main.db",    1 },    { "daily.db",   1 },
-    { "main.hdb",   1 },    { "daily.hdb",  1 },
-    { "main.hdu",   1 },    { "daily.hdu",  1 },
-    { "main.hsb",   1 },    { "daily.hsb",  1 },
-    { "main.hsu",   1 },    { "daily.hsu",  1 },
-    { "main.mdb",   1 },    { "daily.mdb",  1 },
-    { "main.mdu",   1 },    { "daily.mdu",  1 },
-    { "main.msb",   1 },    { "daily.msb",  1 },
-    { "main.msu",   1 },    { "daily.msu",  1 },
-    { "main.ndb",   1 },    { "daily.ndb",  1 },
-    { "main.ndu",   1 },    { "daily.ndu",  1 },
-    { "main.ldb",   1 },    { "daily.ldb",  1 },
-    { "main.ldu",   1 },    { "daily.ldu",  1 },
-    { "main.sdb",   1 },    { "daily.sdb",  1 },
-    { "main.zmd",   1 },    { "daily.zmd",  1 },
-    { "main.rmd",   1 },    { "daily.rmd",  1 },
-    { "main.idb",   0 },    { "daily.idb",  0 },
-    { "main.fp",    0 },    { "daily.fp",   0 },
-    { "main.sfp",   0 },    { "daily.sfp",  0 },
-    { "main.pdb",   1 },    { "daily.pdb",  1 },    { "safebrowsing.gdb", 1 },
-    { "main.wdb",   0 },    { "daily.wdb",  0 },    { "safebrowsing.wdb", 0 },
+    { "db",    1 },
+    { "hdb",   1 },
+    { "hdu",   1 },
+    { "hsb",   1 },
+    { "hsu",   1 },
+    { "mdb",   1 },
+    { "mdu",   1 },
+    { "msb",   1 },
+    { "msu",   1 },
+    { "ndb",   1 },
+    { "ndu",   1 },
+    { "ldb",   1 },
+    { "ldu",   1 },
+    { "sdb",   1 },
+    { "zmd",   1 },
+    { "rmd",   1 },
+    { "idb",   0 },
+    { "fp",    0 },
+    { "sfp",   0 },
+    { "gdb",   1 },
+    { "pdb",   1 },
+    { "wdb",   0 },
 
     { NULL,	    0 }
 };
 
-struct dblist_scan
+static char *getdbname(const char *str, char *dst, int dstlen)
 {
-    char *name;
-    struct dblist_scan *next;
-};
+	int len = strlen(str);
 
-static const char *getdbname(const char *str)
-{
-    if(strstr(str, "main"))
-	return "main";
-    else if(strstr(str, "daily"))
-	return "daily";
-    else if(strstr(str, "safebrowsing"))
-	return "safebrowsing";
-    else if(strstr(str, "bytecode"))
-	return "bytecode";
-    else {
-	mprintf("!getdbname: Can't extract db name\n");
-	return "UNKNOWN";
+    if(cli_strbcasestr(str, ".cvd") || cli_strbcasestr(str, ".cld") || cli_strbcasestr(str, ".cud"))
+	len -= 4;
+
+    if(dst) {
+	strncpy(dst, str, MIN(dstlen - 1, len));
+	dst[MIN(dstlen - 1, len)] = 0;
+    } else {
+	dst = (char *) malloc(len + 1);
+	if(!dst)
+	    return NULL;
+	strncpy(dst, str, len - 4);
+	dst[MIN(dstlen - 1, len - 4)] = 0;
     }
+    return dst;
 }
 
 static int hexdump(void)
@@ -171,9 +173,9 @@ static int hashsig(const struct optstruct *opts, unsigned int mdb, int type)
 		if((sb.st_mode & S_IFMT) == S_IFREG) {
 		    if((hash = cli_hashfile(opts->filename[i], type))) {
 			if(mdb)
-			    mprintf("%u:%s:%s\n", (unsigned int) sb.st_size, hash, opts->filename[i]);
+			    mprintf("%u:%s:%s\n", (unsigned int) sb.st_size, hash, basename(opts->filename[i]));
 			else
-			    mprintf("%s:%u:%s\n", hash, (unsigned int) sb.st_size, opts->filename[i]);
+			    mprintf("%s:%u:%s\n", hash, (unsigned int) sb.st_size, basename(opts->filename[i]));
 			free(hash);
 		    } else {
 			mprintf("!hashsig: Can't generate hash for %s\n", opts->filename[i]);
@@ -251,10 +253,10 @@ static int utf16decode(const struct optstruct *opts)
 	    if(write(fd2, decoded, strlen(decoded)) == -1) {
 		mprintf("!utf16decode: Can't write to file %s\n", newname);
 		free(decoded);
-		unlink(newname);
-		free(newname);
 		close(fd1);
 		close(fd2);
+		unlink(newname);
+		free(newname);
 		return -1;
 	    }
 	    free(decoded);
@@ -413,11 +415,11 @@ static char *sha256file(const char *file, unsigned int *size)
     return sha;
 }
 
-static int writeinfo(const char *dbname, const char *builder, const char *header, const struct optstruct *opts, const struct dblist_scan *dbl)
+static int writeinfo(const char *dbname, const char *builder, const char *header, const struct optstruct *opts, char * const *dblist2, unsigned int dblist2cnt)
 {
 	FILE *fh;
 	unsigned int i, bytes;
-	char file[32], *pt;
+	char file[32], *pt, dbfile[32];
 	unsigned char digest[32], buffer[FILEBUFF];
 	SHA256_CTX ctx;
 
@@ -440,31 +442,31 @@ static int writeinfo(const char *dbname, const char *builder, const char *header
 	return -1;
     }
 
-    if(dbl) {
-	while(dbl) {
-	    if(!(pt = sha256file(dbl->name, &bytes))) {
+    if(dblist2cnt) {
+	for(i = 0; i < dblist2cnt; i++) {
+	    if(!(pt = sha256file(dblist2[i], &bytes))) {
 		mprintf("!writeinfo: Can't generate SHA256 for %s\n", file);
 		fclose(fh);
 		return -1;
 	    }
-	    if(fprintf(fh, "%s:%u:%s\n", dbl->name, bytes, pt) < 0) {
+	    if(fprintf(fh, "%s:%u:%s\n", dblist2[i], bytes, pt) < 0) {
 		mprintf("!writeinfo: Can't write to info file\n");
 		fclose(fh);
 		free(pt);
 		return -1;
 	    }
 	    free(pt);
-	    dbl = dbl->next;
 	}
     } else {
-	for(i = 0; dblist[i].name; i++) {
-	    if(!cli_strbcasestr(dblist[i].name, ".info") && strstr(dblist[i].name, dbname) && !access(dblist[i].name, R_OK)) {
-		if(!(pt = sha256file(dblist[i].name, &bytes))) {
+	for(i = 0; dblist[i].ext; i++) {
+	    snprintf(dbfile, sizeof(dbfile), "%s.%s", dbname, dblist[i].ext);
+	    if(strcmp(dblist[i].ext, "info") && !access(dbfile, R_OK)) {
+		if(!(pt = sha256file(dbfile, &bytes))) {
 		    mprintf("!writeinfo: Can't generate SHA256 for %s\n", file);
 		    fclose(fh);
 		    return -1;
 		}
-		if(fprintf(fh, "%s:%u:%s\n", dblist[i].name, bytes, pt) < 0) {
+		if(fprintf(fh, "%s:%u:%s\n", dbfile, bytes, pt) < 0) {
 		    mprintf("!writeinfo: Can't write to info file\n");
 		    fclose(fh);
 		    free(pt);
@@ -474,18 +476,20 @@ static int writeinfo(const char *dbname, const char *builder, const char *header
 	    }
 	}
     }
-    rewind(fh);
-    sha256_init(&ctx);
-    while((bytes = fread(buffer, 1, sizeof(buffer), fh)))
-	sha256_update(&ctx, buffer, bytes);
-    sha256_final(&ctx, digest);
-    if(!(pt = getdsig(optget(opts, "server")->strarg, builder, digest, 32, 3))) {
-	mprintf("!writeinfo: Can't get digital signature from remote server\n");
-	fclose(fh);
-	return -1;
+    if(!optget(opts, "unsigned")->enabled) {
+	rewind(fh);
+	sha256_init(&ctx);
+	while((bytes = fread(buffer, 1, sizeof(buffer), fh)))
+	    sha256_update(&ctx, buffer, bytes);
+	sha256_final(&ctx, digest);
+	if(!(pt = getdsig(optget(opts, "server")->strarg, builder, digest, 32, 3))) {
+	    mprintf("!writeinfo: Can't get digital signature from remote server\n");
+	    fclose(fh);
+	    return -1;
+	}
+	fprintf(fh, "DSIG:%s\n", pt);
+	free(pt);
     }
-    fprintf(fh, "DSIG:%s\n", pt);
-    free(pt);
     fclose(fh);
     return 0;
 }
@@ -612,6 +616,11 @@ static int script2cdiff(const char *script, const char *builder, const struct op
     return 0;
 }
 
+static int qcompare(const void *a, const void *b)
+{
+    return strcmp(*(char * const *) a, *(char * const *) b);
+}
+
 static int build(const struct optstruct *opts)
 {
 	int ret, bc = 0;
@@ -619,27 +628,26 @@ static int build(const struct optstruct *opts)
 	unsigned int i, sigs = 0, oldsigs = 0, entries = 0, version, real_header, fl;
 	struct stat foo;
 	unsigned char buffer[FILEBUFF];
-	char *tarfile, header[513], smbuff[32], builder[32], *pt, olddb[512], patch[32], broken[32];
-	const char *dbname, *newcvd, *localdbdir = NULL;
+	char *tarfile, header[513], smbuff[32], builder[32], *pt, olddb[512];
+	char patch[32], broken[32], dbname[32], dbfile[32];
+	const char *newcvd, *localdbdir = NULL;
         struct cl_engine *engine;
 	FILE *cvd, *fh;
 	gzFile *tar;
 	time_t timet;
 	struct tm *brokent;
 	struct cl_cvd *oldcvd;
-	struct dblist_scan *dblist2 = NULL, *lspt;
+	char **dblist2 = NULL;
+	unsigned int dblist2cnt = 0;
 	DIR *dd;
 	struct dirent *dent;
 
-#define FREE_LS(x)	    \
-    while(x) {		    \
-	lspt = x;	    \
-	x = x->next;	    \
-	free(lspt->name);   \
-	free(lspt);	    \
-    }
+#define FREE_LS(x)		    \
+    for(i = 0; i < dblist2cnt; i++) \
+	free(x[i]);		    \
+    free(x);
 
-    if(!optget(opts, "server")->enabled) {
+    if(!optget(opts, "server")->enabled && !optget(opts, "unsigned")->enabled) {
 	mprintf("!build: --server is required for --build\n");
 	return -1;
     }
@@ -652,7 +660,7 @@ static int build(const struct optstruct *opts)
 	return -1;
     }
 
-    dbname = getdbname(optget(opts, "build")->strarg);
+    getdbname(optget(opts, "build")->strarg, dbname, sizeof(dbname));
     if(!strcmp(dbname, "bytecode"))
 	bc = 1;
 
@@ -679,52 +687,50 @@ static int build(const struct optstruct *opts)
 	    while((dent = readdir(dd))) {
 		if(dent->d_ino) {
 		    if(cli_strbcasestr(dent->d_name, ".cbc")) {
-			lspt = (struct dblist_scan *) malloc(sizeof(struct dblist_scan));
-			if(!lspt) {
+			dblist2 = (char **) realloc(dblist2, (dblist2cnt + 1) * sizeof(char *));
+			if(!dblist2) { /* dblist2 leaked but we don't really care */
+			    mprintf("!build: Memory allocation error\n");
+			    return -1;
+			}
+			dblist2[dblist2cnt] = strdup(dent->d_name);
+			if(!dblist2[dblist2cnt]) {
 			    FREE_LS(dblist2);
 			    mprintf("!build: Memory allocation error\n");
 			    return -1;
 			}
-			lspt->name = strdup(dent->d_name);
-			if(!lspt->name) {
-			    FREE_LS(dblist2);
-			    mprintf("!build: Memory allocation error\n");
-			    return -1;
-			}
-			lspt->next = dblist2;
-			dblist2 = lspt;
-			entries++;
+			dblist2cnt++;
 		    }
 		}
 	    }
 	    closedir(dd);
+	    entries += dblist2cnt;
+	    qsort(dblist2, dblist2cnt, sizeof(char *), qcompare);
+
 	    if(!access("last.hdb", R_OK)) {
-		if(!dblist2) {
+		if(!dblist2cnt) {
 		    mprintf("!build: dblist2 == NULL (no .cbc files?)\n");
 		    return -1;
 		}
-		lspt = dblist2;
-		while(lspt->next)
-		    lspt = lspt->next;
-		lspt->next = (struct dblist_scan *) malloc(sizeof(struct dblist_scan));
-		if(!lspt->next) {
+		dblist2 = (char **) realloc(dblist2, (dblist2cnt + 1) * sizeof(char *));
+		if(!dblist2) {
+		    mprintf("!build: Memory allocation error\n");
+		    return -1;
+		}
+		dblist2[dblist2cnt] = strdup("last.hdb");
+		if(!dblist2[dblist2cnt]) {
 		    FREE_LS(dblist2);
 		    mprintf("!build: Memory allocation error\n");
 		    return -1;
 		}
-		lspt->next->name = strdup("last.hdb");
-		lspt->next->next = NULL;
-		if(!lspt->next->name) {
-		    FREE_LS(dblist2);
-		    mprintf("!build: Memory allocation error\n");
-		    return -1;
-		}
+		dblist2cnt++;
 		entries += countlines("last.hdb");
 	    }
 	} else {
-	    for(i = 0; dblist[i].name; i++)
-		if(dblist[i].count && strstr(dblist[i].name, dbname) && !access(dblist[i].name, R_OK))
-		    entries += countlines(dblist[i].name);
+	    for(i = 0; dblist[i].ext; i++) {
+		snprintf(dbfile, sizeof(dbfile), "%s.%s", dbname, dblist[i].ext);
+		if(dblist[i].count && !access(dbfile, R_OK))
+		    entries += countlines(dbfile);
+	    }
 	}
 
 	if(entries != sigs)
@@ -739,11 +745,11 @@ static int build(const struct optstruct *opts)
 
     /* try to read cvd header of current database */
     if(opts->filename) {
-	if(cli_strbcasestr(opts->filename[0], ".cvd") || cli_strbcasestr(opts->filename[0], ".cld")) {
+	if(cli_strbcasestr(opts->filename[0], ".cvd") || cli_strbcasestr(opts->filename[0], ".cld") || cli_strbcasestr(opts->filename[0], ".cud")) {
 	    strncpy(olddb, opts->filename[0], sizeof(olddb));
 	    olddb[sizeof(olddb)-1]='\0';
 	} else {
-	    mprintf("!build: Not a CVD/CLD file\n");
+	    mprintf("!build: Not a CVD/CLD/CUD file\n");
 	    FREE_LS(dblist2);
 	    return -1;
 	}
@@ -753,10 +759,12 @@ static int build(const struct optstruct *opts)
 	snprintf(olddb, sizeof(olddb), "%s"PATHSEP"%s.cvd", localdbdir ? localdbdir : pt, dbname);
 	if(access(olddb, R_OK))
 	    snprintf(olddb, sizeof(olddb), "%s"PATHSEP"%s.cld", localdbdir ? localdbdir : pt, dbname);
+	if(access(olddb, R_OK))
+	    snprintf(olddb, sizeof(olddb), "%s"PATHSEP"%s.cud", localdbdir ? localdbdir : pt, dbname);
 	free(pt);
     }
 
-    if(!(oldcvd = cl_cvdhead(olddb))) {
+    if(!(oldcvd = cl_cvdhead(olddb)) && !optget(opts, "unsigned")->enabled) {
 	mprintf("^build: CAN'T READ CVD HEADER OF CURRENT DATABASE %s (wait 3 s)\n", olddb);
 	sleep(3);
     }
@@ -831,7 +839,7 @@ static int build(const struct optstruct *opts)
     /* add current time */
     sprintf(header + strlen(header), ":%u", (unsigned int) timet);
 
-    if(writeinfo(dbname, builder, header, opts, dblist2) == -1) {
+    if(writeinfo(dbname, builder, header, opts, dblist2, dblist2cnt) == -1) {
 	mprintf("!build: Can't generate info file\n");
 	FREE_LS(dblist2);
 	return -1;
@@ -869,21 +877,20 @@ static int build(const struct optstruct *opts)
 	    FREE_LS(dblist2);
 	    return -1;
 	}
-	lspt = dblist2;
-	while(lspt) {
-	    if(tar_addfile(-1, tar, lspt->name) == -1) {
+	for(i = 0; i < dblist2cnt; i++) {
+	    if(tar_addfile(-1, tar, dblist2[i]) == -1) {
 		gzclose(tar);
 		unlink(tarfile);
 		free(tarfile);
 		FREE_LS(dblist2);
 		return -1;
 	    }
-	    lspt = lspt->next;
 	}
     } else {
-	for(i = 0; dblist[i].name; i++) {
-	    if(strstr(dblist[i].name, dbname) && !access(dblist[i].name, R_OK)) {
-		if(tar_addfile(-1, tar, dblist[i].name) == -1) {
+	for(i = 0; dblist[i].ext; i++) {
+	    snprintf(dbfile, sizeof(dbfile), "%s.%s", dbname, dblist[i].ext);
+	    if(!access(dbfile, R_OK)) {
+		if(tar_addfile(-1, tar, dbfile) == -1) {
 		    gzclose(tar);
 		    unlink(tarfile);
 		    free(tarfile);
@@ -915,15 +922,19 @@ static int build(const struct optstruct *opts)
     sprintf(header + strlen(header), "%s:", pt);
     free(pt);
 
-    if(!(pt = getdsig(optget(opts, "server")->strarg, builder, buffer, 16, 1))) {
-	mprintf("!build: Can't get digital signature from remote server\n");
-	fclose(fh);
-	unlink(tarfile);
-	free(tarfile);
-	return -1;
+    if(!optget(opts, "unsigned")->enabled) {
+	if(!(pt = getdsig(optget(opts, "server")->strarg, builder, buffer, 16, 1))) {
+	    mprintf("!build: Can't get digital signature from remote server\n");
+	    fclose(fh);
+	    unlink(tarfile);
+	    free(tarfile);
+	    return -1;
+	}
+	sprintf(header + strlen(header), "%s:", pt);
+	free(pt);
+    } else {
+	sprintf(header + strlen(header), "X:");
     }
-    sprintf(header + strlen(header), "%s:", pt);
-    free(pt);
 
     /* add builder */
     strcat(header, builder);
@@ -980,6 +991,9 @@ static int build(const struct optstruct *opts)
     free(tarfile);
 
     mprintf("Created %s\n", newcvd);
+
+    if(optget(opts, "unsigned")->enabled)
+	return 0;
 
     if(!oldcvd || optget(opts, "no-cdiff")->enabled) {
 	mprintf("Skipping .cdiff creation\n");
@@ -1155,8 +1169,12 @@ static int listdir(const char *dirname, const regex_t *regex)
 	    (cli_strbcasestr(dent->d_name, ".db")  ||
 	     cli_strbcasestr(dent->d_name, ".hdb") ||
 	     cli_strbcasestr(dent->d_name, ".hdu") ||
+	     cli_strbcasestr(dent->d_name, ".hsb") ||
+	     cli_strbcasestr(dent->d_name, ".hsu") ||
 	     cli_strbcasestr(dent->d_name, ".mdb") ||
 	     cli_strbcasestr(dent->d_name, ".mdu") ||
+	     cli_strbcasestr(dent->d_name, ".msb") ||
+	     cli_strbcasestr(dent->d_name, ".msu") ||
 	     cli_strbcasestr(dent->d_name, ".ndb") ||
 	     cli_strbcasestr(dent->d_name, ".ndu") ||
 	     cli_strbcasestr(dent->d_name, ".ldb") ||
@@ -1164,6 +1182,8 @@ static int listdir(const char *dirname, const regex_t *regex)
 	     cli_strbcasestr(dent->d_name, ".sdb") ||
 	     cli_strbcasestr(dent->d_name, ".zmd") ||
 	     cli_strbcasestr(dent->d_name, ".rmd") ||
+	     cli_strbcasestr(dent->d_name, ".cdb") ||
+	     cli_strbcasestr(dent->d_name, ".cbc") ||
 	     cli_strbcasestr(dent->d_name, ".cld") ||
 	     cli_strbcasestr(dent->d_name, ".cvd"))) {
 
@@ -1315,7 +1335,7 @@ static int listdb(const char *filename, const regex_t *regex)
 	    free(start);
 	}
 
-    } else if(cli_strbcasestr(filename, ".ndb") || cli_strbcasestr(filename, ".ndu") || cli_strbcasestr(filename, ".ldb") || cli_strbcasestr(filename, ".ldu") || cli_strbcasestr(filename, ".sdb") || cli_strbcasestr(filename, ".zmd") || cli_strbcasestr(filename, ".rmd")) {
+    } else if(cli_strbcasestr(filename, ".ndb") || cli_strbcasestr(filename, ".ndu") || cli_strbcasestr(filename, ".ldb") || cli_strbcasestr(filename, ".ldu") || cli_strbcasestr(filename, ".sdb") || cli_strbcasestr(filename, ".zmd") || cli_strbcasestr(filename, ".rmd") || cli_strbcasestr(filename, ".cdb")) {
 
 	while(fgets(buffer, FILEBUFF, fh)) {
 	    cli_chomp(buffer);
@@ -1327,22 +1347,40 @@ static int listdb(const char *filename, const regex_t *regex)
 	    line++;
 
 	    if(cli_strbcasestr(filename, ".ldb") || cli_strbcasestr(filename, ".ldu"))
-		start = cli_strtok(buffer, 0, ";");
+		pt = strchr(buffer, ';');
 	    else
-		start = cli_strtok(buffer, 0, ":");
+		pt = strchr(buffer, ':');
 
-	    if(!start) {
+	    if(!pt) {
 		mprintf("!listdb: Malformed pattern line %u (file %s)\n", line, filename);
 		fclose(fh);
 		free(buffer);
 		return -1;
 	    }
+	    *pt = 0;
 
-	    if((pt = strstr(start, " (Clam)")))
+	    if((pt = strstr(buffer, " (Clam)")))
 		*pt = 0;
 
-	    mprintf("%s\n", start);
-	    free(start);
+	    mprintf("%s\n", buffer);
+	}
+
+    } else if(cli_strbcasestr(filename, ".cbc")) {
+	if(fgets(buffer, FILEBUFF, fh) && fgets(buffer, FILEBUFF, fh)) {
+	    pt = strchr(buffer, ';');
+	    if(!pt) { /* not a real sig */
+		fclose(fh);
+		free(buffer);
+		return 0;
+	    }
+	    if(regex) {
+		if(!cli_regexec(regex, buffer, 0, NULL, 0)) {
+		    mprintf("[%s BYTECODE] %s", dbname, buffer);
+		}
+	    } else {
+		*pt = 0;
+		mprintf("%s\n", buffer);
+	    }
 	}
     }
     fclose(fh);
@@ -1452,15 +1490,31 @@ static int vbadump(const struct optstruct *opts)
     return 0;
 }
 
-static int comparesha(const char *dbname)
+static int comparesha(const char *diff)
 {
-	char info[32], buff[FILEBUFF], *sha;
+	char info[32], buff[FILEBUFF], *sha, *pt, *name;
 	const char *tokens[3];
 	FILE *fh;
 	int ret = 0, tokens_count;
 
+    name = strdup(diff);
+    if(!name) {
+	mprintf("!verifydiff: strdup() failed\n");
+	return -1;
+    }
+    if(!(pt = strrchr(name, '-')) || !isdigit(pt[1])) {
+	mprintf("!verifydiff: Invalid diff name\n");
+	free(name);
+	return -1;
+    }
+    *pt = 0;
+    if((pt = strrchr(name, *PATHSEP)))
+	pt++;
+    else
+	pt = name;
 
-    snprintf(info, sizeof(info), "%s.info", getdbname(dbname));
+    snprintf(info, sizeof(info), "%s.info", pt);
+    free(name);
 
     if(!(fh = fopen(info, "rb"))) {
 	mprintf("!verifydiff: Can't open %s\n", info);
@@ -1500,7 +1554,6 @@ static int comparesha(const char *dbname)
     fclose(fh);
     return ret;
 }
-
 
 static int rundiff(const struct optstruct *opts)
 {
@@ -1698,6 +1751,7 @@ static int compare(const char *oldpath, const char *newpath, FILE *diff)
 	if(!badxchg) {
 	    while(fgets(obuff, l1, old)) {
 		oline++;
+		cli_chomp(obuff);
 		obuff[MIN(16, l1-1)] = 0;
 		if((pt = strchr(obuff, ' ')))
 		    *pt = 0;
@@ -2560,7 +2614,7 @@ static int diffdirs(const char *old, const char *new, const char *patch)
 
 static int makediff(const struct optstruct *opts)
 {
-	char *odir, *ndir, name[32], broken[32];
+	char *odir, *ndir, name[32], broken[32], dbname[32];
 	struct cl_cvd *cvd;
 	unsigned int oldver, newver;
 	int ret;
@@ -2634,7 +2688,7 @@ static int makediff(const struct optstruct *opts)
 	return -1;
     }
 
-    snprintf(name, sizeof(name), "%s-%u.script", getdbname(opts->filename[0]), newver);
+    snprintf(name, sizeof(name), "%s-%u.script", getdbname(opts->filename[0], dbname, sizeof(dbname)), newver);
     ret = diffdirs(odir, ndir, name);
 
     cli_rmdirs(odir);
@@ -2685,6 +2739,7 @@ static void help(void)
     mprintf("    --info=FILE            -i FILE         print database information\n");
     mprintf("    --build=NAME [cvd] -b NAME             build a CVD file\n");
     mprintf("    --no-cdiff                             Don't generate .cdiff file\n");
+    mprintf("    --unsigned                             Create unsigned database file (.cud)\n");
     mprintf("    --server=ADDR                          ClamAV Signing Service address\n");
     mprintf("    --datadir=DIR				Use DIR as default database directory\n");
     mprintf("    --unpack=FILE          -u FILE         Unpack a CVD/CLD file\n");

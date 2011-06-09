@@ -165,9 +165,9 @@ typedef unsigned int in_addr_t;
 
 #ifdef _WINDLL
 #define LIBCLAMAV_API
+#undef OUT
 #else
 #define LIBCLAMAV_API __declspec(dllimport)
-#define CL_NOLIBCLAMAV
 #endif
 
 LIBCLAMAV_API extern const char *DATADIR;
@@ -175,5 +175,8 @@ LIBCLAMAV_API extern const char *CONFDIR;
 LIBCLAMAV_API extern const char *CONFDIR_CLAMD;
 LIBCLAMAV_API extern const char *CONFDIR_FRESHCLAM;
 LIBCLAMAV_API extern const char *CONFDIR_MILTER;
+
+#define cli_to_utf8_maybe_alloc(x) (x)
+#define cli_strdup_to_utf8(x) strdup(x)
 
 #endif /* _PLATFORM_H */

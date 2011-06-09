@@ -234,7 +234,7 @@ void help(void)
 #endif
     mprintf("\n");
     mprintf("    --bytecode[=yes(*)/no]               Load bytecode from the database\n");
-    mprintf("    --bytecode-trust-all[=yes/no(*)]     Trust all loaded bytecode\n");
+    mprintf("    --bytecode-unsigned[=yes/no(*)]      Load unsigned bytecode\n");
     mprintf("    --bytecode-timeout=N                 Set bytecode timeout (in milliseconds)\n");
     mprintf("    --detect-pua[=yes/no(*)]             Detect Possibly Unwanted Applications\n");
     mprintf("    --exclude-pua=CAT                    Skip PUA sigs of category CAT\n");

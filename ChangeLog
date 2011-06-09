@@ -1,3 +1,164 @@
+Thu Jun  9 08:22:31 CEST 2011 (acab)
+------------------------------------
+ * libclamav/mew.c: harden boundary check on e8/e9 fixup
+
+Wed Jun  8 14:57:40 CEST 2011 (acab)
+------------------------------------
+ * libclamav/nsis, libclamav/chmunpack.[ch], libclamav/scanners.c:
+	don't remap in NSIS, CHM (bb#2838)
+
+Thu May 26 14:17:52 CEST 2011 (acab)
+------------------------------------
+ * libclamav/matcher-hash.c: in hm_sort don't swap an item with itself (bb#2818)
+
+Thu May 12 13:01:56 CEST 2011 (tk)
+----------------------------------
+ * freshclam/manager.c: fix return code of Rfc2822DateTime() (bb#2809)
+
+Tue May 10 21:25:37 CEST 2011 (tk)
+----------------------------------
+ * sigtool: add support for building unsigned dbs (--unsigned)
+ * libclamav: handle unsigned db files (.cud)
+
+Sat May  7 18:05:23 EEST 2011 (edwin)
+-------------------------------------
+ * libclamav/pdf.c: better detection for encrypted PDFs (bb #2448)
+
+Fri May  6 16:16:00 EEST 2011 (edwin)
+------------------------------------
+ * libclamav/c++: add support for building with external LLVM 2.9, and drop external 2.8 support
+
+Thu May  5 01:07:57 CEST 2011 (acab)
+------------------------------------
+ * clamd: log request ip address for instream scans #bb2592
+
+Wed May  4 14:07:12 EEST 2011 (edwin)
+-------------------------------------
+ * libclamav/c++/llvm/lib/Target/X86/X86InstrInfo.td: bb #2763
+ don't assert on AVX chips (Intel Core i5 and i7)
+
+Tue May  3 22:52:04 PDT 2011 (tk)
+---------------------------------
+ * sigtool: properly normalize html files (bb#2764)
+
+Tue May  3 16:14:27 PDT 2011 (tk)
+---------------------------------
+ * sigtool/sigtool.c: fix formatting of hash dbs (bb#2765)
+
+Wed Apr 27 15:07:22 CEST 2011 (tk)
+----------------------------------
+ * freshclam: add mirror statistics mechanism
+
+Mon Apr 18 17:23:10 CEST 2011 (acab)
+------------------------------------
+ * clamd, win32: Conversion to UTF8 is hopefully completefinal.
+		 See win32/README for important changes! (bb#2343)
+
+Sun Apr 17 16:09:28 CEST 2011 (acab)
+------------------------------------
+ * win32/compat: more UTF8 stuff. Things *appear* to be working ok now.
+
+Sat Apr 16 18:56:40 CEST 2011 (acab)
+------------------------------------
+ * libclamav, shared: Preliminary win32 conversion to UTF8
+
+Thu Apr 14 21:29:36 EEST 2011 (edwin)
+-------------------------------------
+ * libclamav/others.c: make sure TLS key is initializer (bb #2588).
+    Thanks to Cameron Brown for the detailed analysis of the bug.
+
+Thu Apr 14 13:19:38 EEST 2011 (edwin)
+-------------------------------------
+ * configure: check for enable_extended_FILE_stdio (bb #2542)
+
+Mon Apr 11 17:22:46 CEST 2011 (tk)
+----------------------------------
+ * libclamav: add basic GIF validator
+
+Sat Apr  9 17:20:35 CEST 2011 (acab)
+------------------------------------
+ * libclamav/pe_icons.c: don't sigbus on sparc (bb#2695)
+
+Sat Apr  9 03:56:17 CEST 2011 (acab)
+------------------------------------
+ * libclamav/pe.c: reset corrupted status before bytecode hooks (bb#2544)
+
+Thu Apr  7 18:17:56 CEST 2011 (tk)
+----------------------------------
+ * libclamav: add PNG validator based on pngcheck
+
+Tue Apr  5 16:33:15 CEST 2011 (tk)
+----------------------------------
+ * libclamav: add basic JPEG validator
+
+Wed Mar 30 16:02:00 CEST 2011 (tk)
+----------------------------------
+ * libclamav/swf.c: scan images and binary blobs
+
+Mon Mar 28 20:24:40 CEST 2011 (tk)
+----------------------------------
+ * libclamav: add skeleton code for SWF parser
+ * libclamav/others.h: bump f-level
+
+Thu Mar 17 17:46:09 CET 2011 (tk)
+---------------------------------
+ * sigtool, freshclam: put .info on top of container to speed up loading
+
+Wed Mar 16 15:53:42 CET 2011 (tk)
+---------------------------------
+ * sigtool: fix --verify-cdiff
+
+Tue Mar 15 17:56:59 CET 2011 (tk)
+---------------------------------
+ * sigtool: allow arbitrary names for --build
+
+Thu Mar 10 15:54:05 CET 2011 (tk)
+---------------------------------
+ * libclamav: optimize handling of {n} wildcards (bb#1796)
+
+Wed Mar  9 15:42:50 CET 2011 (tk)
+---------------------------------
+ * clamdscan: fix file exclusion (bb#2579)
+
+Fri Mar  4 18:26:44 CET 2011 (acab)
+-----------------------------------
+ * libclamav: Extend prescan_cb with file types
+
+Mon Feb 28 21:46:50 CET 2011 (tk)
+---------------------------------
+ * clamd: add new option ClamukoExcludeUID (bb#2260)
+	  Based on idea from alfred*bokxing.nl
+
+Fri Feb 25 14:49:04 CET 2011 (tk)
+---------------------------------
+ * libclamav/elf.c: fix incorrect detection of Broken.Executable (bb#2580)
+
+Thu Feb 24 14:52:18 CET 2011 (tk)
+---------------------------------
+ * shared/output.c: fix empty lines in syslog (bb#2578)
+
+Mon Feb 21 18:19:18 CET 2011 (tk)
+---------------------------------
+ * clamd: update description of ReadTimeout (bb#2565)
+
+Thu Feb 17 19:13:15 CET 2011 (tk)
+---------------------------------
+ * clamd: add new config option BytecodeUnsigned (bb#2537); drop
+	  "None" from BytecodeSecurity
+ * clamscan: add new switch --bytecode-unsigned and drop --bytecode-trust-all
+
+Tue Feb 15 19:19:31 CET 2011 (tk)
+---------------------------------
+ * sigtool/sigtool.c: improve handling of bytecode.info (bb#2292)
+
+Fri Feb 11 13:16:41 CET 2011 (tk)
+---------------------------------
+ * sigtool/sigtool.c: handle all signature formats with --(list|find)-sigs (bb#2534)
+
+Tue Feb  8 02:42:11 CET 2011 (acab)
+-----------------------------------
+ * libclamav/mpoo.c: Make solaris linker happy - Thanks to John Kendall <john*capps.com>
+
 Mon Feb  7 17:45:49 CET 2011 (tk)
 ---------------------------------
  * V 0.97
