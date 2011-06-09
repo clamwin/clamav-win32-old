@@ -213,7 +213,7 @@ static int download(const struct optstruct *opts, const char *cfgfile)
     return ret;
 }
 
-static void msg_callback(enum cl_msg severity, const char *fullmsg, const char *msg, void *ctx)
+void msg_callback(enum cl_msg severity, const char *fullmsg, const char *msg, void *ctx)
 {
     switch (severity) {
 	case CL_MSG_ERROR:

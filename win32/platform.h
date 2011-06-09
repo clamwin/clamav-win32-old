@@ -22,7 +22,6 @@ extern "C"
 #include "w32_errno.h"
 #include "w32_stat.h"
 #include "random.h"
-#include "utf8_util.h"
 
 #ifdef __cplusplus
 }

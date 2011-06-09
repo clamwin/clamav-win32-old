@@ -349,17 +349,7 @@ static int ac_maketrans(struct cli_matcher *root)
 		struct cli_ac_node *failtarget = node->fail;
 		while(IS_LEAF(failtarget) || !failtarget->trans[i])
 		    failtarget = failtarget->fail;
-		failtarget = failtarget->trans[i];
-		node->trans[i] = failtarget;
-	    } else if (IS_FINAL(child) && IS_LEAF(child)) {
-		struct cli_ac_patt *origlist, *list;
-		origlist = list = child->list;
-		if (list) {
-		    while (list->next) list = list->next;
-		    list->next = child->fail->list;
-		}
-		child->trans = child->fail->trans;
-		child->fail = NULL;
+		node->trans[i] = failtarget->trans[i];
 	    } else {
 		if((ret = bfs_enqueue(&bfs, &bfs_last, child)) != 0)
 		    return ret;
@@ -470,7 +460,7 @@ void cli_ac_free(struct cli_matcher *root)
 	mpool_free(root->mempool, root->ac_reloff);
 
     for(i = 0; i < root->ac_nodes; i++) {
-	if(!IS_LEAF(root->ac_nodetable[i]) && root->ac_nodetable[i]->fail)
+	if(!IS_LEAF(root->ac_nodetable[i]))
 	    mpool_free(root->mempool, root->ac_nodetable[i]->trans);
 	mpool_free(root->mempool, root->ac_nodetable[i]);
     }
@@ -1158,7 +1148,7 @@ void cli_ac_chkmacro(struct cli_matcher *root, struct cli_ac_data *data, unsigne
 int cli_ac_scanbuff(const unsigned char *buffer, uint32_t length, const char **virname, void **customdata, struct cli_ac_result **res, const struct cli_matcher *root, struct cli_ac_data *mdata, uint32_t offset, cli_file_t ftype, struct cli_matched_type **ftoffset, unsigned int mode, const cli_ctx *ctx)
 {
 	struct cli_ac_node *current;
-	struct cli_ac_patt *patt, *pt;
+	struct cli_ac_patt *patt, *pt, *faillist;
         uint32_t i, bp, realoff, matchend;
 	uint16_t j;
 	int32_t **offmatrix, swp;
@@ -1179,12 +1169,22 @@ int cli_ac_scanbuff(const unsigned char *buffer, uint32_t length, const char **v
     for(i = 0; i < length; i++)  {
 	current = current->trans[buffer[i]];
 
-	if(UNLIKELY(IS_FINAL(current))) {
+	if(IS_FINAL(current)) {
+	    faillist = NULL;
 	    patt = current->list;
-	    while(patt) {
+	    if(IS_LEAF(current)) {
+		current = current->fail;
+		faillist = current->list;
+	    }
+	    while(1) {
+		if(!patt) {
+		    if(!(patt = faillist))
+			break;
+		    faillist = NULL;
+		}
 		if(patt->partno > mdata->min_partno) {
 		    patt = NULL;
-		    break;
+		    continue;
 		}
 		bp = i + 1 - patt->depth;
 		if(patt->offdata[0] != CLI_OFF_VERSION && patt->offdata[0] != CLI_OFF_MACRO && !patt->next_same && (patt->offset_min != CLI_OFF_ANY) && (!patt->sigid || patt->partno == 1)) {
@@ -1370,7 +1370,6 @@ int cli_ac_scanbuff(const unsigned char *buffer, uint32_t length, const char **v
 				    return CL_TYPE_IGNORED;
 
 				if((pt->type > type || pt->type >= CL_TYPE_SFX || pt->type == CL_TYPE_MSEXE) && (!pt->rtype || ftype == pt->rtype)) {
-
 				    cli_dbgmsg("Matched signature for file type %s at %u\n", pt->virname, realoff);
 				    type = pt->type;
 				    if(ftoffset && (!*ftoffset || (*ftoffset)->cnt < MAX_EMBEDDED_OBJ || type == CL_TYPE_ZIPSFX) && (type >= CL_TYPE_SFX || ((ftype == CL_TYPE_MSEXE || ftype == CL_TYPE_ZIP || ftype == CL_TYPE_MSOLE2) && type == CL_TYPE_MSEXE)))  {

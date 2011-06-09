@@ -115,7 +115,7 @@ dev_t procdev;
 /* FIXME: If possible, handle users correctly */
 static int checkaccess(const char *path, const char *username, int mode)
 {
-    return !access(path, mode);
+    return !_access(path, mode);
 }
 #else
 static int checkaccess(const char *path, const char *username, int mode)
@@ -712,9 +712,6 @@ int scanmanager(const struct optstruct *opts)
     if(optget(opts, "dev-collect-hashes")->enabled)
 	options |= CL_SCAN_INTERNAL_COLLECT_SHA;
 #endif
-
-    if(optget(opts, "dev-performance")->enabled)
-	options |= CL_SCAN_PERFORMANCE_INFO;
 
     if(optget(opts, "detect-structured")->enabled) {
 	options |= CL_SCAN_STRUCTURED;

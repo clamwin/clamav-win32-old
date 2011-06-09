@@ -66,7 +66,6 @@ typedef enum {
     CL_EMAXSIZE,
     CL_EMAXFILES,
     CL_EFORMAT,
-    CL_EPARSE,
     CL_EBYTECODE,/* may be reported in testmode */
     CL_EBYTECODE_TESTFAIL, /* may be reported in testmode */
 
@@ -94,7 +93,6 @@ typedef enum {
 #define CL_DB_BYTECODE      0x2000
 #define CL_DB_SIGNED	    0x4000  /* internal */
 #define CL_DB_BYTECODE_UNSIGNED	0x8000
-#define CL_DB_UNSIGNED	    0x10000 /* internal */
 
 /* recommended db settings */
 #define CL_DB_STDOPT	    (CL_DB_PHISHING | CL_DB_PHISHING_URLS | CL_DB_BYTECODE)
@@ -122,7 +120,6 @@ typedef enum {
 #define CL_SCAN_HEURISTIC_PRECEDENCE    0x80000
 #define CL_SCAN_BLOCKMACROS		0x100000
 
-#define CL_SCAN_PERFORMANCE_INFO        0x40000000 /* collect performance timings */
 #define CL_SCAN_INTERNAL_COLLECT_SHA    0x80000000 /* Enables hash output in sha-collect builds - for internal use only */
 
 /* recommended scan settings */
@@ -198,14 +195,13 @@ extern int cl_engine_addref(struct cl_engine *engine);
 extern int cl_engine_free(struct cl_engine *engine);
 
 
-/* CALLBACKS */
+/* CALLBACKS - WARNING: unstable API - WIP */
 
 
-typedef cl_error_t (*clcb_pre_scan)(int fd, const char *type, void *context);
+typedef cl_error_t (*clcb_pre_scan)(int fd, void *context);
 /* PRE-SCAN
 Input:
 fd      = File descriptor which is about to be scanned
-type    = File type detected via magic - i.e. NOT on the fly - (e.g. "CL_TYPE_MSEXE")
 context = Opaque application provided data
 
 Output:

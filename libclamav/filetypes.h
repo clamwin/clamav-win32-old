@@ -72,7 +72,6 @@ typedef enum {
     CL_TYPE_HTML_UTF16,
     CL_TYPE_RTF,
     CL_TYPE_7Z,
-    CL_TYPE_SWF,
 
     /* bigger numbers have higher priority (in o-t-f detection) */
     CL_TYPE_HTML, /* on the fly */
@@ -105,7 +104,6 @@ struct cli_matched_type {
 };
 
 cli_file_t cli_ftcode(const char *name);
-const char *cli_ftname(cli_file_t code);
 void cli_ftfree(const struct cl_engine *engine);
 cli_file_t cli_filetype(const unsigned char *buf, size_t buflen, const struct cl_engine *engine);
 cli_file_t cli_filetype2(fmap_t *map, const struct cl_engine *engine);

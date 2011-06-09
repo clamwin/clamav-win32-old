@@ -17,7 +17,6 @@
 #  MA 02110-1301, USA.
 
 AM_CPPFLAGS = -I$(top_srcdir) -I@srcdir@/nsis $(LTDLINCL)
-AM_CFLAGS=@WERR_CFLAGS@
 lib_LTLIBRARIES =
 EXTRA_DIST = c++/Makefile.nollvm.in
 if ENABLE_UNRAR
@@ -89,7 +88,7 @@ libclamav_internal_utils_la_SOURCES=str.c\
 				    regex/utils.h
 
 libclamav_internal_utils_la_LDFLAGS=-static
-libclamav_internal_utils_la_CFLAGS=$(AM_CFLAGS)  -fPIC -DPIC
+libclamav_internal_utils_la_CFLAGS=  -fPIC -DPIC
 
 libclamav_internal_utils_nothreads_la_SOURCES=str.c\
 				    str.h\
@@ -110,7 +109,7 @@ libclamav_internal_utils_nothreads_la_SOURCES=str.c\
 				    regex/utils.h
 
 libclamav_internal_utils_nothreads_la_LDFLAGS=-static
-libclamav_internal_utils_nothreads_la_CFLAGS=$(AM_CFLAGS) -DCL_NOTHREADS
+libclamav_internal_utils_nothreads_la_CFLAGS=-DCL_NOTHREADS
 
 if ENABLE_LLVM
 LLVMLIBADD=c++/libclamavcxx.la -lstdc++ -lm
@@ -128,7 +127,7 @@ libclamav_nocxx_la_SOURCES = bytecode_nojit.c
 
 libclamav_la_LIBADD = @LIBLTDL@ $(IFACELIBADD) $(LLVMLIBADD) libclamav_internal_utils.la @LIBCLAMAV_LIBS@ @THREAD_LIBS@ @LIBM@
 libclamav_la_DEPENDENCIES =  @LTDLDEPS@ $(IFACEDEP) $(LLVMDEP) libclamav_internal_utils.la
-libclamav_la_CFLAGS =$(AM_CFLAGS) -DSEARCH_LIBDIR=\"$(libdir)\"
+libclamav_la_CFLAGS = -DSEARCH_LIBDIR=\"$(libdir)\"
 libclamav_la_LDFLAGS = @TH_SAFE@ -version-info @LIBCLAMAV_VERSION@ -no-undefined
 
 if VERSIONSCRIPT
@@ -364,12 +363,6 @@ libclamav_la_SOURCES = \
 	builtin_bytecodes.h\
 	events.c\
 	events.h \
-	swf.c \
-	swf.h \
-	jpeg.c \
-	jpeg.h \
-	png.c \
-	png.h \
 	arc4.c \
 	arc4.h
 

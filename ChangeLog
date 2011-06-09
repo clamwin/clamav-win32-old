@@ -1,11 +1,10 @@
+Thu Jun  9 09:10:49 CEST 2011 (tk)
+----------------------------------
+ * V 0.97.1
+
 Thu Jun  9 08:22:31 CEST 2011 (acab)
 ------------------------------------
  * libclamav/mew.c: harden boundary check on e8/e9 fixup
-
-Wed Jun  8 14:57:40 CEST 2011 (acab)
-------------------------------------
- * libclamav/nsis, libclamav/chmunpack.[ch], libclamav/scanners.c:
-	don't remap in NSIS, CHM (bb#2838)
 
 Thu May 26 14:17:52 CEST 2011 (acab)
 ------------------------------------
@@ -14,11 +13,6 @@ Thu May 26 14:17:52 CEST 2011 (acab)
 Thu May 12 13:01:56 CEST 2011 (tk)
 ----------------------------------
  * freshclam/manager.c: fix return code of Rfc2822DateTime() (bb#2809)
-
-Tue May 10 21:25:37 CEST 2011 (tk)
-----------------------------------
- * sigtool: add support for building unsigned dbs (--unsigned)
- * libclamav: handle unsigned db files (.cud)
 
 Sat May  7 18:05:23 EEST 2011 (edwin)
 -------------------------------------
@@ -49,32 +43,6 @@ Wed Apr 27 15:07:22 CEST 2011 (tk)
 ----------------------------------
  * freshclam: add mirror statistics mechanism
 
-Mon Apr 18 17:23:10 CEST 2011 (acab)
-------------------------------------
- * clamd, win32: Conversion to UTF8 is hopefully completefinal.
-		 See win32/README for important changes! (bb#2343)
-
-Sun Apr 17 16:09:28 CEST 2011 (acab)
-------------------------------------
- * win32/compat: more UTF8 stuff. Things *appear* to be working ok now.
-
-Sat Apr 16 18:56:40 CEST 2011 (acab)
-------------------------------------
- * libclamav, shared: Preliminary win32 conversion to UTF8
-
-Thu Apr 14 21:29:36 EEST 2011 (edwin)
--------------------------------------
- * libclamav/others.c: make sure TLS key is initializer (bb #2588).
-    Thanks to Cameron Brown for the detailed analysis of the bug.
-
-Thu Apr 14 13:19:38 EEST 2011 (edwin)
--------------------------------------
- * configure: check for enable_extended_FILE_stdio (bb #2542)
-
-Mon Apr 11 17:22:46 CEST 2011 (tk)
-----------------------------------
- * libclamav: add basic GIF validator
-
 Sat Apr  9 17:20:35 CEST 2011 (acab)
 ------------------------------------
  * libclamav/pe_icons.c: don't sigbus on sparc (bb#2695)
@@ -82,23 +50,6 @@ Sat Apr  9 17:20:35 CEST 2011 (acab)
 Sat Apr  9 03:56:17 CEST 2011 (acab)
 ------------------------------------
  * libclamav/pe.c: reset corrupted status before bytecode hooks (bb#2544)
-
-Thu Apr  7 18:17:56 CEST 2011 (tk)
-----------------------------------
- * libclamav: add PNG validator based on pngcheck
-
-Tue Apr  5 16:33:15 CEST 2011 (tk)
-----------------------------------
- * libclamav: add basic JPEG validator
-
-Wed Mar 30 16:02:00 CEST 2011 (tk)
-----------------------------------
- * libclamav/swf.c: scan images and binary blobs
-
-Mon Mar 28 20:24:40 CEST 2011 (tk)
-----------------------------------
- * libclamav: add skeleton code for SWF parser
- * libclamav/others.h: bump f-level
 
 Thu Mar 17 17:46:09 CET 2011 (tk)
 ---------------------------------
@@ -112,17 +63,9 @@ Tue Mar 15 17:56:59 CET 2011 (tk)
 ---------------------------------
  * sigtool: allow arbitrary names for --build
 
-Thu Mar 10 15:54:05 CET 2011 (tk)
----------------------------------
- * libclamav: optimize handling of {n} wildcards (bb#1796)
-
 Wed Mar  9 15:42:50 CET 2011 (tk)
 ---------------------------------
  * clamdscan: fix file exclusion (bb#2579)
-
-Fri Mar  4 18:26:44 CET 2011 (acab)
------------------------------------
- * libclamav: Extend prescan_cb with file types
 
 Mon Feb 28 21:46:50 CET 2011 (tk)
 ---------------------------------
@@ -150,6 +93,15 @@ Thu Feb 17 19:13:15 CET 2011 (tk)
 Tue Feb 15 19:19:31 CET 2011 (tk)
 ---------------------------------
  * sigtool/sigtool.c: improve handling of bytecode.info (bb#2292)
+
+Thu Apr 14 21:29:36 EEST 2011 (edwin)
+-------------------------------------
+ * libclamav/others.c: make sure TLS key is initializer (bb #2588).
+    Thanks to Cameron Brown for the detailed analysis of the bug.
+
+Thu Apr 14 13:19:38 EEST 2011 (edwin)
+-------------------------------------
+ * configure: check for enable_extended_FILE_stdio (bb #2542)
 
 Fri Feb 11 13:16:41 CET 2011 (tk)
 ---------------------------------

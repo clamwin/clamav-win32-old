@@ -39,9 +39,6 @@
 #endif
 #include <fcntl.h>
 #include <dirent.h>
-#ifdef HAVE_SYS_TIMES_H
-#include <sys/times.h>
-#endif
 
 #define DCONF_ARCH  ctx->dconf->archive
 #define DCONF_DOC   ctx->dconf->doc
@@ -90,9 +87,6 @@
 #include "fmap.h"
 #include "cache.h"
 #include "events.h"
-#include "swf.h"
-#include "jpeg.h"
-#include "png.h"
 
 #ifdef HAVE_BZLIB_H
 #include <bzlib.h>
@@ -1265,7 +1259,7 @@ static int cli_scantar(int desc, cli_ctx *ctx, unsigned int posix)
     return ret;
 }
 
-static int cli_scanmschm(cli_ctx *ctx)
+static int cli_scanmschm(int desc, cli_ctx *ctx)
 {
 	int ret = CL_CLEAN, rc;
 	chm_metadata_t metadata;
@@ -1283,7 +1277,7 @@ static int cli_scanmschm(cli_ctx *ctx)
 	return CL_ETMPDIR;
     }
 
-    ret = cli_chm_open(dir, &metadata, ctx);
+    ret = cli_chm_open(desc, dir, &metadata, ctx);
     if (ret != CL_SUCCESS) {
 	if(!ctx->engine->keeptmp)
 	    cli_rmdirs(dir);
@@ -1730,151 +1724,6 @@ static int cli_scanembpe(cli_ctx *ctx, off_t offset)
     return CL_CLEAN;
 }
 
-
-#if defined(_WIN32) || defined(C_LINUX)
-#define PERF_MEASURE
-#endif
-
-#ifdef PERF_MEASURE
-
-static struct {
-    enum perfev id;
-    const char *name;
-    enum ev_type type;
-} perf_events[] = {
-    {PERFT_SCAN, "full scan", ev_time},
-    {PERFT_PRECB, "prescan cb", ev_time},
-    {PERFT_POSTCB, "postscan cb", ev_time},
-    {PERFT_CACHE, "cache", ev_time},
-    {PERFT_FT, "filetype", ev_time},
-    {PERFT_CONTAINER, "container", ev_time},
-    {PERFT_SCRIPT, "script", ev_time},
-    {PERFT_PE, "pe", ev_time},
-    {PERFT_RAW, "raw", ev_time},
-    {PERFT_RAWTYPENO, "raw container", ev_time},
-    {PERFT_MAP, "map", ev_time},
-    {PERFT_BYTECODE,"bytecode", ev_time},
-    {PERFT_KTIME,"kernel", ev_int},
-    {PERFT_UTIME,"user", ev_int}
-};
-
-static void get_thread_times(uint64_t *kt, uint64_t *ut)
-{
-#ifdef _WIN32
-    FILETIME c,e,k,u;
-    ULARGE_INTEGER kl,ul;
-    if (!GetThreadTimes(GetCurrentThread(), &c, &e, &k, &u)) {
-	*kt = *ut = 0;
-	return;
-    }
-    kl.LowPart = k.dwLowDateTime;
-    kl.HighPart = k.dwHighDateTime;
-    ul.LowPart = u.dwLowDateTime;
-    ul.HighPart = u.dwHighDateTime;
-    *kt = kl.QuadPart / 10;
-    *ut = ul.QuadPart / 10;
-#else
-    struct tms tbuf;
-    if (times(&tbuf) != -1) {
-	clock_t tck = sysconf(_SC_CLK_TCK);
-	*kt = 1000000*tbuf.tms_stime / tck;
-	*ut = 1000000*tbuf.tms_utime / tck;
-    } else {
-	*kt = *ut = 0;
-    }
-#endif
-}
-
-static inline void perf_init(cli_ctx *ctx)
-{
-    uint64_t kt,ut;
-    unsigned i;
-
-    if (!(ctx->options & CL_SCAN_PERFORMANCE_INFO))
-	return;
-
-    ctx->perf = cli_events_new(PERFT_LAST);
-    for (i=0;i<sizeof(perf_events)/sizeof(perf_events[0]);i++) {
-	if (cli_event_define(ctx->perf, perf_events[i].id, perf_events[i].name,
-			     perf_events[i].type, multiple_sum) == -1)
-	    continue;
-    }
-    cli_event_time_start(ctx->perf, PERFT_SCAN);
-    get_thread_times(&kt, &ut);
-    cli_event_int(ctx->perf, PERFT_KTIME, -kt);
-    cli_event_int(ctx->perf, PERFT_UTIME, -ut);
-}
-
-static inline void perf_done(cli_ctx* ctx)
-{
-    char timestr[512];
-    char *p;
-    unsigned i;
-    uint64_t kt,ut;
-    char *pend;
-    cli_events_t *perf = ctx->perf;
-
-    if (!perf)
-	return;
-
-    p = timestr;
-    pend = timestr + sizeof(timestr) - 1;
-    *pend = 0;
-
-    cli_event_time_stop(perf, PERFT_SCAN);
-    get_thread_times(&kt, &ut);
-    cli_event_int(perf, PERFT_KTIME, kt);
-    cli_event_int(perf, PERFT_UTIME, ut);
-
-    for (i=0;i<sizeof(perf_events)/sizeof(perf_events[0]);i++) {
-	union ev_val val;
-	unsigned count;
-
-	cli_event_get(perf, perf_events[i].id, &val, &count);
-	if (p < pend)
-	    p += snprintf(p, pend - p, "%s: %d.%03ums, ", perf_events[i].name,
-			  (signed)(val.v_int / 1000),
-			  (unsigned)(val.v_int % 1000));
-    }
-    *p = 0;
-    cli_infomsg(ctx, "performance: %s\n", timestr);
-
-
-    cli_events_free(perf);
-    ctx->perf = NULL;
-}
-
-static inline void perf_start(cli_ctx* ctx, int id)
-{
-    cli_event_time_start(ctx->perf, id);
-}
-
-static inline void perf_stop(cli_ctx* ctx, int id)
-{
-    cli_event_time_stop(ctx->perf, id);
-}
-
-static inline void perf_nested_start(cli_ctx* ctx, int id, int nestedid)
-{
-    cli_event_time_nested_start(ctx->perf, id, nestedid);
-}
-
-static inline void perf_nested_stop(cli_ctx* ctx, int id, int nestedid)
-{
-    cli_event_time_nested_stop(ctx->perf, id, nestedid);
-}
-
-
-#else
-static inline void perf_init(cli_ctx* ctx) {}
-static inline void perf_start(cli_ctx* ctx, int id){}
-static inline void perf_stop(cli_ctx* ctx, int id){}
-static inline void perf_nested_start(cli_ctx* ctx, int id, int nestedid){}
-static inline void perf_nested_stop(cli_ctx* ctx, int id, int nestedid){}
-static inline void perf_done(cli_ctx* ctx){}
-#endif
-
-
 static int cli_scanraw(cli_ctx *ctx, cli_file_t type, uint8_t typercg, cli_file_t *dettype, unsigned char *refhash)
 {
 	int ret = CL_CLEAN, nret = CL_CLEAN;
@@ -1890,15 +1739,12 @@ static int cli_scanraw(cli_ctx *ctx, cli_file_t type, uint8_t typercg, cli_file_
     if(ctx->engine->maxreclevel && ctx->recursion >= ctx->engine->maxreclevel)
         return CL_EMAXREC;
 
-    perf_start(ctx, PERFT_RAW);
     if(typercg)
 	acmode |= AC_SCAN_FT;
 
     ret = cli_fmap_scandesc(ctx, type == CL_TYPE_TEXT_ASCII ? 0 : type, 0, &ftoffset, acmode, NULL, refhash);
-    perf_stop(ctx, PERFT_RAW);
 
     if(ret >= CL_TYPENO) {
-	perf_nested_start(ctx, PERFT_RAWTYPENO, PERFT_SCAN);
 	ctx->recursion++;
 	if(nret != CL_VIRUS) {
 	    lastzip = lastrar = 0xdeadbeef;
@@ -1945,7 +1791,7 @@ static int cli_scanraw(cli_ctx *ctx, cli_file_t type, uint8_t typercg, cli_file_
 			    ctx->container_type = CL_TYPE_NULSFT;
 			    ctx->container_size = map->len - fpt->offset; /* not precise */
 			    cli_dbgmsg("NSIS signature found at %u\n", (unsigned int) fpt->offset-4);
-			    nret = cli_scannulsft(ctx, fpt->offset - 4);
+			    nret = cli_scannulsft(map->fd, ctx, fpt->offset - 4);
 			}
 			break;
 
@@ -2035,7 +1881,6 @@ static int cli_scanraw(cli_ctx *ctx, cli_file_t type, uint8_t typercg, cli_file_
 	    default:
 		break;
 	}
-	perf_nested_stop(ctx, PERFT_RAWTYPENO, PERFT_SCAN);
 	ctx->recursion--;
 	ret = nret;
     }
@@ -2071,56 +1916,23 @@ static void emax_reached(cli_ctx *ctx) {
 #define ret_from_magicscan(retcode) do {							\
     cli_dbgmsg("cli_magic_scandesc: returning %d %s\n", retcode, __AT__);			\
     if(ctx->engine->cb_post_scan) {								\
-	perf_start(ctx, PERFT_POSTCB);                                                         \
 	switch(ctx->engine->cb_post_scan(desc, retcode, retcode == CL_VIRUS && ctx->virname ? *ctx->virname : NULL, ctx->cb_ctx)) {		\
 	case CL_BREAK:										\
 	    cli_dbgmsg("cli_magic_scandesc: file whitelisted by callback\n");			\
-	    perf_stop(ctx, PERFT_POSTCB);                                                      \
 	    return CL_CLEAN;									\
 	case CL_VIRUS:										\
 	    cli_dbgmsg("cli_magic_scandesc: file blacklisted by callback\n");			\
 	    if(ctx->virname)									\
 		*ctx->virname = "Detected.By.Callback";						\
-	    perf_stop(ctx, PERFT_POSTCB);                                                      \
 	    return CL_VIRUS;									\
 	case CL_CLEAN:										\
 	    break;										\
 	default:										\
 	    cli_warnmsg("cli_magic_scandesc: ignoring bad return code from callback\n");	\
 	}											\
-	perf_stop(ctx, PERFT_POSTCB);                                                          \
     }\
     return retcode;										\
     } while(0)
-
-
-#define CALL_PRESCAN_CB(type_name)	                                                     \
-    if(ctx->engine->cb_pre_scan) {		                                             \
-	perf_start(ctx, PERFT_PRECB);                                                        \
-	switch(ctx->engine->cb_pre_scan(desc, (type_name), ctx->cb_ctx)) {                   \
-	case CL_BREAK:                                                                       \
-	    cli_dbgmsg("cli_magic_scandesc: file whitelisted by callback\n");                \
-	    funmap(*ctx->fmap);                                                              \
-	    ctx->fmap--;                                                                     \
-	    perf_stop(ctx, PERFT_PRECB);                                                     \
-	    ret_from_magicscan(CL_CLEAN);                                                    \
-	case CL_VIRUS:                                                                       \
-	    cli_dbgmsg("cli_magic_scandesc: file blacklisted by callback\n");                \
-	    if(ctx->virname)                                                                 \
-		*ctx->virname = "Detected.By.Callback";                                      \
-	    funmap(*ctx->fmap);                                                              \
-	    ctx->fmap--;                                                                     \
-	    perf_stop(ctx, PERFT_PRECB);                                                     \
-	    ret_from_magicscan(CL_VIRUS);                                                    \
-	case CL_CLEAN:                                                                       \
-	    break;                                                                           \
-	default:                                                                             \
-	    cli_warnmsg("cli_magic_scandesc: ignoring bad return code from callback\n");     \
-	}                                                                                    \
-	perf_stop(ctx, PERFT_PRECB);                                                         \
-    }
-
-
 
 static int magic_scandesc(int desc, cli_ctx *ctx, cli_file_t type)
 {
@@ -2170,23 +1982,38 @@ static int magic_scandesc(int desc, cli_ctx *ctx, cli_file_t type)
     }
 
     ctx->fmap++;
-    perf_start(ctx, PERFT_MAP);
     if(!(*ctx->fmap = fmap(desc, 0, sb.st_size))) {
 	cli_errmsg("CRITICAL: fmap() failed\n");
 	ctx->fmap--;
-	perf_stop(ctx, PERFT_MAP);
 	ret_from_magicscan(CL_EMEM);
     }
-    perf_stop(ctx, PERFT_MAP);
 
-    perf_start(ctx, PERFT_CACHE);
+    if(ctx->engine->cb_pre_scan) {
+	switch(ctx->engine->cb_pre_scan(desc, ctx->cb_ctx)) {
+	case CL_BREAK:
+	    cli_dbgmsg("cli_magic_scandesc: file whitelisted by callback\n");
+	    funmap(*ctx->fmap);
+	    ctx->fmap--;
+	    ret_from_magicscan(CL_CLEAN);
+	case CL_VIRUS:
+	    cli_dbgmsg("cli_magic_scandesc: file blacklisted by callback\n");
+	    if(ctx->virname)
+		*ctx->virname = "Detected.By.Callback";
+	    funmap(*ctx->fmap);
+	    ctx->fmap--;
+	    ret_from_magicscan(CL_VIRUS);
+	case CL_CLEAN:
+	    break;
+	default:
+	    cli_warnmsg("cli_magic_scandesc: ignoring bad return code from callback\n");
+	}
+    }
+
     if(cache_check(hash, ctx) == CL_CLEAN) {
 	funmap(*ctx->fmap);
 	ctx->fmap--;
-	perf_stop(ctx, PERFT_CACHE);
 	ret_from_magicscan(CL_CLEAN);
     }
-    perf_stop(ctx, PERFT_CACHE);
     hashed_size = (*ctx->fmap)->len;
     old_hook_lsig_matches = ctx->hook_lsig_matches;
     ctx->hook_lsig_matches = NULL;
@@ -2197,7 +2024,6 @@ static int magic_scandesc(int desc, cli_ctx *ctx, cli_file_t type)
 	else
 	    cli_dbgmsg("Raw mode: No support for special files\n");
 
-	CALL_PRESCAN_CB("CL_TYPE_BINARY_DATA");
 	if((ret = cli_fmap_scandesc(ctx, 0, 0, NULL, AC_SCAN_VIR, NULL, hash)) == CL_VIRUS)
 	    cli_dbgmsg("%s found in descriptor %d\n", *ctx->virname, desc);
 	else if(ret == CL_CLEAN) {
@@ -2213,10 +2039,8 @@ static int magic_scandesc(int desc, cli_ctx *ctx, cli_file_t type)
 	ret_from_magicscan(ret);
     }
 
-    perf_start(ctx, PERFT_FT);
     if(type == CL_TYPE_ANY)
-	type = cli_filetype2(*ctx->fmap, ctx->engine);
-    perf_stop(ctx, PERFT_FT);
+	type = cli_filetype2(*ctx->fmap, ctx->engine); /* FIXMEFMAP: port to fmap */
     if(type == CL_TYPE_ERROR) {
 	cli_dbgmsg("cli_magic_scandesc: cli_filetype2 returned CL_TYPE_ERROR\n");
 	funmap(*ctx->fmap);
@@ -2224,8 +2048,6 @@ static int magic_scandesc(int desc, cli_ctx *ctx, cli_file_t type)
 	ctx->hook_lsig_matches = old_hook_lsig_matches;
 	ret_from_magicscan(CL_EREAD);
     }
-
-    CALL_PRESCAN_CB(cli_ftname(type));
 
 #ifdef HAVE__INTERNAL__SHA_COLLECT
     if(!ctx->sha_collect && type==CL_TYPE_MSEXE) ctx->sha_collect = 1;
@@ -2252,7 +2074,6 @@ static int magic_scandesc(int desc, cli_ctx *ctx, cli_file_t type)
     }
 
     ctx->recursion++;
-    perf_nested_start(ctx, PERFT_CONTAINER, PERFT_SCAN);
     switch(type) {
 	case CL_TYPE_IGNORED:
 	    break;
@@ -2292,7 +2113,7 @@ static int magic_scandesc(int desc, cli_ctx *ctx, cli_file_t type)
 	    ctx->container_type = CL_TYPE_NULSFT;
 	    ctx->container_size = sb.st_size;
 	    if(SCAN_ARCHIVE && (DCONF_ARCH & ARCH_CONF_NSIS))
-		ret = cli_scannulsft(ctx, 0);
+		ret = cli_scannulsft(desc, ctx, 0);
 	    break;
 
         case CL_TYPE_AUTOIT:
@@ -2329,11 +2150,6 @@ static int magic_scandesc(int desc, cli_ctx *ctx, cli_file_t type)
 	        ret = cli_scanscript(ctx);
 	    break;
 
-	case CL_TYPE_SWF:
-	    if(DCONF_DOC & DOC_CONF_SWF)
-		ret = cli_scanswf(ctx);
-	    break;
-
 	case CL_TYPE_RTF:
 	    ctx->container_type = CL_TYPE_RTF;
 	    ctx->container_size = sb.st_size;
@@ -2362,7 +2178,7 @@ static int magic_scandesc(int desc, cli_ctx *ctx, cli_file_t type)
 	    ctx->container_type = CL_TYPE_MSCHM;
 	    ctx->container_size = sb.st_size;
 	    if(SCAN_ARCHIVE && (DCONF_ARCH & ARCH_CONF_CHM))
-		ret = cli_scanmschm(ctx);
+		ret = cli_scanmschm(desc, ctx);
 	    break;
 
 	case CL_TYPE_MSOLE2:
@@ -2439,15 +2255,6 @@ static int magic_scandesc(int desc, cli_ctx *ctx, cli_file_t type)
 	case CL_TYPE_GRAPHICS:
 	    if(SCAN_ALGO && (DCONF_OTHER & OTHER_CONF_JPEG))
 		ret = cli_scanjpeg(desc, ctx);
-
-	    if(ctx->img_validate && SCAN_ALGO && ret != CL_VIRUS)
-		ret = cli_parsejpeg(ctx);
-
-	    if(ctx->img_validate && SCAN_ALGO && ret != CL_VIRUS && ret != CL_EPARSE)
-		ret = cli_parsepng(ctx);
-
-	    if(ctx->img_validate && SCAN_ALGO && ret != CL_VIRUS && ret != CL_EPARSE)
-		ret = cli_parsegif(ctx);
 	    break;
 
         case CL_TYPE_PDF: /* FIXMELIMITS: pdf should be an archive! */
@@ -2500,7 +2307,6 @@ static int magic_scandesc(int desc, cli_ctx *ctx, cli_file_t type)
 	default:
 	    break;
     }
-    perf_nested_stop(ctx, PERFT_CONTAINER, PERFT_SCAN);
     ctx->recursion--;
     ctx->container_type = current_container_type;
     ctx->container_size = current_container_size;
@@ -2542,26 +2348,22 @@ static int magic_scandesc(int desc, cli_ctx *ctx, cli_file_t type)
 	case CL_TYPE_TEXT_UTF16BE:
 	case CL_TYPE_TEXT_UTF16LE:
 	case CL_TYPE_TEXT_UTF8:
-	    perf_nested_start(ctx, PERFT_SCRIPT, PERFT_SCAN);
 	    if((DCONF_DOC & DOC_CONF_SCRIPT) && dettype != CL_TYPE_HTML)
 	        ret = cli_scanscript(ctx);
 	    if(SCAN_MAIL && (DCONF_MAIL & MAIL_CONF_MBOX) && ret != CL_VIRUS && (ctx->container_type == CL_TYPE_MAIL || dettype == CL_TYPE_MAIL)) {
 		lseek(desc, 0, SEEK_SET);
 		ret = cli_scandesc(desc, ctx, CL_TYPE_MAIL, 0, NULL, AC_SCAN_VIR, NULL);
 	    }
-	    perf_nested_stop(ctx, PERFT_SCRIPT, PERFT_SCAN);
 	    break;
 	/* Due to performance reasons all executables were first scanned
 	 * in raw mode. Now we will try to unpack them
 	 */
 	case CL_TYPE_MSEXE:
-	    perf_nested_start(ctx, PERFT_PE, PERFT_SCAN);
 	    if(SCAN_PE && ctx->dconf->pe) {
 		unsigned int corrupted_input = ctx->corrupted_input;
 		ret = cli_scanpe(ctx);
 		ctx->corrupted_input = corrupted_input;
 	    }
-	    perf_nested_stop(ctx, PERFT_PE, PERFT_SCAN);
 	    break;
 	default:
 	    break;
@@ -2582,9 +2384,7 @@ static int magic_scandesc(int desc, cli_ctx *ctx, cli_file_t type)
 	case CL_EMAXFILES:
 	    cli_dbgmsg("Descriptor[%d]: %s\n", desc, cl_strerror(ret));
 	case CL_CLEAN:
-	    perf_start(ctx, PERFT_CACHE);
 	    cache_add(hash, hashed_size, ctx);
-	    perf_stop(ctx, PERFT_CACHE);
 	    ret_from_magicscan(CL_CLEAN);
 	default:
 	    ret_from_magicscan(ret);
@@ -2628,7 +2428,6 @@ int cl_scandesc_callback(int desc, const char **virname, unsigned long int *scan
 	free(ctx.fmap);
 	return CL_EMEM;
     }
-    perf_init(&ctx);
 
 #ifdef HAVE__INTERNAL__SHA_COLLECT
     if(scanoptions & CL_SCAN_INTERNAL_COLLECT_SHA) {
@@ -2653,7 +2452,6 @@ int cl_scandesc_callback(int desc, const char **virname, unsigned long int *scan
     if(rc == CL_CLEAN && ctx.found_possibly_unwanted)
 	rc = CL_VIRUS;
     cli_logg_unsetup();
-    perf_done(&ctx);
     return rc;
 }
 
@@ -2701,16 +2499,9 @@ int cl_scanfile(const char *filename, const char **virname, unsigned long int *s
 int cl_scanfile_callback(const char *filename, const char **virname, unsigned long int *scanned, const struct cl_engine *engine, unsigned int scanoptions, void *context)
 {
 	int fd, ret;
-	const char *fname = cli_to_utf8_maybe_alloc(filename);
 
-    if(!fname)
-	    return CL_EARG;
-
-    if((fd = safe_open(fname, O_RDONLY|O_BINARY)) == -1)
+    if((fd = safe_open(filename, O_RDONLY|O_BINARY)) == -1)
 	return CL_EOPEN;
-
-    if(fname != filename)
-	free((void*)fname);
 
     ret = cl_scandesc_callback(fd, virname, scanned, engine, scanoptions, context);
     close(fd);

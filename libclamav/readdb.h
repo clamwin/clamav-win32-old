@@ -57,7 +57,6 @@
 	cli_strbcasestr(ext, ".cfg")   ||	\
 	cli_strbcasestr(ext, ".cvd")   ||	\
 	cli_strbcasestr(ext, ".cld")   ||	\
-	cli_strbcasestr(ext, ".cud")   ||	\
 	cli_strbcasestr(ext, ".cdb")   ||	\
 	cli_strbcasestr(ext, ".idb")		\
     )

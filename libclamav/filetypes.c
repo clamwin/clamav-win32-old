@@ -96,7 +96,6 @@ static const struct ftmap_s {
     { "CL_TYPE_AUTOIT",		CL_TYPE_AUTOIT		},
     { "CL_TYPE_ISHIELD_MSI",	CL_TYPE_ISHIELD_MSI	},
     { "CL_TYPE_7Z",		CL_TYPE_7Z		},
-    { "CL_TYPE_SWF",		CL_TYPE_SWF		},
     { NULL,			CL_TYPE_IGNORED		}
 };
 
@@ -109,17 +108,6 @@ cli_file_t cli_ftcode(const char *name)
 	    return ftmap[i].code;
 
     return CL_TYPE_ERROR;
-}
-
-const char *cli_ftname(cli_file_t code)
-{
-	unsigned int i;
-
-    for(i = 0; ftmap[i].name; i++)
-	if(ftmap[i].code == code)
-	    return ftmap[i].name;
-
-    return NULL;
 }
 
 void cli_ftfree(const struct cl_engine *engine)

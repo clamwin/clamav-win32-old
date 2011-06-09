@@ -201,7 +201,9 @@ BUILD_CONFIGURE_FLAGS = @BUILD_CONFIGURE_FLAGS@
 CC = @CC@
 CCDEPMODE = @CCDEPMODE@
 CFGDIR = @CFGDIR@
-CFLAGS = @CFLAGS@
+
+# ClamAV: filter -Werror here
+CFLAGS = `echo "@CFLAGS@" | sed -e 's/-Werror[^=-]//'`
 CHECK_CPPFLAGS = @CHECK_CPPFLAGS@
 CHECK_LIBS = @CHECK_LIBS@
 CLAMAVGROUP = @CLAMAVGROUP@
@@ -217,7 +219,6 @@ CYGPATH_W = @CYGPATH_W@
 DBDIR = @DBDIR@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
-DLLTOOL = @DLLTOOL@
 DSYMUTIL = @DSYMUTIL@
 DUMPBIN = @DUMPBIN@
 ECHO_C = @ECHO_C@
@@ -266,7 +267,6 @@ LT_DLLOADERS = @LT_DLLOADERS@
 LT_DLPREOPEN = @LT_DLPREOPEN@
 MAINT = @MAINT@
 MAKEINFO = @MAKEINFO@
-MANIFEST_TOOL = @MANIFEST_TOOL@
 MKDIR_P = @MKDIR_P@
 NM = @NM@
 NMEDIT = @NMEDIT@
@@ -291,13 +291,10 @@ THREAD_LIBS = @THREAD_LIBS@
 TH_SAFE = @TH_SAFE@
 VERSION = @VERSION@
 VERSIONSCRIPTFLAG = @VERSIONSCRIPTFLAG@
-WERR_CFLAGS = @WERR_CFLAGS@
-WERR_CFLAGS_MILTER = @WERR_CFLAGS_MILTER@
 abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@
 abs_top_builddir = @abs_top_builddir@
 abs_top_srcdir = @abs_top_srcdir@
-ac_ct_AR = @ac_ct_AR@
 ac_ct_CC = @ac_ct_CC@
 ac_ct_DUMPBIN = @ac_ct_DUMPBIN@
 am__include = @am__include@
@@ -330,6 +327,7 @@ libdir = @libdir@
 libexecdir = @libexecdir@
 localedir = @localedir@
 localstatedir = @localstatedir@
+lt_ECHO = @lt_ECHO@
 ltdl_LIBOBJS = @ltdl_LIBOBJS@
 ltdl_LTLIBOBJS = @ltdl_LTLIBOBJS@
 mandir = @mandir@
@@ -371,7 +369,7 @@ EXTRA_DIST = lt__dirent.c lt__strl.c COPYING.LIB README argz_.h argz.c
 CLEANFILES = libltdl.la libltdlc.la libdlloader.la $(ltdl_LIBOBJS) \
 	$(ltdl_LTLIBOBJS)
 MOSTLYCLEANFILES = argz.h argz.h-t
-LTDL_VERSION_INFO = -version-info 10:0:3
+LTDL_VERSION_INFO = -version-info 9:1:2
 @INSTALL_LTDL_TRUE@ltdlincludedir = $(includedir)/libltdl
 @INSTALL_LTDL_TRUE@ltdlinclude_HEADERS = libltdl/lt_system.h \
 @INSTALL_LTDL_TRUE@			  libltdl/lt_error.h \
@@ -964,6 +962,7 @@ uninstall-am: uninstall-includeHEADERS uninstall-libLTLIBRARIES \
 # doesn't have one that works with the given compiler.
 all-local $(lib_OBJECTS): $(ARGZ_H)
 argz.h: argz_.h
+	$(mkinstalldirs) . 
 	cp $(srcdir)/argz_.h $@-t
 	mv $@-t $@
 

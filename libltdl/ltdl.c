@@ -54,10 +54,6 @@ or obtained by writing to the Free Software Foundation, Inc.,
 #  define LT_LIBEXT "a"
 #endif
 
-#if !defined(LT_LIBPREFIX)
-#  define LT_LIBPREFIX "lib"
-#endif
-
 /* This is the maximum symbol size that won't require malloc/free */
 #undef	LT_SYMBOL_LENGTH
 #define LT_SYMBOL_LENGTH	128
@@ -76,7 +72,6 @@ or obtained by writing to the Free Software Foundation, Inc.,
 static	const char	objdir[]		= LT_OBJDIR;
 static	const char	archive_ext[]		= LT_ARCHIVE_EXT;
 static  const char	libext[]		= LT_LIBEXT;
-static  const char	libprefix[]		= LT_LIBPREFIX;
 #if defined(LT_MODULE_EXT)
 static	const char	shlib_ext[]		= LT_MODULE_EXT;
 #endif
@@ -213,7 +208,7 @@ LT_BEGIN_C_DECLS
 LT_SCOPE const lt_dlvtable *	get_vtable (lt_user_data data);
 LT_END_C_DECLS
 #ifdef HAVE_LIBDLLOADER
-extern LT_DLSYM_CONST lt_dlsymlist preloaded_symbols[];
+extern lt_dlsymlist		preloaded_symbols;
 #endif
 
 /* Initialize libltdl. */
@@ -239,7 +234,7 @@ lt_dlinit (void)
 #ifdef HAVE_LIBDLLOADER
       if (!errors)
 	{
-	  errors += lt_dlpreload (preloaded_symbols);
+	  errors += lt_dlpreload (&preloaded_symbols);
 	}
 
       if (!errors)
@@ -999,7 +994,7 @@ trim (char **dest, const char *str)
 
   FREE (*dest);
 
-  if (!end || end == str)
+  if (!end)
     return 1;
 
   if (len > 3 && str[0] == '\'')
@@ -1081,19 +1076,11 @@ parse_dotla_file(FILE *file, char **dlname, char **libdir, char **deplibs,
 	{
 	  errors += trim (old_name, &line[sizeof (STR_OLD_LIBRARY) - 1]);
 	}
-
-      /* Windows native tools do not understand the POSIX paths we store
-	 in libdir. */
 #undef  STR_LIBDIR
 #define STR_LIBDIR	"libdir="
       else if (strncmp (line, STR_LIBDIR, sizeof (STR_LIBDIR) - 1) == 0)
 	{
 	  errors += trim (libdir, &line[sizeof(STR_LIBDIR) - 1]);
-#ifdef __WINDOWS__
-	  /* Disallow following unix-style paths on MinGW.  */
-	  if (*libdir && (**libdir == '/' || **libdir == '\\'))
-	    **libdir = '\0';
-#endif
 	}
 
 #undef  STR_DL_DEPLIBS
@@ -1277,8 +1264,8 @@ try_dlopen (lt_dlhandle *phandle, const char *filename, const char *ext,
 
       if (vtable)
 	{
-	  /* libprefix + name + "." + libext + NULL */
-	  archive_name = MALLOC (char, strlen (libprefix) + LT_STRLEN (name) + strlen (libext) + 2);
+	  /* name + "." + libext + NULL */
+	  archive_name = MALLOC (char, LT_STRLEN (name) + LT_STRLEN (libext) + 2);
 	  *phandle = (lt_dlhandle) lt__zalloc (sizeof (struct lt__handle));
 
 	  if ((*phandle == NULL) || (archive_name == NULL))
@@ -1290,14 +1277,7 @@ try_dlopen (lt_dlhandle *phandle, const char *filename, const char *ext,
 
 	  /* Preloaded modules are always named according to their old
 	     archive name.  */
-	  if (strncmp(name, "lib", 3) == 0)
-	    {
-	      sprintf (archive_name, "%s%s.%s", libprefix, name + 3, libext);
-	    }
-	  else
-	    {
-	      sprintf (archive_name, "%s.%s", name, libext);
-	    }
+	  sprintf (archive_name, "%s.%s", name, libext);
 
 	  if (tryall_dlopen (&newhandle, archive_name, advise, vtable) == 0)
 	    {
@@ -1507,7 +1487,7 @@ try_dlopen (lt_dlhandle *phandle, const char *filename, const char *ext,
 }
 
 
-/* If the last error message stored was `FILE_NOT_FOUND', then return
+/* If the last error messge store was `FILE_NOT_FOUND', then return
    non-zero.  */
 static int
 file_not_found (void)
@@ -1527,7 +1507,7 @@ file_not_found (void)
 static int
 has_library_ext (const char *filename)
 {
-  const char *	ext     = 0;
+  char *	ext     = 0;
 
   assert (filename);
 
@@ -2086,7 +2066,7 @@ lt_dlerror (void)
   LT__GETERROR (error);
   LT__SETERRORSTR (0);
 
-  return error;
+  return error ? error : NULL;
 }
 
 static int

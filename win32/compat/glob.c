@@ -21,8 +21,6 @@
 #include "dirent.h"
 #include "libgen.h"
 
-#include <malloc.h>
-
 /* 
     I GIVE UP! The CRT is b0rked and cannot be helped.
 
@@ -67,7 +65,7 @@
     #define wrapper.
 */
 
-static int glob_add(char *path, int *argc, char ***argv) {
+static int glob_add(const char *path, int *argc, char ***argv) {
     char *tail = strchr(path, '*'), *tailqmark;
     char *dup1, *dup2, *dir, *base, *taildirsep, *tailwldsep;
     struct dirent *de;
@@ -123,11 +121,8 @@ static int glob_add(char *path, int *argc, char ***argv) {
     if(!tailwldsep)
 	tailwldsep = tail + taillen;
 
-    baselen = strlen(path) + 1;
-    dup1 = (char *)_alloca(baselen * 2);
-    memcpy(dup1, path, baselen);
-    dup2 = dup1 + baselen;
-    memcpy(dup2, path, baselen);
+    dup1 = strdup(path);
+    dup2 = strdup(path);
 
     if(!mergedir) {
 	dir = dirname(dup1);
@@ -180,21 +175,16 @@ static int glob_add(char *path, int *argc, char ***argv) {
 	}
     }
     if(d) closedir(d);
-    _freea(dup1);
+    free(dup1);
+    free(dup2);
     free(path);
     return outlen;
 }
 
 void w32_glob(int *argc_ptr, char ***argv_ptr) {
-    wchar_t *wtmp = GetCommandLineW();
-    char *cur, *begparm = NULL, *endparm = NULL;
+    char *cur = GetCommandLineA(), *begparm = NULL, *endparm = NULL;
     char **argv = NULL, c;
-    int argc = 0, in_sq = 0, in_dq = 0, need_glob = 0, allarglen = 0, linelen;
-
-    linelen = wcslen(wtmp);
-    cur = _alloca(linelen * 6 + 1);
-    if(!WideCharToMultiByte(CP_UTF8, 0, wtmp, -1, cur, linelen * 6 + 1, NULL, NULL))
-	cur = GetCommandLineA();
+    int argc = 0, in_sq = 0, in_dq = 0, need_glob = 0, allarglen = 0;
 
     do {
 	c = *cur;
@@ -264,6 +254,7 @@ void w32_glob(int *argc_ptr, char ***argv_ptr) {
 	}
 	cur++;
     } while (c);
+
     if(argc) {
 	int i, argvlen = sizeof(*argv) * (argc + 1), argclen = 0;
 	argv = realloc(argv, argvlen + allarglen + argc);

@@ -112,9 +112,8 @@ char *cli_virname(char *virname, unsigned int official)
 int cli_parse_add(struct cli_matcher *root, const char *virname, const char *hexsig, uint16_t rtype, uint16_t type, const char *offset, uint8_t target, const uint32_t *lsigid, unsigned int options)
 {
 	struct cli_bm_patt *bm_new;
-	char *pt, *hexcpy, *start, *n, l, r;
-	const char *wild;
-	int ret, asterisk = 0, range;
+	char *pt, *hexcpy, *start, *n;
+	int ret, asterisk = 0;
 	unsigned int i, j, hexlen, parts = 0;
 	int mindist = 0, maxdist = 0, error = 0;
 
@@ -163,24 +162,7 @@ int cli_parse_add(struct cli_matcher *root, const char *virname, const char *hex
 	}
 	return CL_SUCCESS;
     }
-    if((wild = strchr(hexsig, '{'))) {
-	if(sscanf(wild, "%c%u%c", &l, &range, &r) == 3 && l == '{' && r == '}' && range > 0 && range < 128) {
-	    hexcpy = cli_calloc(hexlen + 2 * range, sizeof(char));
-	    if(!hexcpy)
-		return CL_EMEM;
-	    strncpy(hexcpy, hexsig, wild - hexsig);
-	    for(i = 0; i < (unsigned int) range; i++)
-		strcat(hexcpy, "??");
-	    if(!(wild = strchr(wild, '}'))) {
-		cli_errmsg("cli_parse_add(): Problem adding signature: missing bracket\n");
-		free(hexcpy);
-		return CL_EMALFDB;
-	    }
-	    strcat(hexcpy, ++wild);
-	    ret = cli_parse_add(root, virname, hexcpy, rtype, type, offset, target, lsigid, options);
-	    free(hexcpy);
-	    return ret;
-	}
+    if(strchr(hexsig, '{')) {
 
 	root->ac_partsigs++;
 
@@ -1696,7 +1678,7 @@ static int cli_loadinfo(FILE *fs, struct cl_engine *engine, unsigned int options
     sha256_init(&ctx);
     while(cli_dbgets(buffer, FILEBUFF, fs, dbio)) {
 	line++;
-	if(!(options & CL_DB_UNSIGNED) && !strncmp(buffer, "DSIG:", 5)) {
+	if(!strncmp(buffer, "DSIG:", 5)) {
 	    dsig = 1;
 	    sha256_final(&ctx, hash);
 	    if(cli_versig2(hash, buffer + 5, INFO_NSTR, INFO_ESTR) != CL_SUCCESS) {
@@ -1775,7 +1757,7 @@ static int cli_loadinfo(FILE *fs, struct cl_engine *engine, unsigned int options
 	last = new;
     }
 
-    if(!(options & CL_DB_UNSIGNED) && !dsig) {
+    if(!dsig) {
 	cli_errmsg("cli_loadinfo: Digital signature not found\n");
 	return CL_EMALFDB;
     }
@@ -2381,9 +2363,6 @@ int cli_load(const char *filename, struct cl_engine *engine, unsigned int *signo
 
     } else if(cli_strbcasestr(dbname, ".cld")) {
 	ret = cli_cvdload(fs, engine, signo, options, 1, filename, 0);
-
-    } else if(cli_strbcasestr(dbname, ".cud")) {
-	ret = cli_cvdload(fs, engine, signo, options, 2, filename, 0);
 
     } else if(cli_strbcasestr(dbname, ".hdb") || cli_strbcasestr(dbname, ".hsb")) {
 	ret = cli_loadhash(fs, engine, signo, MD5_HDB, options, dbio, dbname);

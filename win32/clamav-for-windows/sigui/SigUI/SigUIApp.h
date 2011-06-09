@@ -37,7 +37,6 @@ class SigUIApp : public wxApp
 	bool install_mode;
 	bool verbose_mode;
 	bool conf_mode;
-      wxString langname;
 };
 
 #endif // SIGUIAPP_H

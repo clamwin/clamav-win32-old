@@ -488,7 +488,7 @@ static int cli_nsis_unpack(struct nsis_st *n, cli_ctx *ctx) {
 }
 
 
-int cli_scannulsft(cli_ctx *ctx, off_t offset) {
+int cli_scannulsft(int desc, cli_ctx *ctx, off_t offset) {
         int ret;
 	struct nsis_st nsist;
 
@@ -505,7 +505,11 @@ int cli_scannulsft(cli_ctx *ctx, off_t offset) {
 	return CL_ETMPDIR;
     }
     
-    nsist.map = *ctx->fmap;
+    if(!(nsist.map = fmap(desc, 0, 0))) {
+	cli_errmsg("scannulsft: fmap failed\n");
+	return CL_EMEM;
+    }
+
     if(ctx->engine->keeptmp) cli_dbgmsg("NSIS: Extracting files to %s\n", nsist.dir);
 
     do {
@@ -529,6 +533,7 @@ int cli_scannulsft(cli_ctx *ctx, off_t offset) {
 	ret = CL_CLEAN;
 
     nsis_shutdown(&nsist);
+    funmap(nsist.map);
 
     if(!ctx->engine->keeptmp)
         cli_rmdirs(nsist.dir);

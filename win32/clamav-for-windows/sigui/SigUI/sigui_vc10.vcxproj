@@ -98,7 +98,6 @@
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>wx_pch.h</PrecompiledHeaderFile>
-      <DisableSpecificWarnings>4996;4611;4706</DisableSpecificWarnings>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>_DEBUG;__WXMSW__;_UNICODE;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -141,7 +140,6 @@
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>wx_pch.h</PrecompiledHeaderFile>
-      <DisableSpecificWarnings>4996;4611;4706</DisableSpecificWarnings>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>_DEBUG;__WXMSW__;_UNICODE;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -187,7 +185,6 @@
       <PrecompiledHeaderFile>
       </PrecompiledHeaderFile>
       <FunctionLevelLinking>true</FunctionLevelLinking>
-      <DisableSpecificWarnings>4996;4611;4706</DisableSpecificWarnings>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>__WXMSW__;NDEBUG;_UNICODE;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -236,7 +233,6 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>wx_pch.h</PrecompiledHeaderFile>
       <FunctionLevelLinking>true</FunctionLevelLinking>
-      <DisableSpecificWarnings>4996;4611;4706</DisableSpecificWarnings>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>__WXMSW__;NDEBUG;_UNICODE;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
