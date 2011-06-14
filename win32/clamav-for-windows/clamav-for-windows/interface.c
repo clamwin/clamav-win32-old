@@ -250,8 +250,8 @@ BOOL interface_setup(void) {
     return TRUE;
 }
 
-static int sigload_callback(const char *type, const char *name, void *context) {
-    if(minimal_definitions && strcmp(type, "fp"))
+static int sigload_callback(const char *type, const char *name, unsigned int custom, void *context) {
+    if(minimal_definitions && (custom || strcmp(type, "fp")))
 	return 1;
     return 0;
 }
@@ -355,7 +355,7 @@ int CLAMAPI Scan_Initialize(const wchar_t *pEnginesFolder, const wchar_t *pTempR
 	unlock_engine();
 	FAIL(CL_EMEM, "Not enough memory for a new engine");
     }
-    cl_engine_set_clcb_pre_scan(engine, prescan_cb);
+    cl_engine_set_clcb_pre_cache(engine, prescan_cb);
     cl_engine_set_clcb_post_scan(engine, postscan_cb);
     
     minimal_definitions = bLoadMinDefs;
