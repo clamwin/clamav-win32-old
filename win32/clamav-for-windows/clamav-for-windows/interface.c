@@ -28,6 +28,57 @@
 #include "clscanapi.h"
 #include "interface.h"
 
+const char *types[] = {
+    "HTML",		/*  0 */
+    "HTML_UTF16",	/*  1 */
+    "MSEXE",		/*  2 */
+    "GRAPHICS",		/*  3 */
+    "TEXT_ASCII",	/*  4 */
+    "TEXT_UTF8",	/*  5 */
+    "TEXT_UTF16LE",	/*  6 */
+    "TEXT_UTF16BE",	/*  7 */
+    "PDF",		/*  8 */
+    "SCRIPT",		/*  9 */
+    "RTF",		/* 10 */
+    "RIFF",		/* 11 */
+    "MSCHM",		/* 12 */
+    "MSCAB",		/* 13 */
+    "MSOLE2",		/* 14 */
+    "MSSZDD",		/* 15 */
+    "ZIP",		/* 16 */
+    "RAR",		/* 17 */
+    "7Z",		/* 18 */
+    "BZ",		/* 19 */
+    "GZ",		/* 20 */
+    "ARJ",		/* 21 */
+    "ZIPSFX",		/* 22 */
+    "RARSFX",		/* 23 */
+    "CABSFX",		/* 24 */
+    "ARJSFX",		/* 25 */
+    "NULSFT",		/* 26 */
+    "AUTOIT",		/* 27 */
+    "ISHIELD_MSI",	/* 28 */
+    "SFX",		/* 29 */
+    "BINHEX",		/* 30 */
+    "MAIL",		/* 31 */
+    "TNEF",		/* 32 */
+    "BINARY_DATA",	/* 33 */
+    "CRYPTFF",		/* 34 */
+    "UUENCODED",	/* 35 */
+    "SCRENC",		/* 36 */
+    "POSIX_TAR",	/* 37 */
+    "OLD_TAR",		/* 38 */
+    "ELF",		/* 39 */
+    "MACHO",		/* 40 */
+    "MACHO_UNIBIN",	/* 41 */
+    "SIS",		/* 42 */
+    "SWF",		/* 43 */
+    "CPIO_ODC",		/* 44 */
+    "CPIO_NEWC",	/* 45 */
+    "CPIO_CRC",		/* 46 */
+    NULL
+};
+
 int WINAPI SHCreateDirectoryExA(HWND, LPCTSTR, SECURITY_ATTRIBUTES *); /* cannot include Shlobj.h due to DATADIR collision */
 
 #define FMT(s) "!"__FUNCTION__": "s"\n"
@@ -55,6 +106,7 @@ typedef struct {
     CLAM_SCAN_CALLBACK scancb;
     void *scancb_ctx;
     unsigned int scanopts;
+    _int64 *filetype;
 } instance;
 
 struct {
@@ -73,6 +125,7 @@ BOOL minimal_definitions = FALSE;
 #define lock_instances()(WaitForSingleObject(instance_mutex, INFINITE) == WAIT_FAILED)
 #define unlock_instances() do {ReleaseMutex(instance_mutex);} while(0)
 
+cl_error_t filetype_cb(int fd, const char *detected_file_type, void *context);
 cl_error_t prescan_cb(int fd, const char *detected_file_type, void *context);
 cl_error_t postscan_cb(int fd, int result, const char *virname, void *context);
 
@@ -355,7 +408,8 @@ int CLAMAPI Scan_Initialize(const wchar_t *pEnginesFolder, const wchar_t *pTempR
 	unlock_engine();
 	FAIL(CL_EMEM, "Not enough memory for a new engine");
     }
-    cl_engine_set_clcb_pre_cache(engine, prescan_cb);
+    cl_engine_set_clcb_pre_cache(engine, filetype_cb);
+    cl_engine_set_clcb_pre_scan(engine, prescan_cb);
     cl_engine_set_clcb_post_scan(engine, postscan_cb);
     
     minimal_definitions = bLoadMinDefs;
@@ -449,7 +503,7 @@ int CLAMAPI Scan_CreateInstance(CClamAVScanner **ppScanner) {
     INFN();
     if(!ppScanner)
 	FAIL(CL_ENULLARG, "NULL pScanner");
-    inst = calloc(1, sizeof(*inst));
+    inst = (instance *)calloc(1, sizeof(*inst));
     if(!inst)
 	FAIL(CL_EMEM, "CreateInstance: OOM");
     if(lock_engine()) {
@@ -887,7 +941,7 @@ int CLAMAPI Scan_ScanObjectByHandle(CClamAVScanner *pScanner, HANDLE object, int
     perf = GetTickCount();
     res = cl_scandesc_callback(fd, &virname, NULL, engine, inst->scanopts, &sctx);
 
-    do {
+    if(!inst->filetype) do {
 	CLAM_SCAN_INFO si;
 	CLAM_ACTION act;
 	DWORD cbperf;
@@ -935,7 +989,7 @@ int CLAMAPI Scan_ScanObjectByHandle(CClamAVScanner *pScanner, HANDLE object, int
     if(res == CL_VIRUS) {
 	logg("Scan_ScanObjectByHandle (instance %p): file is INFECTED with %s\n", inst, virname);
 	if(pInfoList) {
-	    CLAM_SCAN_INFO_LIST *infolist = calloc(1, sizeof(CLAM_SCAN_INFO_LIST) + sizeof(CLAM_SCAN_INFO) + MAX_VIRNAME_LEN * 2);
+	    CLAM_SCAN_INFO_LIST *infolist = (CLAM_SCAN_INFO_LIST *)calloc(1, sizeof(CLAM_SCAN_INFO_LIST) + sizeof(CLAM_SCAN_INFO) + MAX_VIRNAME_LEN * 2);
 	    PCLAM_SCAN_INFO scaninfo;
 	    wchar_t *wvirname;
 	    if(!infolist)
@@ -967,6 +1021,16 @@ int CLAMAPI Scan_ScanObjectByHandle(CClamAVScanner *pScanner, HANDLE object, int
     WIN();
 }
 
+int CLAMAPI Scan_GetFileType(HANDLE hFile, _int64 *filetype) {
+    instance *inst;
+    int status, ret = Scan_CreateInstance((CClamAVScanner **)&inst);
+    if(ret != CLAMAPI_SUCCESS)
+	return ret;
+    inst->filetype = filetype;
+    ret = Scan_ScanObjectByHandle((CClamAVScanner *)inst, hFile, &status, NULL);
+    Scan_DestroyInstance((CClamAVScanner *)inst);
+    return ret;
+}
 
 int CLAMAPI Scan_DeleteScanInfo(CClamAVScanner *pScanner, PCLAM_SCAN_INFO_LIST pInfoList) {
     logg("*in Scan_DeleteScanInfo(pScanner = %p, pInfoList = %p)\n", pScanner, pInfoList);
@@ -989,6 +1053,38 @@ int CLAMAPI Scan_DeleteScanInfo(CClamAVScanner *pScanner, PCLAM_SCAN_INFO_LIST p
     WIN();
 }
 
+
+static void ftype_bits(const char *type, _int64 *filetype) {
+    int i;
+    if(strncmp(type, "CL_TYPE_", 8)) {
+	for(i=0; types[i]; i++) {
+	    if(!strcmp(&type[8], types[i]))
+		break;
+	}
+	if(!types[i]) i = -1;
+    } else
+	i = -1;
+    if(i<0) {
+	filetype[0] = 0;
+	filetype[1] = 0;
+    } else if(i<64) {
+	filetype[0] = 1LL << i;
+	filetype[1] = 0;
+    } else {
+	filetype[0] = 0;
+	filetype[1] = 1LL << (i-64);
+    }
+}
+
+cl_error_t filetype_cb(int fd, const char *type, void *context) {
+    struct scan_ctx *sctx = (struct scan_ctx *)context;
+    if(sctx && sctx->inst && sctx->inst->filetype) {
+	ftype_bits(type, sctx->inst->filetype);
+	return CL_BREAK;
+    }
+    return CL_CLEAN;
+}
+
 cl_error_t prescan_cb(int fd, const char *type, void *context) {
     struct scan_ctx *sctx = (struct scan_ctx *)context;
     char tmpf[4096];
@@ -1003,16 +1099,11 @@ cl_error_t prescan_cb(int fd, const char *type, void *context) {
 	return CL_CLEAN;
     }
     inst = sctx->inst;
-    logg("*in prescan_cb with clamav context %p, instance %p, fd %d, type %s)\n", context, inst, fd, type);
-    if(strncmp(type, "CL_TYPE_", 8) ||
-       (strcmp(&type[8], "BINARY_DATA") &&
-	strcmp(&type[8], "ANY") &&
-	strcmp(&type[8], "MSEXE") &&
-	strcmp(&type[8], "MSCAB") &&
-	strcmp(&type[8], "OLE2")
-	)
-       ) logg("*prescan_cb: skipping scan of type %s\n", type);
+    if(inst && inst->filetype)
+	return CL_CLEAN; /* Just in case, this shouldn't happen */
 
+    logg("*in prescan_cb with clamav context %p, instance %p, fd %d, type %s)\n", context, inst, fd, type);
+    ftype_bits(type, si.filetype);
     si.cbSize = sizeof(si);
     si.flags = 0;
     si.scanPhase = (fd == sctx->entryfd) ? SCAN_PHASE_INITIAL : SCAN_PHASE_PRESCAN;
@@ -1105,10 +1196,13 @@ cl_error_t postscan_cb(int fd, int result, const char *virname, void *context) {
 	logg("!postscan_cb called with NULL clamav context\n");
 	return CL_CLEAN;
     }
+    inst = sctx->inst;
+    if(inst && inst->filetype)
+	return CL_CLEAN; /* No callback, we are just filetyping */
+
     if(fd == sctx->entryfd)
 	return CL_CLEAN; /* Moved to after cl_scandesc returns due to heuristic results not being yet set in magicscan */
 
-    inst = sctx->inst;
     si.cbSize = sizeof(si);
     si.flags = 0;
     si.scanPhase = SCAN_PHASE_POSTSCAN;

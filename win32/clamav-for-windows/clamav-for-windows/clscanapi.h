@@ -136,6 +136,10 @@ typedef struct _CLAM_SCAN_INFO {
     /* Presence: ALWAYS */
     const wchar_t *pInnerObjectPath;
 
+    /** File type **/
+    /* Presence; SCAN_PHASE_PRESCAN */
+    _int64 filetype[2];
+
 } CLAM_SCAN_INFO, *PCLAM_SCAN_INFO;
 /* NOTE: all the objects within the above structure are guaranteed to be available and
  *       valid until the callback returns (SCAN_PHASE_PRESCAN and SCAN_PHASE_POSTSCAN) or
@@ -253,6 +257,12 @@ int CLAMAPI Scan_ScanObject(CClamAVScanner *pScanner, const wchar_t *pObjectPath
  * OUTPUT @param pInfoList : list containing additional information about file that was scanned (ONLY valid in *pScanStatus == CLAM_INFECTED)
  */
 int CLAMAPI Scan_ScanObjectByHandle(CClamAVScanner *pScanner, HANDLE object, int *pScanStatus, PCLAM_SCAN_INFO_LIST *pInfoList);
+
+/*
+ * Returns the outer file type as an _int64[2] for the give HANDLE
+ * Scan is not performed and no callback is invoked
+ */
+ int CLAMAPI Scan_GetFileType(HANDLE hFile, _int64 *filetype);
 
 /*
  * MANDATORY SUPPORT
