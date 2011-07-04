@@ -115,6 +115,7 @@ struct {
 } *instances = NULL;
 unsigned int ninsts_total = 0;
 unsigned int ninsts_avail = 0;
+unsigned int official_sigs, custom_sigs;
 HANDLE instance_mutex;
 
 BOOL minimal_definitions = FALSE;
@@ -306,6 +307,10 @@ BOOL interface_setup(void) {
 static int sigload_callback(const char *type, const char *name, unsigned int custom, void *context) {
     if(minimal_definitions && (custom || strcmp(type, "fp")))
 	return 1;
+    if(custom)
+	custom_sigs++;
+    else if(strcmp(type, "fp"))
+	official_sigs++;
     return 0;
 }
 
@@ -361,6 +366,7 @@ static int load_db(void) {
     INFN();
 
     cl_engine_set_clcb_sigload(engine, sigload_callback, NULL);
+    official_sigs = custom_sigs = 0;
     if((ret = cl_load(dbdir, engine, &signo, CL_DB_STDOPT & ~CL_DB_PHISHING & ~CL_DB_PHISHING_URLS)) != CL_SUCCESS) {
 	cl_engine_free(engine);
 	engine = NULL;
@@ -380,6 +386,21 @@ static int load_db(void) {
     touch_last_update(signo);
 
     WIN();
+}
+
+int CLAMAPI Scan_HaveSigs(unsigned int *official, unsigned int *custom) {
+    int ret;
+    if(lock_engine())
+	FAIL(-1, "failed to lock engine");
+    if(!engine) {
+	unlock_engine();
+	FAIL(-1, "No engine available");
+    }
+    ret = ((official_sigs + custom_sigs) > 0);
+    if(official) *official = official_sigs;
+    if(custom) *custom = custom_sigs;
+    unlock_engine();
+    return ret;
 }
 
 static void free_engine_and_unlock(void) {
@@ -1024,10 +1045,13 @@ int CLAMAPI Scan_ScanObjectByHandle(CClamAVScanner *pScanner, HANDLE object, int
 int CLAMAPI Scan_GetFileType(HANDLE hFile, _int64 *filetype) {
     instance *inst;
     int status, ret = Scan_CreateInstance((CClamAVScanner **)&inst);
-    if(ret != CLAMAPI_SUCCESS)
-	return ret;
+    logg("*in Scan_GetFileType(HANDLE = %x, filetype = %p)\n", hFile, filetype);
+    if(ret != CLAMAPI_SUCCESS) {
+	FAIL(ret, "Failed to create instance, error %d", ret);
+    }
     inst->filetype = filetype;
     ret = Scan_ScanObjectByHandle((CClamAVScanner *)inst, hFile, &status, NULL);
+    logg("Scan_GetFileType: Scan_ScanObjectByHandle returned %d, type %016llx%016llx\n", ret, filetype[1], filetype[0]);
     Scan_DestroyInstance((CClamAVScanner *)inst);
     return ret;
 }
@@ -1056,7 +1080,7 @@ int CLAMAPI Scan_DeleteScanInfo(CClamAVScanner *pScanner, PCLAM_SCAN_INFO_LIST p
 
 static void ftype_bits(const char *type, _int64 *filetype) {
     int i;
-    if(strncmp(type, "CL_TYPE_", 8)) {
+    if(!strncmp(type, "CL_TYPE_", 8)) {
 	for(i=0; types[i]; i++) {
 	    if(!strcmp(&type[8], types[i]))
 		break;
@@ -1074,12 +1098,14 @@ static void ftype_bits(const char *type, _int64 *filetype) {
 	filetype[0] = 0;
 	filetype[1] = 1LL << (i-64);
     }
+    logg("*ftype_bits setting type to %016llx%016llx\n", filetype[1], filetype[0]);
 }
 
 cl_error_t filetype_cb(int fd, const char *type, void *context) {
     struct scan_ctx *sctx = (struct scan_ctx *)context;
     if(sctx && sctx->inst && sctx->inst->filetype) {
 	ftype_bits(type, sctx->inst->filetype);
+        logg("*in filetype_cb with clamav context %p, instance %p, fd %d, type %s, typenum %016llx%016llx)\n", context, sctx->inst, fd, type, sctx->inst->filetype[1], sctx->inst->filetype[0]);
 	return CL_BREAK;
     }
     return CL_CLEAN;
