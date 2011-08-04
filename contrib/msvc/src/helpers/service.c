@@ -180,7 +180,7 @@ void svc_ready(void)
     }
 }
 
-int svc_checkpoint(const char *type, const char *name, void *context)
+int svc_checkpoint(const char *type, const char *name, unsigned int custom, void *context)
 {
     if (svc.dwCurrentState == SERVICE_START_PENDING)
     {

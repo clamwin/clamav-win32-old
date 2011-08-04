@@ -63,7 +63,7 @@ extern BOOL cw_revertfsredir(void);
 /* service */
 extern void svc_register(const char *name);
 extern void svc_ready(void);
-extern int svc_checkpoint(const char *type, const char *name, void *context);
+extern int svc_checkpoint(const char *type, const char *name, unsigned int custom, void *context);
 extern int svc_install(const char *name, const char *dname, const char *desc);
 extern int svc_uninstall(const char *name, int verbose);
 
