@@ -79,10 +79,6 @@
    don't. */
 #define HAVE_DECL_SNPRINTF 0
 
-/* Define to 1 if you have the declaration of `strncasecmp', and to 0 if you
-   don't. */
-#define HAVE_DECL_STRNCASECMP 0
-
 /* Define to 1 if you have the declaration of `strtok_r', and to 0 if you
    don't. */
 #define HAVE_DECL_STRTOK_R 0
@@ -124,9 +120,6 @@
 /* Define to 1 if you have the `mbrtowc' function. */
 #define HAVE_MBRTOWC 1
 
-/* Define to 1 if you have the `memchr' function. */
-#define HAVE_MEMCHR 1
-
 /* Define to 1 if you have the <memory.h> header file. */
 #define HAVE_MEMORY_H 1
 
@@ -165,6 +158,12 @@
 
 /* Define to 1 if fchownat is declared even after undefining macros. */
 /* #undef HAVE_RAW_DECL_FCHOWNAT */
+
+/* Define to 1 if ffsl is declared even after undefining macros. */
+/* #undef HAVE_RAW_DECL_FFSL */
+
+/* Define to 1 if ffsll is declared even after undefining macros. */
+/* #undef HAVE_RAW_DECL_FFSLL */
 
 /* Define to 1 if fpurge is declared even after undefining macros. */
 /* #undef HAVE_RAW_DECL_FPURGE */
@@ -216,6 +215,9 @@
 
 /* Define to 1 if getusershell is declared even after undefining macros. */
 /* #undef HAVE_RAW_DECL_GETUSERSHELL */
+
+/* Define to 1 if group_member is declared even after undefining macros. */
+/* #undef HAVE_RAW_DECL_GROUP_MEMBER */
 
 /* Define to 1 if lchown is declared even after undefining macros. */
 /* #undef HAVE_RAW_DECL_LCHOWN */
@@ -298,9 +300,6 @@
 /* Define to 1 if stpncpy is declared even after undefining macros. */
 /* #undef HAVE_RAW_DECL_STPNCPY */
 
-/* Define to 1 if strcasecmp is declared even after undefining macros. */
-/* #undef HAVE_RAW_DECL_STRCASECMP */
-
 /* Define to 1 if strcasestr is declared even after undefining macros. */
 /* #undef HAVE_RAW_DECL_STRCASESTR */
 
@@ -312,9 +311,6 @@
 
 /* Define to 1 if strerror_r is declared even after undefining macros. */
 /* #undef HAVE_RAW_DECL_STRERROR_R */
-
-/* Define to 1 if strncasecmp is declared even after undefining macros. */
-/* #undef HAVE_RAW_DECL_STRNCASECMP */
 
 /* Define to 1 if strncat is declared even after undefining macros. */
 #define HAVE_RAW_DECL_STRNCAT 1
@@ -494,17 +490,11 @@
 /* Define to 1 if you have the <stdlib.h> header file. */
 #define HAVE_STDLIB_H 1
 
-/* Define to 1 if you have the `strcasecmp' function. */
-/* #undef HAVE_STRCASECMP */
-
 /* Define to 1 if you have the <strings.h> header file. */
 /* #undef HAVE_STRINGS_H */
 
 /* Define to 1 if you have the <string.h> header file. */
 #define HAVE_STRING_H 1
-
-/* Define to 1 if you have the `strncasecmp' function. */
-/* #undef HAVE_STRNCASECMP */
 
 /* Define to 1 if you have the `strnlen' function. */
 /* Sherpya: no strnlen on MinGW */
@@ -626,9 +616,9 @@
 /* If using the C implementation of alloca, define if you know the
    direction of stack growth for your system; otherwise it will be
    automatically deduced at runtime.
-	STACK_DIRECTION > 0 => grows toward higher addresses
-	STACK_DIRECTION < 0 => grows toward lower addresses
-	STACK_DIRECTION = 0 => direction of growth unknown */
+        STACK_DIRECTION > 0 => grows toward higher addresses
+        STACK_DIRECTION < 0 => grows toward lower addresses
+        STACK_DIRECTION = 0 => direction of growth unknown */
 /* #undef STACK_DIRECTION */
 
 /* Define to 1 if you have the ANSI C header files. */
@@ -648,6 +638,19 @@
 /* Define to 1 if on MINIX. */
 /* #undef _MINIX */
 
+/* The _Noreturn keyword of draft C1X.  */
+#ifndef _Noreturn
+# if (3 <= __GNUC__ || (__GNUC__ == 2 && 8 <= __GNUC_MINOR__) \
+      || 0x5110 <= __SUNPRO_C)
+#  define _Noreturn __attribute__ ((__noreturn__))
+# elif 1200 <= _MSC_VER
+#  define _Noreturn __declspec (noreturn)
+# else
+#  define _Noreturn
+# endif
+#endif
+
+
 /* Define to 2 if the system does not provide POSIX.1 features except with
    this defined. */
 /* #undef _POSIX_1_SOURCE */
@@ -661,6 +664,10 @@
 /* Enable extensions on AIX 3, Interix.  */
 #ifndef _ALL_SOURCE
 # define _ALL_SOURCE 1
+#endif
+/* Enable general extensions on MacOS X.  */
+#ifndef _DARWIN_C_SOURCE
+# define _DARWIN_C_SOURCE 1
 #endif
 /* Enable GNU extensions on systems that have them.  */
 #ifndef _GNU_SOURCE
@@ -731,6 +738,20 @@
 /* The name _UNUSED_PARAMETER_ is an earlier spelling, although the name
    is a misnomer outside of parameter lists.  */
 #define _UNUSED_PARAMETER_ _GL_UNUSED
+
+/* The __pure__ attribute was added in gcc 2.96.  */
+#if __GNUC__ > 2 || (__GNUC__ == 2 && __GNUC_MINOR__ >= 96)
+# define _GL_ATTRIBUTE_PURE __attribute__ ((__pure__))
+#else
+# define _GL_ATTRIBUTE_PURE /* empty */
+#endif
+
+/* The __const__ attribute was added in gcc 2.95.  */
+#if __GNUC__ > 2 || (__GNUC__ == 2 && __GNUC_MINOR__ >= 95)
+# define _GL_ATTRIBUTE_CONST __attribute__ ((__const__))
+#else
+# define _GL_ATTRIBUTE_CONST /* empty */
+#endif
 
 /* Sherpya: missing on win32 */
 #define EOVERFLOW E2BIG
