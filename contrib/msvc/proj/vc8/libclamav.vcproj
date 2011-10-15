@@ -1535,6 +1535,14 @@
 					>
 				</File>
 				<File
+					RelativePath="..\..\gnulib\msvc-inval.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\gnulib\msvc-inval.h"
+					>
+				</File>
+				<File
 					RelativePath="..\..\gnulib\printf-args.c"
 					>
 				</File>

@@ -40,6 +40,7 @@
 #define S_ISLNK(x)  (0)
 #define sleep(x)    Sleep(x * 1000)
 
+#include <sys/types.h>
 extern int ftruncate(int fd, off_t length);
 
 #endif /* _UNISTD_H */

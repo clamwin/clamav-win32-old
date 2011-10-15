@@ -79,6 +79,10 @@
    don't. */
 #define HAVE_DECL_SNPRINTF 0
 
+/* Define to 1 if you have the declaration of `strncasecmp', and to 0 if you
+   don't. */
+#define HAVE_DECL_STRNCASECMP 0
+
 /* Define to 1 if you have the declaration of `strtok_r', and to 0 if you
    don't. */
 #define HAVE_DECL_STRTOK_R 0
@@ -126,14 +130,26 @@
 /* Define to 1 if you have the `mprotect' function. */
 /* #undef HAVE_MPROTECT */
 
+/* Define to 1 on MSVC platforms that have the "invalid parameter handler"
+   concept. */
+#ifdef _MSC_VER
+#define HAVE_MSVC_INVALID_PARAMETER_HANDLER 1
+#endif
+
 /* Define to 1 if btowc is declared even after undefining macros. */
 #define HAVE_RAW_DECL_BTOWC 1
+
+/* Define to 1 if chdir is declared even after undefining macros. */
+/* #undef HAVE_RAW_DECL_CHDIR */
 
 /* Define to 1 if chown is declared even after undefining macros. */
 /* #undef HAVE_RAW_DECL_CHOWN */
 
 /* Define to 1 if dprintf is declared even after undefining macros. */
 /* #undef HAVE_RAW_DECL_DPRINTF */
+
+/* Define to 1 if dup is declared even after undefining macros. */
+/* #undef HAVE_RAW_DECL_DUP */
 
 /* Define to 1 if dup2 is declared even after undefining macros. */
 /* #undef HAVE_RAW_DECL_DUP2 */
@@ -158,6 +174,12 @@
 
 /* Define to 1 if fchownat is declared even after undefining macros. */
 /* #undef HAVE_RAW_DECL_FCHOWNAT */
+
+/* Define to 1 if fdatasync is declared even after undefining macros. */
+/* #undef HAVE_RAW_DECL_FDATASYNC */
+
+/* Define to 1 if ffs is declared even after undefining macros. */
+/* #undef HAVE_RAW_DECL_FFS */
 
 /* Define to 1 if ffsl is declared even after undefining macros. */
 /* #undef HAVE_RAW_DECL_FFSL */
@@ -255,6 +277,9 @@
 /* Define to 1 if memrchr is declared even after undefining macros. */
 /* #undef HAVE_RAW_DECL_MEMRCHR */
 
+/* Define to 1 if pclose is declared even after undefining macros. */
+/* #undef HAVE_RAW_DECL_PCLOSE */
+
 /* Define to 1 if pipe is declared even after undefining macros. */
 /* #undef HAVE_RAW_DECL_PIPE */
 
@@ -300,6 +325,9 @@
 /* Define to 1 if stpncpy is declared even after undefining macros. */
 /* #undef HAVE_RAW_DECL_STPNCPY */
 
+/* Define to 1 if strcasecmp is declared even after undefining macros. */
+/* #undef HAVE_RAW_DECL_STRCASECMP */
+
 /* Define to 1 if strcasestr is declared even after undefining macros. */
 /* #undef HAVE_RAW_DECL_STRCASESTR */
 
@@ -311,6 +339,9 @@
 
 /* Define to 1 if strerror_r is declared even after undefining macros. */
 /* #undef HAVE_RAW_DECL_STRERROR_R */
+
+/* Define to 1 if strncasecmp is declared even after undefining macros. */
+/* #undef HAVE_RAW_DECL_STRNCASECMP */
 
 /* Define to 1 if strncat is declared even after undefining macros. */
 #define HAVE_RAW_DECL_STRNCAT 1
@@ -490,11 +521,17 @@
 /* Define to 1 if you have the <stdlib.h> header file. */
 #define HAVE_STDLIB_H 1
 
+/* Define to 1 if you have the `strcasecmp' function. */
+/* #undef HAVE_STRCASECMP */
+
 /* Define to 1 if you have the <strings.h> header file. */
 /* #undef HAVE_STRINGS_H */
 
 /* Define to 1 if you have the <string.h> header file. */
 #define HAVE_STRING_H 1
+
+/* Define to 1 if you have the `strncasecmp' function. */
+/* #undef HAVE_STRNCASECMP */
 
 /* Define to 1 if you have the `strnlen' function. */
 /* Sherpya: no strnlen on MinGW */
@@ -514,6 +551,9 @@
 
 /* Define to 1 if you have the <sys/mman.h> header file. */
 /* #undef HAVE_SYS_MMAN_H */
+
+/* Define to 1 if you have the <sys/socket.h> header file. */
+/* #undef HAVE_SYS_SOCKET_H */
 
 /* Define to 1 if you have the <sys/stat.h> header file. */
 #define HAVE_SYS_STAT_H 1
@@ -554,11 +594,19 @@
 /* Define to 1 if you have the `wcsnlen' function. */
 #define HAVE_WCSNLEN 1
 
+/* Define to 1 if you have the <winsock2.h> header file. */
+#define HAVE_WINSOCK2_H 1
+
 /* Define if you have the 'wint_t' type. */
 #define HAVE_WINT_T 1
 
 /* Define to 1 if the system has the type `_Bool'. */
 /* #undef HAVE__BOOL */
+
+/* Define to 1 if you have the `_set_invalid_parameter_handler' function. */
+#ifdef _MSC_VER
+#define HAVE__SET_INVALID_PARAMETER_HANDLER 1
+#endif
 
 /* Define to a substitute value for mmap()'s MAP_ANONYMOUS flag. */
 /* #undef MAP_ANONYMOUS */
@@ -593,7 +641,7 @@
 #endif
 
 /* Define if vasnprintf exists but is overridden by gnulib. */
-#define REPLACE_VASNPRINTF 1
+/* #undef REPLACE_VASNPRINTF */
 
 /* Define to l, ll, u, ul, ull, etc., as suitable for constants of type
    'sig_atomic_t'. */
@@ -634,6 +682,17 @@
 /* Define to l, ll, u, ul, ull, etc., as suitable for constants of type
    'wint_t'. */
 #define WINT_T_SUFFIX 
+
+/* Enable large inode numbers on Mac OS X.  */
+#ifndef _DARWIN_USE_64_BIT_INODE
+# define _DARWIN_USE_64_BIT_INODE 1
+#endif
+
+/* Number of bits in a file offset, on hosts where this is settable. */
+/* #undef _FILE_OFFSET_BITS */
+
+/* Define for large files, on AIX-style hosts. */
+/* #undef _LARGE_FILES */
 
 /* Define to 1 if on MINIX. */
 /* #undef _MINIX */
@@ -706,6 +765,12 @@
 # define __GNUC_STDC_INLINE__ 1
 #endif
 
+/* Define to `int' if <sys/types.h> does not define. */
+/* #undef mode_t */
+
+/* Define to `int' if <sys/types.h> does not define. */
+/* #undef pid_t */
+
 /* Define as the type of the result of subtracting two pointers, if the system
    doesn't define it. */
 /* #undef ptrdiff_t */
@@ -726,6 +791,9 @@
 
 /* Define to `unsigned int' if <sys/types.h> does not define. */
 /* #undef size_t */
+
+/* Define as a signed type of the same size as size_t. */
+/* #undef ssize_t */
 
 /* Define as a marker that can be attached to declarations that might not
     be used.  This helps to reduce warnings, such as from
@@ -753,10 +821,14 @@
 # define _GL_ATTRIBUTE_CONST /* empty */
 #endif
 
-/* Sherpya: missing on win32 */
-#define EOVERFLOW E2BIG
+/* clamwin */
+#define REPLACE_VASNPRINTF 1
 
-/* I'm not going to fix warning in gnulib */
+#ifndef EOVERFLOW
+#define EOVERFLOW E2BIG
+#endif
+
+/* I'm not going to fix warnings in gnulib */
 #ifdef _MSC_VER
 #pragma warning(disable: 4244 4267) /* Conversion, possible loss of data */
 #endif
