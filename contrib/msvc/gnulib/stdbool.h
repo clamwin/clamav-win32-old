@@ -16,7 +16,7 @@
    along with this program; if not, write to the Free Software Foundation,
    Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.  */
 
-/* Sherpya: MinGW has his own stdboo.h */
+/* Sherpya: MinGW has his own stdbool.h */
 #ifdef __GNUC__
 #include_next <stdbool.h>
 #else

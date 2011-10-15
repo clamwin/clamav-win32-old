@@ -50,10 +50,12 @@ typedef long int intmax_t;
 typedef uint32_t mode_t;
 #endif
 
+#ifndef ssize_t
 #ifdef  _WIN64
 typedef __int64 ssize_t;
 #else
 typedef int ssize_t;
+#endif
 #endif
 
 #endif /* __GNUC__ */
