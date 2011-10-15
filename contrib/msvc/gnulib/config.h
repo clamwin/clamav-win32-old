@@ -831,6 +831,7 @@
 /* I'm not going to fix warnings in gnulib */
 #ifdef _MSC_VER
 #pragma warning(disable: 4244 4267) /* Conversion, possible loss of data */
+#pragma warning(disable: 4005)      /* Macro redefinition (EOVERFLOW) */
 #endif
 
 #include <osdeps.h>
