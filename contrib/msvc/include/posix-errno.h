@@ -23,6 +23,11 @@
 
 #define MAX_CW_ERRNO        128
 
+#if _MSC_VER >= 1600
+#pragma warning(push)
+#pragma warning(disable: 4005)  /* Macro redefinition */
+#endif
+
 /* winsock specific */
 #define ELOOP               44
 #define EPROCLIM            45
@@ -106,6 +111,10 @@
 #define EWOULDBLOCK         EALREADY  /* Operation would block - should be EAGAIN */
 
 #define ETIMEDOUT           WSAETIMEDOUT /* needed by pthreads win32, it will use winsock value */
+
+#if _MSC_VER >= 1600
+#pragma warning(pop)
+#endif
 
 extern int cw_wseterrno(void);
 extern const char *cw_strerror(int errnum);
