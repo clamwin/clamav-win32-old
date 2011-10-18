@@ -22,7 +22,7 @@ BEGIN
 			VALUE "FileDescription", "ClamWin Antivirus"
 			VALUE "FileVersion", "0, 97, 9, 9"
 			VALUE "InternalName", __MODULE__
-			VALUE "LegalCopyright", "Copyright (C) 2007-2011 Sourcefire, Inc. / ClamWin Pty Ltd"
+			VALUE "LegalCopyright", "Copyright (C) 2005-2011 Sourcefire, Inc. / ClamWin Pty Ltd"
 			VALUE "OriginalFilename", __MODULE__
 			VALUE "ProductName", "ClamWin Antivirus"
 			VALUE "ProductVersion", "0, 97, 9, 9"
