@@ -93,6 +93,7 @@
 #include "swf.h"
 #include "jpeg.h"
 #include "png.h"
+#include "iso9660.h"
 
 #ifdef HAVE_BZLIB_H
 #include <bzlib.h>
@@ -772,6 +773,37 @@ static int cli_scanmscab(int desc, cli_ctx *ctx, off_t sfx_offset)
     return ret;
 }
 
+static int vba_scandata(const unsigned char *data, unsigned int len, cli_ctx *ctx)
+{
+	struct cli_matcher *groot = ctx->engine->root[0];
+	struct cli_matcher *troot = ctx->engine->root[2];
+	struct cli_ac_data gmdata, tmdata;
+	struct cli_ac_data *mdata[2];
+	int ret;
+
+    if((ret = cli_ac_initdata(&tmdata, troot->ac_partsigs, troot->ac_lsigs, troot->ac_reloff_num, CLI_DEFAULT_AC_TRACKLEN)))
+	return ret;
+
+    if((ret = cli_ac_initdata(&gmdata, groot->ac_partsigs, groot->ac_lsigs, groot->ac_reloff_num, CLI_DEFAULT_AC_TRACKLEN))) {
+	cli_ac_freedata(&tmdata);
+	return ret;
+    }
+    mdata[0] = &tmdata;
+    mdata[1] = &gmdata;
+
+    ret = cli_scanbuff(data, len, 0, ctx, CL_TYPE_MSOLE2, mdata);
+
+    if(ret != CL_VIRUS) {
+	ret = cli_lsig_eval(ctx, troot, &tmdata, NULL, NULL);
+	if(ret != CL_VIRUS)
+	    ret = cli_lsig_eval(ctx, groot, &gmdata, NULL, NULL);
+    }
+    cli_ac_freedata(&tmdata);
+    cli_ac_freedata(&gmdata);
+
+    return ret;
+}
+
 static int cli_vba_scandir(const char *dirname, cli_ctx *ctx, struct uniq *U)
 {
 	int ret = CL_CLEAN, i, j, fd, data_len, hasmacros = 0;
@@ -812,7 +844,7 @@ static int cli_vba_scandir(const char *dirname, cli_ctx *ctx, struct uniq *U)
 		    /* cli_dbgmsg("Project content:\n%s", data); */
 		    if(ctx->scanned)
 			*ctx->scanned += data_len / CL_COUNT_PRECISION;
-		    if(cli_scanbuff(data, data_len, 0, ctx, CL_TYPE_MSOLE2, NULL) == CL_VIRUS) {
+		    if(vba_scandata(data, data_len, ctx) == CL_VIRUS) {
 			free(data);
 			ret = CL_VIRUS;
 			break;
@@ -871,7 +903,7 @@ static int cli_vba_scandir(const char *dirname, cli_ctx *ctx, struct uniq *U)
 			cli_dbgmsg("Project content:\n%s", data);
 			if(ctx->scanned)
 			    *ctx->scanned += vba_project->length[i] / CL_COUNT_PRECISION;
-			if(cli_scanbuff(data, vba_project->length[i], 0, ctx, CL_TYPE_MSOLE2, NULL) == CL_VIRUS) {
+			if(vba_scandata(data, vba_project->length[i], ctx) == CL_VIRUS) {
 				free(data);
 				ret = CL_VIRUS;
 				break;
@@ -1879,7 +1911,7 @@ static int cli_scanraw(cli_ctx *ctx, cli_file_t type, uint8_t typercg, cli_file_
 {
 	int ret = CL_CLEAN, nret = CL_CLEAN;
 	struct cli_matched_type *ftoffset = NULL, *fpt;
-	uint32_t lastzip, lastrar;
+	uint32_t lastrar;
 	struct cli_exe_info peinfo;
 	unsigned int acmode = AC_SCAN_VIR, break_loop = 0;
 	fmap_t *map = *ctx->fmap;
@@ -1901,7 +1933,7 @@ static int cli_scanraw(cli_ctx *ctx, cli_file_t type, uint8_t typercg, cli_file_
 	perf_nested_start(ctx, PERFT_RAWTYPENO, PERFT_SCAN);
 	ctx->recursion++;
 	if(nret != CL_VIRUS) {
-	    lastzip = lastrar = 0xdeadbeef;
+	    lastrar = 0xdeadbeef;
 	    fpt = ftoffset;
 	    while(fpt) {
 		if(fpt->offset) switch(fpt->type) {
@@ -1937,6 +1969,15 @@ static int cli_scanraw(cli_ctx *ctx, cli_file_t type, uint8_t typercg, cli_file_
 			    ctx->container_size = map->len - fpt->offset; /* not precise */
 			    cli_dbgmsg("ARJ-SFX signature found at %u\n", (unsigned int) fpt->offset);
 			    nret = cli_scanarj(map->fd, ctx, fpt->offset, &lastrar);
+			}
+			break;
+
+		    case CL_TYPE_ISO9660:
+			if(SCAN_ARCHIVE && (DCONF_ARCH & ARCH_CONF_ISO9660)) {
+			    ctx->container_type = CL_TYPE_ISO9660;
+			    ctx->container_size = map->len - fpt->offset; /* not precise */
+			    cli_dbgmsg("ISO9660 signature found at %u\n", (unsigned int) fpt->offset);
+			    nret = cli_scaniso(ctx, fpt->offset);
 			}
 			break;
 
