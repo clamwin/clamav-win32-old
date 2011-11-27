@@ -500,6 +500,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\..\libclamav\iso9660.c"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\..\libclamav\jpeg.c"
 				>
 			</File>
@@ -1115,6 +1119,10 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\libclamav\ishield.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\iso9660.h"
 				>
 			</File>
 			<File
