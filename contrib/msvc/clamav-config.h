@@ -18,9 +18,6 @@
 /* name of the clamav user */
 #define CLAMAVUSER "ClamWin"
 
-/* enable clamuko */
-#undef CLAMUKO
-
 /* enable debugging */
 #if defined(_MSC_VER) && defined(_DEBUG)
 #define CL_DEBUG 1
@@ -89,13 +86,16 @@
 /* "default FD_SETSIZE value" */
 #define DEFAULT_FD_SETSIZE ((unsigned __int32) (-1))
 
+/* use fanotify */
+#undef FANOTIFY
+
 /* whether _XOPEN_SOURCE needs to be defined for fd passing to work */
 #undef FDPASS_NEED_XOPEN
 
 /* file i/o buffer size */
 #define FILEBUFF 8192
 
-/* FPU byte ordering is little endian */
+/* FPU byte ordering matches CPU */
 #define FPU_WORDS_BIGENDIAN 0
 
 /* enable workaround for broken DNS servers */

@@ -632,6 +632,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\..\libclamav\rijndael.c"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\..\libclamav\rtf.c"
 				>
 			</File>
@@ -1247,6 +1251,10 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\libclamav\regex_suffix.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\rijndael.h"
 				>
 			</File>
 			<File
