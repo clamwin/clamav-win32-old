@@ -186,7 +186,7 @@ typedef	struct	mbox_ctx {
 #define UNLOCKFILE(fp)
 #endif
 
-static	int	cli_parse_mbox(const char *dir, int desc, cli_ctx *ctx);
+static	int	cli_parse_mbox(const char *dir, cli_ctx *ctx);
 static	message	*parseEmailFile(fmap_t *map, size_t *at, const table_t *rfc821Table, const char *firstLine, const char *dir);
 static	message	*parseEmailHeaders(message *m, const table_t *rfc821Table);
 static	int	parseEmailHeader(message *m, const char *line, const table_t *rfc821Table);
@@ -302,13 +302,13 @@ static	pthread_mutex_t	tables_mutex = PTHREAD_MUTEX_INITIALIZER;
 #endif
 
 int
-cli_mbox(const char *dir, int desc, cli_ctx *ctx)
+cli_mbox(const char *dir, cli_ctx *ctx)
 {
 	if(dir == NULL) {
 		cli_dbgmsg("cli_mbox called with NULL dir\n");
 		return CL_ENULLARG;
 	}
-	return cli_parse_mbox(dir, desc, ctx);
+	return cli_parse_mbox(dir, ctx);
 }
 
 /*
@@ -327,7 +327,7 @@ cli_mbox(const char *dir, int desc, cli_ctx *ctx)
  *	e.g. \0Content-Type: application/binary;
  */
 static int
-cli_parse_mbox(const char *dir, int desc, cli_ctx *ctx)
+cli_parse_mbox(const char *dir, cli_ctx *ctx)
 {
 	int retcode;
 	message *body;
@@ -656,7 +656,7 @@ parseEmailFile(fmap_t *map, size_t *at, const table_t *rfc821, const char *first
 				bodyIsEmpty = TRUE;
 			} else {
 				char *ptr;
-				char *lookahead;
+				const char *lookahead;
 
 				if(fullline == NULL) {
 					char cmd[RFC2821LENGTH + 1], out[RFC2821LENGTH + 1];
@@ -3212,7 +3212,8 @@ usefulHeader(int commandNumber, const char *cmd)
 static char *
 getline_from_mbox(char *buffer, size_t buffer_len, fmap_t *map, size_t *at)
 {
-    char *src, *cursrc, *curbuf;
+    const char *src, *cursrc;
+    char *curbuf;
     size_t i;
     size_t input_len = MIN(map->len - *at, buffer_len + 1);
     src = cursrc = fmap_need_off_once(map, *at, input_len);
