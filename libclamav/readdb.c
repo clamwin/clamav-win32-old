@@ -59,6 +59,7 @@
 #include "md5.h"
 #include "sha256.h"
 #include "dsig.h"
+#include "asn1.h"
 
 #include "phishcheck.h"
 #include "phish_whitelist.h"
@@ -1896,13 +1897,31 @@ static int cli_loadhash(FILE *fs, struct cl_engine *engine, unsigned int *signo,
 	const char *pt, *virname;
 	int ret = CL_SUCCESS;
 	unsigned int size_field = 1, md5_field = 0, line = 0, sigs = 0, tokens_count;
-	struct cli_matcher *db = NULL;
+	struct cli_matcher *db;
 	unsigned long size;
 
 
     if(mode == MD5_MDB) {
 	size_field = 0;
 	md5_field = 1;
+	db = engine->hm_mdb;
+    } else if(mode == MD5_HDB)
+	db = engine->hm_hdb;
+    else
+	db = engine->hm_fp;
+
+    if(!db) {
+	if(!(db = mpool_calloc(engine->mempool, 1, sizeof(*db))))
+	    return CL_EMEM;
+#ifdef USE_MPOOL
+	db->mempool = engine->mempool;
+#endif
+	if(mode == MD5_HDB)
+	    engine->hm_hdb = db;
+	else if(mode == MD5_MDB)
+	    engine->hm_mdb = db;
+	else
+	    engine->hm_fp = db;
     }
 
     if(engine->ignored)
@@ -1972,31 +1991,8 @@ static int cli_loadhash(FILE *fs, struct cl_engine *engine, unsigned int *signo,
 	    break;
 	}
 
-	if(mode == MD5_HDB)
-	    db = engine->hm_hdb;
-	else if(mode == MD5_MDB)
-	    db = engine->hm_mdb;
-	else
-	    db = engine->hm_fp;
-
-	if(!db) {
-	    if(!(db = mpool_calloc(engine->mempool, 1, sizeof(*db)))) {
-		ret = CL_EMEM;
-		break;
-	    }
-#ifdef USE_MPOOL
-	    db->mempool = engine->mempool;
-#endif
-	    if(mode == MD5_HDB)
-		engine->hm_hdb = db;
-	    else if(mode == MD5_MDB)
-		engine->hm_mdb = db;
-	    else
-		engine->hm_fp = db;
-	}
-
-	if((ret = hm_addhash(db, tokens[md5_field], size, virname))) {
-	    cli_errmsg("cli_loadhash: Malformed MD5 string at line %u\n", line);
+	if((ret = hm_addhash_str(db, tokens[md5_field], size, virname))) {
+	    cli_errmsg("cli_loadhash: Malformed hash string at line %u\n", line);
 	    mpool_free(engine->mempool, (void *)virname);
 	    break;
 	}
@@ -2351,6 +2347,20 @@ static int cli_loadcdb(FILE *fs, struct cl_engine *engine, unsigned int *signo, 
     return CL_SUCCESS;
 }
 
+static int cli_loadmscat(FILE *fs, const char *dbname, struct cl_engine *engine, unsigned int options, struct cli_dbio *dbio) {
+    fmap_t *map;
+
+    if(!(map = fmap(fileno(fs), 0, 0))) {
+	cli_warnmsg("Can't map cat: %s\n", dbname);
+	return 0;
+    }
+
+    if(asn1_load_mscat(map, engine))
+	cli_errmsg("Failed to load certificates from cat: %s\n", dbname);
+    funmap(map);
+    return 0;
+}
+
 static int cli_loaddbdir(const char *dirname, struct cl_engine *engine, unsigned int *signo, unsigned int options);
 
 int cli_load(const char *filename, struct cl_engine *engine, unsigned int *signo, unsigned int options, struct cli_dbio *dbio)
@@ -2474,10 +2484,12 @@ int cli_load(const char *filename, struct cl_engine *engine, unsigned int *signo
 
     } else if(cli_strbcasestr(dbname, ".cdb")) {
     	ret = cli_loadcdb(fs, engine, signo, options, dbio);
+    } else if(cli_strbcasestr(dbname, ".cat")) {
+	ret = cli_loadmscat(fs, dbname, engine, options, dbio);
     } else {
 	cli_dbgmsg("cli_load: unknown extension - assuming old database format\n");
 	ret = cli_loaddb(fs, engine, signo, options, dbio, dbname);
-    }
+    } 
 
     if(ret) {
 	cli_errmsg("Can't load %s: %s\n", filename, cl_strerror(ret));
@@ -2965,6 +2977,8 @@ int cl_engine_free(struct cl_engine *engine)
 	mpool_free(engine->mempool, root);
     }
 
+    crtmgr_free(&engine->cmgr);
+
     while(engine->cdb) {
 	struct cli_cdb *pt = engine->cdb;
 	engine->cdb = pt->next;
@@ -3157,7 +3171,7 @@ static int countsigs(const char *dbname, unsigned int options, unsigned int *sig
 	if(options & CL_COUNTSIGS_UNOFFICIAL)
 	    (*sigs)++;
 
-    } else if(cli_strbcasestr(dbname, ".wdb") || cli_strbcasestr(dbname, ".fp") || cli_strbcasestr(dbname, ".ftm") || cli_strbcasestr(dbname, ".cfg")) {
+    } else if(cli_strbcasestr(dbname, ".wdb") || cli_strbcasestr(dbname, ".fp") || cli_strbcasestr(dbname, ".ftm") || cli_strbcasestr(dbname, ".cfg") || cli_strbcasestr(dbname, ".cat")) {
 	/* ignore */
 
     } else if((options & CL_COUNTSIGS_UNOFFICIAL) && CLI_DBEXT(dbname)) {

@@ -357,6 +357,19 @@ struct cl_engine *cl_engine_new(void)
 #ifdef _WIN32
     cl_engine_set_clcb_post_scan(new, cw_postscan_check);
 #endif
+
+    crtmgr_init(&new->cmgr);
+    if(crtmgr_add_roots(&new->cmgr))  {
+	cli_errmsg("cl_engine_new: Can't initialize root certificates\n");
+	mpool_free(new->mempool, new->dconf);
+	mpool_free(new->mempool, new->root);
+#ifdef USE_MPOOL
+	mpool_destroy(new->mempool);
+#endif
+	free(new);
+	return NULL;
+    }
+
     cli_dbgmsg("Initialized %s engine\n", cl_retver());
     return new;
 }

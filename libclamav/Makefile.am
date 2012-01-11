@@ -378,7 +378,11 @@ libclamav_la_SOURCES = \
 	arc4.c \
 	arc4.h \
 	rijndael.c \
-	rijndael.h
+	rijndael.h \
+	crtmgr.c \
+	crtmgr.h \
+	asn1.c \
+	asn1.h
 
 if !LINK_TOMMATH
 libclamav_la_SOURCES += bignum.c \
