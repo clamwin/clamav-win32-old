@@ -171,7 +171,6 @@ sha256_init                         @155 NONAME
 sha256_update                       @156 NONAME
 uniq_get                            @157 NONAME
 fmap                                @158 NONAME
-funmap                              @159 NONAME
 
 ; optparser
 optget                              @170 NONAME

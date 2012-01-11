@@ -364,11 +364,15 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath="..\..\..\..\libclamav\7z.c"
+				RelativePath="..\..\..\..\libclamav\7z_iface.c"
 				>
 			</File>
 			<File
 				RelativePath="..\..\..\..\libclamav\arc4.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\asn1.c"
 				>
 			</File>
 			<File
@@ -425,6 +429,10 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\libclamav\cpio.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\crtmgr.c"
 				>
 			</File>
 			<File
@@ -767,11 +775,27 @@
 				Name="7z"
 				>
 				<File
+					RelativePath="..\..\..\..\libclamav\7z\7z.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\7z\7zAlloc.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\7z\7zAlloc.h"
+					>
+				</File>
+				<File
 					RelativePath="..\..\..\..\libclamav\7z\7zBuf.c"
 					>
 				</File>
 				<File
 					RelativePath="..\..\..\..\libclamav\7z\7zBuf.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\7z\7zBuf2.c"
 					>
 				</File>
 				<File
@@ -783,15 +807,27 @@
 					>
 				</File>
 				<File
+					RelativePath="..\..\..\..\libclamav\7z\7zDec.c"
+					>
+				</File>
+				<File
 					RelativePath="..\..\..\..\libclamav\7z\7zFile.c"
 					>
 				</File>
 				<File
-					RelativePath="..\..\..\..\libclamav\7z\7zfile.h"
+					RelativePath="..\..\..\..\libclamav\7z\7zFile.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\7z\7zIn.c"
 					>
 				</File>
 				<File
 					RelativePath="..\..\..\..\libclamav\7z\7zStream.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\7z\7zVersion.h"
 					>
 				</File>
 				<File
@@ -815,15 +851,15 @@
 					>
 				</File>
 				<File
-					RelativePath="..\..\..\..\libclamav\7z\BraIA64.c"
-					>
-				</File>
-				<File
 					RelativePath="..\..\..\..\libclamav\7z\CpuArch.h"
 					>
 				</File>
 				<File
-					RelativePath="..\..\..\..\libclamav\7z\lzma.txt"
+					RelativePath="..\..\..\..\libclamav\7z\Lzma2Dec.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\7z\Lzma2Dec.h"
 					>
 				</File>
 				<File
@@ -835,57 +871,25 @@
 					>
 				</File>
 				<File
+					RelativePath="..\..\..\..\libclamav\7z\Ppmd.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\7z\Ppmd7.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\7z\Ppmd7.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\7z\Ppmd7Dec.c"
+					>
+				</File>
+				<File
 					RelativePath="..\..\..\..\libclamav\7z\Types.h"
 					>
 				</File>
-				<Filter
-					Name="Archive"
-					>
-					<Filter
-						Name="7z"
-						>
-						<File
-							RelativePath="..\..\..\..\libclamav\7z\Archive\7z\7zDecode.c"
-							>
-						</File>
-						<File
-							RelativePath="..\..\..\..\libclamav\7z\Archive\7z\7zDecode.h"
-							>
-						</File>
-						<File
-							RelativePath="..\..\..\..\libclamav\7z\Archive\7z\7zExtract.c"
-							>
-						</File>
-						<File
-							RelativePath="..\..\..\..\libclamav\7z\Archive\7z\7zExtract.h"
-							>
-						</File>
-						<File
-							RelativePath="..\..\..\..\libclamav\7z\Archive\7z\7zHeader.c"
-							>
-						</File>
-						<File
-							RelativePath="..\..\..\..\libclamav\7z\Archive\7z\7zHeader.h"
-							>
-						</File>
-						<File
-							RelativePath="..\..\..\..\libclamav\7z\Archive\7z\7zIn.c"
-							>
-						</File>
-						<File
-							RelativePath="..\..\..\..\libclamav\7z\Archive\7z\7zIn.h"
-							>
-						</File>
-						<File
-							RelativePath="..\..\..\..\libclamav\7z\Archive\7z\7zItem.c"
-							>
-						</File>
-						<File
-							RelativePath="..\..\..\..\libclamav\7z\Archive\7z\7zItem.h"
-							>
-						</File>
-					</Filter>
-				</Filter>
 			</Filter>
 			<Filter
 				Name="nsis"
@@ -918,11 +922,15 @@
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
 			<File
-				RelativePath="..\..\..\..\libclamav\7z.h"
+				RelativePath="..\..\..\..\libclamav\7z_iface.h"
 				>
 			</File>
 			<File
 				RelativePath="..\..\..\..\libclamav\arc4.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\asn1.h"
 				>
 			</File>
 			<File
@@ -1007,6 +1015,10 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\libclamav\cpio.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\crtmgr.h"
 				>
 			</File>
 			<File
