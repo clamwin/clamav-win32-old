@@ -163,14 +163,11 @@ cli_wm_readdir                      @144 NONAME
 cli_writen                          @145 NONAME
 
 html_normalise_map                  @150 NONAME
-mp_clear                            @151 NONAME
-mp_init                             @152 NONAME
-mp_read_radix                       @153 NONAME
-sha256_final                        @154 NONAME
-sha256_init                         @155 NONAME
-sha256_update                       @156 NONAME
-uniq_get                            @157 NONAME
-fmap                                @158 NONAME
+sha256_final                        @151 NONAME
+sha256_init                         @152 NONAME
+sha256_update                       @153 NONAME
+uniq_get                            @154 NONAME
+fmap                                @155 NONAME
 
 ; optparser
 optget                              @170 NONAME

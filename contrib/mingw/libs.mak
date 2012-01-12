@@ -31,11 +31,14 @@ libclamav_SOURCES+=$(addprefix $(top)/win32/3rdparty/zlib/,adler32.c compress.c 
 	deflate.c gzlib.c gzread.c gzwrite.c gzclose.c infback.c inffast.c inflate.c inftrees.c trees.c uncompr.c zutil.c)
 
 libclamav_SOURCES+=$(wildcard $(top)/libclamav/7z/*.c)
-libclamav_SOURCES+=$(wildcard $(top)/libclamav/7z/Archive/7z/*.c)
 
+libclamav_SOURCES+=$(wildcard $(top)/libclamav/tomsfastmath/*/*.c)
+
+# exclusions
 libclamav_SOURCES:=$(subst $(top)/libclamav/regex/engine.c,,$(libclamav_SOURCES))
 libclamav_SOURCES:=$(subst $(top)/libclamav/bytecode_nojit.c,,$(libclamav_SOURCES))
 libclamav_SOURCES:=$(subst $(top)/libclamav/others.c,$(msvc)/src/dllmain/win32others.c,$(libclamav_SOURCES))
+libclamav_SOURCES:=$(subst $(top)/libclamav/tomsfastmath/misc/fp_ident.c,,$(libclamav_SOURCES))
 
 libclamav_OBJECTS=$(libclamav_SOURCES:.c=.o)
 libclamav_OBJECTS+=$(msvc)/resources/libclamav-rc.o

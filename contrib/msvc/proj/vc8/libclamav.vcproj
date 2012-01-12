@@ -53,7 +53,7 @@
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
 				DebugInformationFormat="4"
-				DisableSpecificWarnings="4996"
+				DisableSpecificWarnings="4996;4244"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -138,7 +138,7 @@
 				WarningLevel="3"
 				Detect64BitPortabilityProblems="false"
 				DebugInformationFormat="3"
-				DisableSpecificWarnings="4996"
+				DisableSpecificWarnings="4996;4244"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -221,7 +221,7 @@
 				WarningLevel="3"
 				Detect64BitPortabilityProblems="false"
 				DebugInformationFormat="3"
-				DisableSpecificWarnings="4996"
+				DisableSpecificWarnings="4996;4244"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -305,7 +305,7 @@
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
 				DebugInformationFormat="3"
-				DisableSpecificWarnings="4996"
+				DisableSpecificWarnings="4996;4244"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -381,10 +381,6 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\libclamav\autoit.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\libclamav\bignum.c"
 				>
 			</File>
 			<File
@@ -915,6 +911,350 @@
 					>
 				</File>
 			</Filter>
+			<Filter
+				Name="tomsfastmath"
+				>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\exptmod\fp_2expt.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\addsub\fp_add.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\addsub\fp_add_d.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\addsub\fp_addmod.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\addsub\fp_cmp.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\addsub\fp_cmp_d.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\addsub\fp_cmp_mag.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\bit\fp_cnt_lsb.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\bit\fp_count_bits.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\divide\fp_div.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\bit\fp_div_2.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\bit\fp_div_2d.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\divide\fp_div_d.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\exptmod\fp_exptmod.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\numtheory\fp_gcd.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\numtheory\fp_invmod.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\numtheory\fp_isprime.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\numtheory\fp_lcm.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\bit\fp_lshd.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\divide\fp_mod.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\bit\fp_mod_2d.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\divide\fp_mod_d.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\mont\fp_montgomery_calc_normalization.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\mont\fp_montgomery_reduce.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\mont\fp_montgomery_setup.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\mul\fp_mul.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\mul\fp_mul_2.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\mul\fp_mul_2d.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\mul\fp_mul_comba.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\mul\fp_mul_comba_12.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\mul\fp_mul_comba_17.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\mul\fp_mul_comba_20.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\mul\fp_mul_comba_24.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\mul\fp_mul_comba_28.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\mul\fp_mul_comba_3.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\mul\fp_mul_comba_32.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\mul\fp_mul_comba_4.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\mul\fp_mul_comba_48.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\mul\fp_mul_comba_6.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\mul\fp_mul_comba_64.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\mul\fp_mul_comba_7.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\mul\fp_mul_comba_8.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\mul\fp_mul_comba_9.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\mul\fp_mul_comba_small_set.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\mul\fp_mul_d.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\mul\fp_mulmod.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\numtheory\fp_prime_miller_rabin.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\numtheory\fp_prime_random_ex.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\bin\fp_radix_size.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\bin\fp_read_radix.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\bin\fp_read_signed_bin.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\bin\fp_read_unsigned_bin.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\bin\fp_reverse.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\bit\fp_rshd.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\bin\fp_s_rmap.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\misc\fp_set.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\bin\fp_signed_bin_size.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\sqr\fp_sqr.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\sqr\fp_sqr_comba.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\sqr\fp_sqr_comba_12.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\sqr\fp_sqr_comba_17.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\sqr\fp_sqr_comba_20.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\sqr\fp_sqr_comba_24.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\sqr\fp_sqr_comba_28.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\sqr\fp_sqr_comba_3.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\sqr\fp_sqr_comba_32.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\sqr\fp_sqr_comba_4.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\sqr\fp_sqr_comba_48.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\sqr\fp_sqr_comba_6.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\sqr\fp_sqr_comba_64.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\sqr\fp_sqr_comba_7.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\sqr\fp_sqr_comba_8.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\sqr\fp_sqr_comba_9.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\sqr\fp_sqr_comba_generic.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\sqr\fp_sqr_comba_small_set.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\sqr\fp_sqrmod.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\addsub\fp_sub.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\addsub\fp_sub_d.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\addsub\fp_submod.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\bin\fp_to_signed_bin.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\bin\fp_to_unsigned_bin.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\bin\fp_toradix.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\bin\fp_unsigned_bin_size.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\addsub\s_fp_add.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\addsub\s_fp_sub.c"
+					>
+				</File>
+			</Filter>
 		</Filter>
 		<Filter
 			Name="Header Files"
@@ -947,10 +1287,6 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\libclamav\bignum.h"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\libclamav\bignum_class.h"
 				>
 			</File>
 			<File
