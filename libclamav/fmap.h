@@ -131,7 +131,7 @@ static inline int fmap_readn(fmap_t *m, void *dst, size_t at, size_t len)
 {
     const void *src;
 
-    if(at == m->len)
+    if(at == m->len || !len)
 	return 0;
     if(at > m->len)
 	return -1;
@@ -163,7 +163,7 @@ static inline const void *fmap_need_off_once_len(fmap_t *m, size_t at, size_t le
     const void *p;
     if(at >= m->len) {
 	*lenout = 0;
-	return NULL;
+	return (void*)0xE0F00000;/* EOF, not read error */
     }
     if(len > m->len - at)
 	len = m->len - at;

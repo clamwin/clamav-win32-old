@@ -1422,7 +1422,7 @@ static int cli_scancryptff(cli_ctx *ctx)
 	return CL_ECREAT;
     }
 
-    for(; src = fmap_need_off_once_len(*ctx->fmap, pos, FILEBUFF, &bread); pos += bread) {
+    for(; (src = fmap_need_off_once_len(*ctx->fmap, pos, FILEBUFF, &bread)) && bread; pos += bread) {
 	for (i=0;i<bread;i++)
 	    dest[i] = src[i] ^ (unsigned char) 0xff;
 	if(cli_writen(ndesc, dest, bread) == -1) {
@@ -2643,11 +2643,12 @@ int cli_map_scandesc(cl_fmap_t *map, off_t offset, size_t length, cli_ctx *ctx)
 {
     off_t old_off = map->nested_offset;
     size_t old_len = map->len;
+    size_t old_real_len = map->real_len;
     int ret;
 
     cli_dbgmsg("cli_map_scandesc: [%ld, +%ld), [%ld, +%ld)\n",
 	       old_off, old_len, offset, length);
-    if (offset < 0 || offset >= length) {
+    if (offset < 0 || offset >= old_len) {
 	cli_dbgmsg("Invalid offset: %ld\n", (long)offset);
 	return CL_CLEAN;
     }
@@ -2680,6 +2681,7 @@ int cli_map_scandesc(cl_fmap_t *map, off_t offset, size_t length, cli_ctx *ctx)
     ctx->fmap--;
     map->nested_offset = old_off;
     map->len = old_len;
+    map->real_len = old_real_len;
     return ret;
 }
 
