@@ -159,7 +159,7 @@ static char *get_dns(void)
             return NULL;
     }
 
-    if ((res = GetNetworkParams(FixedInfo, &ulOutBufLen) != NO_ERROR))
+    if ((res = GetNetworkParams(FixedInfo, &ulOutBufLen)) != ERROR_SUCCESS)
     {
         GlobalFree(FixedInfo);
         logg("!DNS Resolver: [2] Call to GetNetworkParams() failed %d\n", res);
