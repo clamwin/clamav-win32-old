@@ -29,7 +29,7 @@
 static char *cw_getaltname(const char *filename)
 {
     size_t len = strlen(filename) + 6;
-    size_t wlen = 0, pos = 0;
+    size_t pos = 0;
     char *lslash = strrchr(filename, '\\');
     char *name_a = NULL, *fqname_a = NULL;
     wchar_t *name_w = NULL;

@@ -130,9 +130,9 @@ static BOOL isIssuerTrusted(wchar_t *filename)
         CERT_QUERY_FORMAT_FLAG_BINARY, 0, &dwEncoding, &dwContentType, &dwFormatType, &hStore, &hMsg, NULL))
     {
         if ((lErr = GetLastError()) == CRYPT_E_NO_MATCH)
-            cli_dbgmsg("sigcheck: CryptQueryObject() returns CRYPT_E_NO_MATCH\n", GetLastError());
+            cli_dbgmsg("sigcheck: CryptQueryObject() returns CRYPT_E_NO_MATCH\n");
         else
-            cli_errmsg("sigcheck: CryptQueryObject() failed: 0x%08x\n", GetLastError());
+            cli_errmsg("sigcheck: CryptQueryObject() failed: 0x%08x\n", lErr);
         return FALSE;
     }
 

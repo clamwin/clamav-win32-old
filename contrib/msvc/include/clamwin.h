@@ -121,8 +121,8 @@ namespace ClamWin
     class Scanner
     {
     public:
-        Scanner::Scanner(void) : m_ch(pCWInit()) {}
-        Scanner::~Scanner(void) { pCWFree(m_ch); }
+        Scanner(void) : m_ch(pCWInit()) {}
+        ~Scanner(void) { pCWFree(m_ch); }
 
         BOOL LoadDB(TCHAR *path = NULL)
         {

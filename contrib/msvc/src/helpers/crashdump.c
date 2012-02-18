@@ -42,7 +42,7 @@ DWORD WINAPI CrashMiniDumpWriteDumpProc(LPVOID lpParam)
     HMODULE hDll = NULL;
     char dumpfile[MAX_PATH] = "";
     char executable[MAX_PATH] = "Unknown module";
-    char *lSlash = NULL, *p;
+    char *lSlash = NULL;
     unsigned int i;
 
     GetModuleFileNameA(NULL, executable, MAX_PATH - 1);
