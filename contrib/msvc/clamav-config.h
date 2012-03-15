@@ -12,6 +12,9 @@
 /* "build clamd" */
 #define BUILD_CLAMD 1
 
+/* enable ClamAuth */
+#undef CLAMAUTH
+
 /* name of the clamav group */
 #undef CLAMAVGROUP
 
@@ -431,9 +434,6 @@
 /* The archive extension */
 #define LT_LIBEXT "dll"
 
-/* The archive prefix */
-#undef LT_LIBPREFIX
-
 /* Define to the extension used for runtime loadable modules, say, ".so". */
 #if defined(_MSC_VER) && defined(_DEBUG)
 #define LT_MODULE_EXT "d"
@@ -520,7 +520,7 @@
 #undef USE_SYSLOG
 
 /* Stable releases tag */
-#define CLAMWIN_RELEASE "0.97.3"
+#define CLAMWIN_RELEASE "0.97.4"
 
 /* Version number of package */
 #ifdef CLAMWIN_RELEASE
