@@ -20,7 +20,7 @@ dnl   MA 02110-1301, USA.
 AC_PREREQ([2.59])
 dnl For a release change [devel] to the real version [0.xy]
 dnl also change VERSION below
-AC_INIT([ClamAV], [0.97.3], [http://bugs.clamav.net/], [clamav], [http://www.clamav.net/])
+AC_INIT([ClamAV], [0.97.4], [http://bugs.clamav.net/], [clamav], [http://www.clamav.net/])
 
 AH_BOTTOM([#include "platform.h"])
 dnl put configure auxiliary into config
@@ -43,10 +43,10 @@ AC_DEFINE([PACKAGE], PACKAGE_NAME, [Name of package])
 
 dnl change this on a release
 dnl VERSION="devel-`date +%Y%m%d`"
-VERSION="0.97.3"
+VERSION="0.97.4"
 
 LC_CURRENT=7
-LC_REVISION=12
+LC_REVISION=13
 LC_AGE=1
 LIBCLAMAV_VERSION="$LC_CURRENT":"$LC_REVISION":"$LC_AGE"
 AC_SUBST([LIBCLAMAV_VERSION])
@@ -1044,6 +1044,7 @@ darwin*)
     AC_DEFINE([C_BSD],1,[os is bsd flavor])
     AC_DEFINE([C_DARWIN],1,[os is darwin])
     AC_DEFINE([BIND_8_COMPAT],1,[enable bind8 compatibility])
+    AC_DEFINE([CLAMAUTH],1,[enable ClamAuth])
     use_netinfo="yes"
     ;;
 os2*)
@@ -1069,6 +1070,9 @@ hpux*)
 	TH_SAFE="-thread-safe"
     fi
     AC_DEFINE([C_HPUX],1,[os is hpux])
+    if test "$have_mempool" = "yes"; then
+	LDFLAGS="$LDFLAGS -Wl,+pd,1M"
+    fi
     ;;
 aix*)
     if test "$have_pthreads" = "yes"; then
