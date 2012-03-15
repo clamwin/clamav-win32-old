@@ -16,6 +16,9 @@
 #include <sys/conf.h>
 #include <miscfs/devfs/devfs.h>
 
+#define CLAMAUTH_VERSION            "0.3"
+#define CLAMAUTH_PROTOCOL_VERSION    2
+
 #pragma mark ***** Global Resources
 /* These declarations are required to allocate memory and create locks.
  * They're created when we start and destroyed when we stop.
@@ -24,160 +27,59 @@
 static OSMallocTag  gMallocTag = NULL;
 static lck_grp_t *  gLockGroup = NULL;
 
-#pragma mark ***** Vnode Utilities
-/* VnodeActionInfo describes one of the action bits in the vnode scope's action 
- * field.
- */
+#define CLAMAUTH_EVENTS (KAUTH_VNODE_EXECUTE)
 
-struct VnodeActionInfo {
-    kauth_action_t      fMask;                  /* only one bit should be set */
-    const char *        fOpNameFile;            /* descriptive name of the bit for files */
-    const char *        fOpNameDir;             /* descriptive name of the bit for directories
-                                                 * NULL implies equivalent to fOpNameFile
-                                                 */
-};
-typedef struct VnodeActionInfo VnodeActionInfo;
+struct AuthEvent {
+    /* don't change the first two fields */
+    UInt32 action;
+    char path[1024];
+    UInt32 pid;
 
-/* Some evil macros (aren't they all) to make it easier to initialise kVnodeActionInfo. */
-#define VNODE_ACTION(action)                        { KAUTH_VNODE_ ## action,     #action,     NULL       }
-#define VNODE_ACTION_FILEDIR(actionFile, actionDir) { KAUTH_VNODE_ ## actionFile, #actionFile, #actionDir }
-
-/* kVnodeActionInfo is a table of all the known action bits and their human readable names. */
-static const VnodeActionInfo kVnodeActionInfo[] = {
-    VNODE_ACTION_FILEDIR(READ_DATA,   LIST_DIRECTORY),
-    VNODE_ACTION_FILEDIR(WRITE_DATA,  ADD_FILE),
-    VNODE_ACTION_FILEDIR(EXECUTE,     SEARCH),
-    VNODE_ACTION(DELETE),
-    VNODE_ACTION_FILEDIR(APPEND_DATA, ADD_SUBDIRECTORY),
-    VNODE_ACTION(DELETE_CHILD),
-    VNODE_ACTION(READ_ATTRIBUTES),
-    VNODE_ACTION(WRITE_ATTRIBUTES),
-    VNODE_ACTION(READ_EXTATTRIBUTES),
-    VNODE_ACTION(WRITE_EXTATTRIBUTES),
-    VNODE_ACTION(READ_SECURITY),
-    VNODE_ACTION(WRITE_SECURITY),
-    VNODE_ACTION(TAKE_OWNERSHIP),
-    VNODE_ACTION(SYNCHRONIZE),
-    VNODE_ACTION(LINKTARGET),
-    VNODE_ACTION(CHECKIMMUTABLE),
-    VNODE_ACTION(ACCESS),
-    VNODE_ACTION(NOIMMUTABLE)
 };
 
-#define kVnodeActionInfoCount (sizeof(kVnodeActionInfo) / sizeof(*kVnodeActionInfo))
+#define EVENTQSIZE 64
 
-static int CreateVnodeActionString(
-    kauth_action_t  action, 
-    boolean_t       isDir, 
-    char **         actionStrPtr, 
-    size_t *        actionStrBufSizePtr
-)
-    /* Creates a human readable description of a vnode action bitmap.  
-     * action is the bitmap.  isDir is true if the action relates to a 
-     * directory, and false otherwise.  This allows the action name to 
-     * be context sensitive (KAUTH_VNODE_EXECUTE vs KAUTH_VNODE_SEARCH).
-     * actionStrPtr is a place to store the allocated string pointer.  
-     * The caller is responsible for freeing this memory using OSFree.
-     * actionStrBufSizePtr is a place to store the size of the resulting 
-     * allocation (because the annoying kernel memory allocator requires 
-     * you to provide the size when you free).
-     */
+struct AuthEventQueue {
+    struct AuthEvent queue[EVENTQSIZE];
+    int cnt, first, last;
+};
+
+void AuthEventInitQueue(struct AuthEventQueue *queue);
+void AuthEventEnqueue(struct AuthEventQueue *queue, struct AuthEvent *event);
+int AuthEventDequeue(struct AuthEventQueue *queue, struct AuthEvent *event);
+
+void AuthEventInitQueue(struct AuthEventQueue *queue)
 {
-    int             err;
-    enum { kCalcLen, kCreateString } pass;
-    kauth_action_t  actionsLeft;
-    unsigned int    infoIndex;
-    size_t          actionStrLen;
-    char *          actionStr;
-
-    assert( actionStrPtr != NULL);
-    assert(*actionStrPtr != NULL);
-    assert( actionStrBufSizePtr != NULL);
-    
-    err = 0;
-    
-    actionStr = NULL;
-    
-    /* A two pass algorithm.  In the first pass, actionStr is NULL and we just 
-     * calculate actionStrLen; at the end of the first pass we actually allocate 
-     * actionStr.  In the second pass, actionStr is not NULL and we actually 
-     * initialise the string in that buffer.
-     */
-    
-    for (pass = kCalcLen; pass <= kCreateString; pass++) {
-        actionsLeft = action;
-
-        /* Process action bits that are described in kVnodeActionInfo. */        
-        infoIndex = 0;
-        actionStrLen = 0;
-        while ( (actionsLeft != 0) && (infoIndex < kVnodeActionInfoCount) ) {
-            if ( actionsLeft & kVnodeActionInfo[infoIndex].fMask ) {
-                const char * thisStr;
-                size_t       thisStrLen;
-                
-                /* Increment the length of the action string by the action name. */                
-                if ( isDir && (kVnodeActionInfo[infoIndex].fOpNameDir != NULL) ) {
-                    thisStr = kVnodeActionInfo[infoIndex].fOpNameDir;
-                } else {
-                    thisStr = kVnodeActionInfo[infoIndex].fOpNameFile;
-                }
-                thisStrLen = strlen(thisStr);
-                
-                if (actionStr != NULL) {
-                    memcpy(&actionStr[actionStrLen], thisStr, thisStrLen);
-                }
-                actionStrLen += thisStrLen;
-                
-                /* Now clear the bit in actionsLeft, indicating that we've 
-                 * processed this one.
-                 */
-                actionsLeft &= ~kVnodeActionInfo[infoIndex].fMask;
-
-                /* If there's any actions left, account for the intervening "|". */
-                if (actionsLeft != 0) {
-                    if (actionStr != NULL) {
-                        actionStr[actionStrLen] = '|';
-                    }
-                    actionStrLen += 1;
-                }
-            }
-            infoIndex += 1;
-        }
-        
-        /* Now include any remaining actions as a hex number. */
-        if (actionsLeft != 0) {
-            if (actionStr != NULL)
-                snprintf(&actionStr[actionStrLen], 10, "0x%08x", actionsLeft);
-            actionStrLen += 10;         /* strlen("0x") + 8 chars of hex */
-        }
-        
-        /* If we're at the end of the first pass, allocate actionStr 
-         * based on the size we just calculated.  Remember that actionStrLen 
-         * is a string length, so we have to allocate an extra character to 
-         * account for the null terminator.  If we're at the end of the 
-         * second pass, just place the null terminator.
-         */
-        if (pass == kCalcLen) {
-            actionStr = OSMalloc(actionStrLen + 1, gMallocTag);
-            if (actionStr == NULL) {
-                err = ENOMEM;
-            }
-        } else {
-            actionStr[actionStrLen] = 0;
-        }
-        
-        if (err != 0) {
-            break;
-        }
-    }
-
-    *actionStrPtr        = actionStr;
-    *actionStrBufSizePtr = actionStrLen + 1;
-    
-    assert( (err == 0) == (*actionStrPtr != NULL) );
-    
-    return err;
+    memset(queue, 0, sizeof(struct AuthEventQueue));
+    queue->first = queue->cnt = 0;
+    queue->last = EVENTQSIZE - 1;
 }
+
+void AuthEventEnqueue(struct AuthEventQueue *queue, struct AuthEvent *event)
+{
+    queue->last = (queue->last + 1) % EVENTQSIZE;
+    memcpy(&queue->queue[queue->last], event, sizeof(struct AuthEvent));
+    queue->cnt++;
+}
+
+int AuthEventDequeue(struct AuthEventQueue *queue, struct AuthEvent *event)
+{
+    if(!queue->cnt)
+        return 1;
+    memcpy(event, &queue->queue[queue->first], sizeof(struct AuthEvent));
+    queue->first = (queue->first + 1) % EVENTQSIZE;
+    queue->cnt--;
+    return 0;
+}
+
+struct AuthEventQueue gEventQueue;
+static lck_mtx_t *gEventQueueLock = NULL;
+static SInt32 gEventCount = 0;
+
+#define MAX_PREFIX_NUM 10
+#define MAX_PREFIX_LEN 128
+static char gPrefixTable[MAX_PREFIX_NUM][MAX_PREFIX_LEN];
+static unsigned int gPrefixCount = 0;
 
 static int CreateVnodePath(vnode_t vp, char **vpPathPtr)
     /* Creates a full path for a vnode.  vp may be NULL, in which 
@@ -208,12 +110,126 @@ static int CreateVnodePath(vnode_t vp, char **vpPathPtr)
     return err;
 }
 
+/* /dev/clamauth handling */
+
+static int ca_devidx = -1;
+static void *ca_devnode = NULL;
+int dev_open = 0, dev_read = 0;
+
+static int ca_open(dev_t dev, int flag, int devtype, proc_t p)
+{
+    if(dev_open)
+        return EBUSY;
+    
+    dev_open = 1;
+    
+    return 0;
+}
+
+static int ca_close(dev_t dev, int flag, int devtype, proc_t p)
+{
+    struct AuthEvent event;
+
+    lck_mtx_lock(gEventQueueLock);
+    dev_open = 0;
+    dev_read = 0;
+    AuthEventInitQueue(&gEventQueue);
+    /* Initialize event queue and add version info event */
+    event.action = CLAMAUTH_PROTOCOL_VERSION;
+    strncpy(event.path, "ClamAuth "CLAMAUTH_VERSION"", sizeof(event.path));
+    event.pid = 0xdeadbeef;
+    AuthEventEnqueue(&gEventQueue, &event);
+    lck_mtx_unlock(gEventQueueLock);
+
+    return 0;
+}
+
+static int ca_read(dev_t dev, uio_t uio, int ioflag)
+{
+    int ret = 0, size, retq = 0;
+    struct AuthEvent event;
+    struct timespec waittime;
+    
+    waittime.tv_sec  = 1;
+    waittime.tv_nsec = 0;
+    while(uio_resid(uio) > 0) {
+        lck_mtx_lock(gEventQueueLock);
+        retq = AuthEventDequeue(&gEventQueue, &event);
+        dev_read = 1;
+        lck_mtx_unlock(gEventQueueLock);
+        if(retq != 1) {
+            /* snprintf(info, sizeof(info), "PATH: %s, PID: %d, ACTION: %d\n", event.path, event.pid, event.action); */
+            size = MIN(uio_resid(uio), sizeof(event));
+            ret = uiomove((const char *) &event, size, uio);
+            if(ret)
+                break;
+        }  else {
+            //(void) msleep(&gEventQueue, NULL, PUSER, "events", &waittime);
+            break;
+        }
+    }
+    
+    if(ret) {
+        printf("ClamAuth: uiomove() failed\n");
+    }
+    
+    return ret;
+}
+
+static int ca_write(dev_t dev, uio_t uio, int ioflag)
+{
+    return EBADF;
+}
+
+static int ca_ioctl(dev_t dev, u_long cmd, caddr_t addr, int flag, proc_t p)
+{
+    return EBADF;
+}
+
+static int ca_select(dev_t dev, int flag, void * wql, proc_t p)
+{
+    return EBADF;
+}
+
+static struct cdevsw clamauth_cdevsw = {
+    ca_open,
+    ca_close,
+    ca_read,
+    ca_write,
+    ca_ioctl,
+    eno_stop,
+    eno_reset,
+    NULL,
+    ca_select,
+    eno_mmap,
+    eno_strat,
+    eno_getc,
+    eno_putc,
+    0
+};
+
+static int ca_remove(void)
+{
+    if(ca_devnode)
+        devfs_remove(ca_devnode);
+    
+    if(ca_devidx != -1) {
+        if(cdevsw_remove(ca_devidx, &clamauth_cdevsw) != ca_devidx) {
+            printf("ClamAuth: cdevsw_remove() failed\n");
+            return KERN_FAILURE;
+        }
+    }
+    
+    return KERN_SUCCESS;
+}
+
+
 #pragma mark ***** Listener Resources
 
 /* Some scopes (for example KAUTH_SCOPE_VNODE) are called a /lot/.  Thus, 
  * it's a good idea to avoid taking mutexes in your listener if at all 
  * possible.  Thus, we use non-blocking synchronisation to protect the 
- * global data that's accessed by our listener (gPrefix and gListenerScope).  
+ * global data that's accessed by our listener (gPrefix).  
  * Every time we enter a listener, we increment gActivationCount, and ever 
  * time we leave we decrement it.  When we want to change the listener, we 
  * first remove the listener, then we wait for the activation count to hit, 
@@ -225,103 +241,6 @@ static int CreateVnodePath(vnode_t vp, char **vpPathPtr)
  */
 
 static SInt32 gActivationCount = 0;
-
-static const char * gPrefix = NULL;         /* points into gConfiguration, so doesn't need to be freed */
-
-static char * gListenerScope = NULL;        /* must be freed using OSFree */
-
-static int GenericScopeListener(
-    kauth_cred_t    credential,
-    void *          idata,
-    kauth_action_t  action,
-    uintptr_t       arg0,
-    uintptr_t       arg1,
-    uintptr_t       arg2,
-    uintptr_t       arg3
-)
-    /* A Kauth listener that's called to authorize an action in the generic 
-     * scope (KAUTH_SCOPE_GENERIC).  See the Kauth documentation for a description 
-     * of the parameters.  In this case, we just dump out the parameters to the 
-     * operation and return KAUTH_RESULT_DEFER, allowing the other listeners 
-     * to decide whether the operation is allowed or not.
-     */
-{
-    #pragma unused(idata)
-    #pragma unused(arg0)
-    #pragma unused(arg1)
-    #pragma unused(arg2)
-    #pragma unused(arg3)
-    
-    (void) OSIncrementAtomic(&gActivationCount);
-
-    /* Tell the user about this request. */
-    switch (action) {
-        case KAUTH_GENERIC_ISSUSER:
-            printf(
-                "scope=" KAUTH_SCOPE_GENERIC ", action=KAUTH_GENERIC_ISSUSER, actor=%ld\n", 
-                (long) kauth_cred_getuid(credential)
-            );
-            break;
-        default:
-            printf("ClamAuth.GenericScopeListener: Unknown action (%d).\n", action);
-            break;
-    }
-
-    (void) OSDecrementAtomic(&gActivationCount);
-
-    return KAUTH_RESULT_DEFER;
-}
-
-static int ProcessScopeListener(
-    kauth_cred_t    credential,
-    void *          idata,
-    kauth_action_t  action,
-    uintptr_t       arg0,
-    uintptr_t       arg1,
-    uintptr_t       arg2,
-    uintptr_t       arg3
-)
-    /* A Kauth listener that's called to authorize an action in the process 
-     * scope (KAUTH_SCOPE_PROCESS).  See the Kauth documentation for a description 
-     * of the parameters.  In this case, we just dump out the parameters to the 
-     * operation and return KAUTH_RESULT_DEFER, allowing the other listeners 
-     * to decide whether the operation is allowed or not.
-     */
-{
-    #pragma unused(idata)
-    #pragma unused(arg2)
-    #pragma unused(arg3)
-
-    (void) OSIncrementAtomic(&gActivationCount);
-
-    /* Tell the user about this request. */
-    switch (action) {
-        case KAUTH_PROCESS_CANSIGNAL:
-            printf(
-                "scope=" KAUTH_SCOPE_PROCESS ", action=KAUTH_PROCESS_CANSIGNAL, uid=%ld, pid=%ld, target=%ld, signal=%ld\n", 
-                (long) kauth_cred_getuid(credential),
-                (long) proc_selfpid(),
-                (long) proc_pid((proc_t) arg0),
-                (long) arg1
-            );
-            break;
-        case KAUTH_PROCESS_CANTRACE:
-            printf(
-                "scope=" KAUTH_SCOPE_PROCESS ", action=KAUTH_PROCESS_CANTRACE, uid=%ld, pid=%ld, target=%ld\n", 
-                (long) kauth_cred_getuid(credential),
-                (long) proc_selfpid(),
-                (long) proc_pid((proc_t) arg0)
-            );
-            break;
-        default:
-            printf("ClamAuth.ProcessScopeListener: Unknown action (%d).\n", action);
-            break;
-    }
-
-    (void) OSDecrementAtomic(&gActivationCount);
-
-    return KAUTH_RESULT_DEFER;
-}
 
 static int VnodeScopeListener(
     kauth_cred_t    credential,
@@ -343,12 +262,9 @@ static int VnodeScopeListener(
     vnode_t         dvp;
     char *          vpPath;
     char *          dvpPath;
-    boolean_t       isDir;
-    char *          actionStr;
-    size_t          actionStrBufSize;
-    
-    actionStrBufSize = 0;
-    
+    struct AuthEvent event;
+    unsigned int    i, mpath = 0;
+        
     (void) OSIncrementAtomic(&gActivationCount);
 
     context = (vfs_context_t) arg0;
@@ -357,7 +273,6 @@ static int VnodeScopeListener(
     
     vpPath = NULL;
     dvpPath = NULL;
-    actionStr = NULL;
     
     /* Convert the vnode, if any, to a path. */
     err = CreateVnodePath(vp, &vpPath);
@@ -365,43 +280,51 @@ static int VnodeScopeListener(
     /* Convert the parent directory vnode, if any, to a path. */
     if (err == 0)
         err = CreateVnodePath(dvp, &dvpPath);
-    
-    /* Create actionStr as a human readable description of action. */
-    if (err == 0) {
-        if (vp != NULL) {
-            isDir = ( vnode_vtype(vp) == VDIR );
-        } else {
-            isDir = FALSE;
-        }
-        err = CreateVnodeActionString(action, isDir, &actionStr, &actionStrBufSize);
-    }
 
     /* Tell the user about this request.  Note that we filter requests 
      * based on gPrefix.  If gPrefix is set, only requests where one 
      * of the paths is prefixed by gPrefix will be printed.
      */    
     if (err == 0) {
-        if (  (gPrefix == NULL) 
-           || (  ( (vpPath != NULL)  && strprefix(vpPath, gPrefix) ) 
-              || ( (dvpPath != NULL) && strprefix(dvpPath, gPrefix) ) 
-              ) 
-           ) {
-            printf(
-                "scope=" KAUTH_SCOPE_VNODE ", action=%s, uid=%ld, vp=%s, dvp=%s\n", 
-                actionStr,
+        for(i = 0; i < gPrefixCount; i++) {
+            if(vpPath && strprefix(vpPath, gPrefixTable[i])) {
+                mpath = 1;
+            } else if(dvpPath && strprefix(dvpPath, gPrefixTable[i])) {
+                mpath = 1;
+            }
+            if(mpath)
+                break;
+        }
+
+        if (mpath) {
+            if(action & CLAMAUTH_EVENTS)
+                   printf(
+                "scope=" KAUTH_SCOPE_VNODE ", uid=%ld, vp=%s, dvp=%s\n", 
                 (long) kauth_cred_getuid(vfs_context_ucred(context)),
                 (vpPath  != NULL) ?  vpPath : "<null>",
                 (dvpPath != NULL) ? dvpPath : "<null>"
-            );            
+            );
+            
+            event.pid = vfs_context_pid(context);    
+            event.action = action;
+            if(vpPath) {
+                strncpy(event.path, vpPath, sizeof(event.path));
+                event.path[sizeof(event.path) - 1] = 0;
+            } else {
+                event.path[0] = 0;
+            }
+            lck_mtx_lock(gEventQueueLock);
+            if(dev_read && (action & CLAMAUTH_EVENTS)) {
+                // printf("gPrefix: %s, vpPath: %s, dvpPath: %s, action: %d\n", gPrefix, vpPath ? vpPath : "<null>", dvpPath ? dvpPath : "<null>", action);
+                AuthEventEnqueue(&gEventQueue, &event);
+            }
+            lck_mtx_unlock(gEventQueueLock);
+            (void) OSIncrementAtomic(&gEventCount);
         }
     } else {
         printf("ClamAuth.VnodeScopeListener: Error %d.\n", err);
     }
     
-    /* Clean up. */
-    if (actionStr != NULL) {
-        OSFree(actionStr, actionStrBufSize, gMallocTag);
-    }
     if (vpPath != NULL) {
         OSFree(vpPath, MAXPATHLEN, gMallocTag);
     }
@@ -415,86 +338,56 @@ static int VnodeScopeListener(
 }
 
 static int FileOpScopeListener(
-    kauth_cred_t    credential,
-    void *          idata,
-    kauth_action_t  action,
-    uintptr_t       arg0,
-    uintptr_t       arg1,
-    uintptr_t       arg2,
-    uintptr_t       arg3
-)
-    /* A Kauth listener that's called to authorize an action in the file operation */
+                               kauth_cred_t    credential,
+                               void *          idata,
+                               kauth_action_t  action,
+                               uintptr_t       arg0,
+                               uintptr_t       arg1,
+                               uintptr_t       arg2,
+                               uintptr_t       arg3
+                               )
+/* A Kauth listener that's called to authorize an action in the file operation */
 {
-    #pragma unused(idata)
-    #pragma unused(arg2)
-    #pragma unused(arg3)
+#pragma unused(credential)
+#pragma unused(idata)
+#pragma unused(arg2)
+#pragma unused(arg3)
+    struct AuthEvent event;
+    vfs_context_t   context;
+    const char *path;
+    unsigned int i, mpath = 0;
+
+    if(!dev_read)
+        return KAUTH_RESULT_DEFER;
+
+    context = (vfs_context_t) arg0;
+    path = (const char *) arg1;
 
     (void) OSIncrementAtomic(&gActivationCount);
 
-    /* Tell the user about this request.  Note that we filter requests 
-     * based on gPrefix.  If gPrefix is set, only requests there is a 
-     * path that's prefixed by gPrefix will be printed.
-     */
-
     switch (action) {
-        case KAUTH_FILEOP_OPEN:
-            if ( (gPrefix == NULL) || strprefix( (const char *) arg1, gPrefix) ) {
-                printf(
-                    "scope=" KAUTH_SCOPE_FILEOP ", action=KAUTH_FILEOP_OPEN, uid=%ld, vnode=0x%lx, path=%s\n", 
-                    (long) kauth_cred_getuid(credential),
-                    (long) arg0,
-                    (const char *) arg1
-                );
+        /* case KAUTH_FILEOP_OPEN: */
+        case KAUTH_FILEOP_EXEC:
+            for(i = 0; i < gPrefixCount; i++) {
+                if(strprefix((const char *) arg1, gPrefixTable[i])) {
+                    mpath = 1;
+                    break;
+                }
             }
-            break;
-           case KAUTH_FILEOP_EXEC:
-            if ( (gPrefix == NULL) || strprefix( (const char *) arg1, gPrefix) ) {
-                printf(
-                    "scope=" KAUTH_SCOPE_FILEOP ", action=KAUTH_FILEOP_EXEC, uid=%ld, vnode=0x%lx, path=%s\n", 
-                    (long) kauth_cred_getuid(credential),
-                    (long) arg0,
-                    (const char *) arg1
-                );
+            if(mpath) {
+                event.pid = vfs_context_pid(context);
+                event.action = action;
+                strncpy(event.path, path, sizeof(event.path));
+                event.path[sizeof(event.path) - 1] = 0;
+                lck_mtx_lock(gEventQueueLock);
+                if(dev_read)
+                    AuthEventEnqueue(&gEventQueue, &event);
+                lck_mtx_unlock(gEventQueueLock);
             }
             break;
         default:
-            printf("ClamAuth.FileOpScopeListener: Unknown action (%d).\n", action);
             break;
     }
-
-    (void) OSDecrementAtomic(&gActivationCount);
-
-    return KAUTH_RESULT_DEFER;
-}
-
-static int UnknownScopeListener(
-    kauth_cred_t    credential,
-    void *          idata,
-    kauth_action_t  action,
-    uintptr_t       arg0,
-    uintptr_t       arg1,
-    uintptr_t       arg2,
-    uintptr_t       arg3
-)
-    /* A Kauth listener that's called to authorize an action in any scope  
-     * that we don't recognise).
-     */
-{
-    #pragma unused(idata)
-    
-    (void) OSIncrementAtomic(&gActivationCount);
-
-    /* Tell the user about this request. */
-    printf(
-        "scope=%s, action=%d, uid=%ld, arg0=0x%lx, arg1=0x%lx, arg2=0x%lx, arg3=0x%lx\n", 
-        gListenerScope,
-        action,
-        (long) kauth_cred_getuid(credential),
-        (long) arg0,
-        (long) arg1,
-        (long) arg2,
-        (long) arg3
-    );
     
     (void) OSDecrementAtomic(&gActivationCount);
 
@@ -567,20 +460,9 @@ static void RemoveListener(void)
 
         (void) msleep(&gActivationCount, NULL, PUSER, "com_apple_dts_kext_ClamAuth.RemoveListener", &oneSecond);
     } while ( gActivationCount > 0 );
-    
-    /* gListenerScope and gPrefix are both accessed by the listener callbacks 
-     * without taking any form of lock.  So, we don't destroy them until after 
-     * all the listener callbacks have drained.
-     */
-    
-    if (gListenerScope != NULL) {
-        OSFree(gListenerScope, strlen(gListenerScope) + 1, gMallocTag);
-        gListenerScope = NULL;
-    }
-    gPrefix = NULL;
 }
 
-static void InstallListener(const char *scope, size_t scopeLen, const char *prefix)
+static void InstallListener(void)
     /* Installs a listener for the specified scope.  scope and scopeLen specifies 
      * the scope to listen for.  prefix is a parameter for the scope listener. 
      * It may be NULL.
@@ -593,59 +475,16 @@ static void InstallListener(const char *scope, size_t scopeLen, const char *pref
      *
      * This routine always runs under the gConfigurationLock.
      */
-{
-    kauth_scope_callback_t  callback;
-    
-    assert(scope != NULL);
-    assert(scopeLen > 0);
-    
-    /* Allocate memory for the scope string.  We need to keep a persistent 
-     * copy of this string because kauth_listen_scope doesn't make a copy of 
-     * its scope identifier input parameter.  Normally you'd use a constant 
-     * string, which persists as long as the kext is loaded, but I can't do 
-     * that because the scope identifier is supplied by the user via sysctl.
-     */
-    
-    assert(gListenerScope == NULL);
-    
-    gListenerScope = OSMalloc(scopeLen + 1, gMallocTag);
-    if (gListenerScope == NULL) {
-        printf("ClamAuth.InstallListener: Could not allocate gListenerScope.\n");
-    } else {
-        memcpy(gListenerScope, scope, scopeLen);
-        gListenerScope[scopeLen] = 0;
+{   
 
-        /* Copy the prefix pointer over to gPrefix. */        
-        assert(gPrefix == NULL);
-
-        gPrefix = prefix;
-        
-        /* Register the appropriate listener with Kauth. */
-        if ( strcmp(gListenerScope, KAUTH_SCOPE_GENERIC) == 0 ) {
-            callback = GenericScopeListener;
-        } else if ( strcmp(gListenerScope, KAUTH_SCOPE_PROCESS) == 0 ) {
-            callback = ProcessScopeListener;
-        } else if ( strcmp(gListenerScope, KAUTH_SCOPE_VNODE) == 0 ) {
-            callback = VnodeScopeListener;
-        } else if ( strcmp(gListenerScope, KAUTH_SCOPE_FILEOP) == 0 ) {
-            callback = FileOpScopeListener;
-        } else {
-            callback = UnknownScopeListener;
-        }
-        
-        assert(gListener == NULL);
-        
-        gListener = kauth_listen_scope(gListenerScope, callback, NULL);
-        if (gListener == NULL) {
-            printf("ClamAuth.InstallListener: Could not create gListener.\n");
-        }
-    }
-    
-    /* In the event of any failure, call RemoveListener which will 
-     * do all the right cleanup.
-     */    
-    if ( gListenerScope == NULL || gListener == NULL ) {
+    assert(gListener == NULL);
+    //gListener = kauth_listen_scope(KAUTH_SCOPE_VNODE, VnodeScopeListener, NULL);
+    gListener = kauth_listen_scope(KAUTH_SCOPE_FILEOP, FileOpScopeListener, NULL);
+    if (gListener == NULL) {
+        printf("ClamAuth.InstallListener: Could not create gListener.\n");
         RemoveListener();
+    } else {
+        printf("ClamAuth: Installed file listener\n");
     }
 }
 
@@ -660,6 +499,7 @@ static void ConfigureKauth(const char *configuration)
      * This routine always runs under the gConfigurationLock.
      */
 {
+    unsigned int i = 0;
     assert(configuration != NULL);
     
     /* Remove the existing listener. */
@@ -668,47 +508,49 @@ static void ConfigureKauth(const char *configuration)
     /* Parse the configuration string and install the new listener. */
     if (strcmp(configuration, "remove") == 0) {
         printf("ClamAuth.ConfigureKauth: Removed listener.\n");
-    } else if ( strprefix(configuration, "add ") ) {
+    } else if ( strprefix(configuration, "monitor ") ) {
         const char *cursor;
-        const char *scopeStart;
-        const char *scopeEnd;
-        const char *prefixStart;
         
-        /* Skip the "add ". */        
-        cursor = configuration + strlen("add ");
-        
-        /* Work out the span of the scope. */        
-        scopeStart = cursor;
-        while ( (*cursor != ' ') && (*cursor != 0) ) {
-            cursor += 1;
-        }
-        scopeEnd = cursor;
-        
-        if (scopeStart == scopeEnd) {
+        /* Skip the "monitor ". */        
+        cursor = configuration + strlen("monitor ");
+
+        gPrefixCount = 0;
+        while(*cursor == ' ')
+            cursor++;
+
+        if (!*cursor) {
             printf("ClamAuth.ConfigureKauth: Bad configuration '%s'.\n", configuration);
-        } else {
-
-            /* Look for a prefix. */
-            if (*cursor == ' ') {
-                cursor += 1;
-            }
-            if (*cursor == 0) {
-                prefixStart = NULL;
-            } else {
-                prefixStart = cursor;
-            }
-            
-            /* Tell the user what we're doing. */            
-            if (prefixStart == NULL) {
-                printf("ClamAuth.ConfigureKauth: scope = %.*s\n", (int) (scopeEnd - scopeStart), scopeStart);
-            } else {
-                printf("ClamAuth.ConfigureKauth: scope = %.*s, prefix = %s\n", (int) (scopeEnd - scopeStart), scopeStart, prefixStart);
-            }
-
-            InstallListener(scopeStart, scopeEnd - scopeStart, prefixStart);
+            return;
         }
-    } else {
-        printf("ClamAuth.ConfigureKauth: Bad configuration '%s'.\n", configuration);
+
+        while(1) {
+            if(i < MAX_PREFIX_LEN - 1) {
+                if(*cursor == ' ') {
+                    gPrefixTable[gPrefixCount][i] = 0;
+                    gPrefixCount++;
+                    i = 0;
+                    if(gPrefixCount >= MAX_PREFIX_NUM) {
+                        printf("ClamAuth.ConfigureKauth: Too many paths (> %u).\n", MAX_PREFIX_NUM);
+                        gPrefixCount = 0;
+                        return;  
+                    }
+                } else {
+                    gPrefixTable[gPrefixCount][i++] = *cursor;
+                }
+            } else {
+                printf("ClamAuth.ConfigureKauth: Path too long (%u > %u).\n", i, MAX_PREFIX_LEN);
+                gPrefixCount = 0;
+                return;
+            }
+            cursor++;
+            if(!*cursor) {
+                gPrefixTable[gPrefixCount][i] = 0;
+                gPrefixCount++;
+                break;
+            }
+        }
+        printf("ClamAuth.ConfigureKauth: Monitoring %u path(s)\n", gPrefixCount);
+        InstallListener();
     }
 }
 
@@ -717,6 +559,7 @@ static void ConfigureKauth(const char *configuration)
  */
 
 static char gConfiguration[1024];
+
 
 static int SysctlHandler(
     struct sysctl_oid * oidp, 
@@ -781,72 +624,6 @@ SYSCTL_OID(
 static boolean_t gRegisteredOID = FALSE;
 
 
-/* /dev/clamauth handling */
-
-static int ca_devidx = -1;
-static void *ca_devnode = NULL;
-
-static int ca_open(dev_t dev, int flag, int devtype, proc_t p)
-{
-    return ENOENT;
-}
-
-static int ca_close(dev_t dev, int flag, int devtype, proc_t p)
-{
-    return ENOENT;
-}
-
-static int ca_read(dev_t dev, uio_t uio, int ioflag)
-{
-    return EBADF;
-}
-
-static int ca_write(dev_t dev, uio_t uio, int ioflag)
-{
-    return EBADF;
-}
-
-static int ca_ioctl(dev_t dev, u_long cmd, caddr_t addr, int flag, proc_t p)
-{
-    return EBADF;
-}
-
-static int ca_select(dev_t dev, int flag, void * wql, proc_t p)
-{
-    return EBADF;
-}
-
-static struct cdevsw clamauth_cdevsw = {
-    ca_open,
-    ca_close,
-    ca_read,
-    ca_write,
-    ca_ioctl,
-    eno_stop,
-    eno_reset,
-    NULL,
-    ca_select,
-    eno_mmap,
-    eno_strat,
-    eno_getc,
-    eno_putc,
-    0
-};
-
-static int ca_remove(void)
-{
-    if(ca_devnode)
-        devfs_remove(ca_devnode);
-
-    if(ca_devidx != -1) {
-        if(cdevsw_remove(ca_devidx, &clamauth_cdevsw) != ca_devidx) {
-            printf("ClamAuth: cdevsw_remove() failed\n");
-            return KERN_FAILURE;
-        }
-    }
-
-    return KERN_SUCCESS;
-}
 
 #pragma mark ***** Start/Stop
 
@@ -860,6 +637,7 @@ extern kern_return_t com_apple_dts_kext_ClamAuth_start(kmod_info_t * ki, void * 
     #pragma unused(ki)
     #pragma unused(d)
     kern_return_t   err;
+    struct AuthEvent event;
 
     ca_devidx = cdevsw_add(-1, &clamauth_cdevsw);
     if(ca_devidx == -1) {
@@ -895,6 +673,21 @@ extern kern_return_t com_apple_dts_kext_ClamAuth_start(kmod_info_t * ki, void * 
             err = KERN_FAILURE;
         }
     }
+
+    /* Event queue lock */
+    if (err == KERN_SUCCESS) {
+        gEventQueueLock = lck_mtx_alloc_init(gLockGroup, LCK_ATTR_NULL);
+        if (gEventQueueLock == NULL) {
+            err = KERN_FAILURE;
+        }
+    }
+    AuthEventInitQueue(&gEventQueue);
+
+    /* Initialize event queue and add version info event */
+    event.action = CLAMAUTH_PROTOCOL_VERSION;
+    strncpy(event.path, "ClamAuth "CLAMAUTH_VERSION"", sizeof(event.path));
+    event.pid = 0xdeadbeef;
+    AuthEventEnqueue(&gEventQueue, &event);
 
     /* Register our sysctl handler. */    
     if (err == KERN_SUCCESS) {
@@ -955,7 +748,13 @@ extern kern_return_t com_apple_dts_kext_ClamAuth_stop(kmod_info_t * ki, void * d
         lck_mtx_free(gConfigurationLock, gLockGroup);
         gConfigurationLock = NULL;
     }
-    
+
+    /* Clean up the event queue lock. */    
+    if (gEventQueueLock != NULL) {
+        lck_mtx_free(gEventQueueLock, gLockGroup);
+        gEventQueueLock = NULL;
+    }
+
     /* Clean up our global resources. */
     if (gLockGroup != NULL) {
         lck_grp_free(gLockGroup);
