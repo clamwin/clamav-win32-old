@@ -12,6 +12,9 @@
 /* "build clamd" */
 #define BUILD_CLAMD 1
 
+/* use ClamAuth */
+#undef CLAMAUTH
+
 /* name of the clamav group */
 #undef CLAMAVGROUP
 
@@ -361,9 +364,6 @@
 
 /* Define to 1 if sysconf(_SC_PAGESIZE) is available */
 #undef HAVE_SYSCONF_SC_PAGESIZE
-
-/* link against system-wide libtommath */
-#undef HAVE_SYSTEM_TOMMATH
 
 /* Define to 1 if you have the <sys/dl.h> header file. */
 #undef HAVE_SYS_DL_H
