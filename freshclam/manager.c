@@ -1315,7 +1315,7 @@ static int buildcld(const char *tmpdir, const char *dbname, const char *newfile,
 	char cwd[512], info[32], buff[513], *pt;
 	struct dirent *dent;
 	int fd, err = 0;
-	gzFile *gzs = NULL;
+	gzFile gzs = NULL;
 
     if(!getcwd(cwd, sizeof(cwd))) {
 	logg("!buildcld: Can't get path of current working directory\n");
@@ -2185,6 +2185,15 @@ int downloadmanager(const struct optstruct *opts, const char *hostname, int loge
     logg("*Using IPv6 aware code\n");
 #endif
 
+    /* custom dbs */
+    if((opt = optget(opts, "DatabaseCustomURL"))->enabled) {
+	while(opt) {
+	    if(updatecustomdb(opt->strarg, &signo, opts, localip, logerr) == 0)
+		updated = 1;
+	    opt = opt->nextarg;
+	}
+    }
+
 #ifdef HAVE_RESOLV_H
     dnsdbinfo = optget(opts, "DNSDatabaseInfo")->strarg;
 
@@ -2365,15 +2374,6 @@ int downloadmanager(const struct optstruct *opts, const char *hostname, int loge
 
     mirman_write("mirrors.dat", dbdir, &mdat);
     mirman_free(&mdat);
-
-    /* custom dbs */
-    if((opt = optget(opts, "DatabaseCustomURL"))->enabled) {
-	while(opt) {
-	    if(updatecustomdb(opt->strarg, &signo, opts, localip, logerr) == 0)
-		updated = 1;
-	    opt = opt->nextarg;
-	}
-    }
 
     cli_rmdirs(updtmpdir);
 
