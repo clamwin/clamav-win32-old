@@ -1256,7 +1256,7 @@ static int buildcld(const char *tmpdir, const char *dbname, const char *newfile,
 	char cwd[512], info[32], buff[513], *pt;
 	struct dirent *dent;
 	int fd, err = 0;
-	gzFile *gzs = NULL;
+	gzFile gzs = NULL;
 
     if(!getcwd(cwd, sizeof(cwd))) {
 	logg("!buildcld: Can't get path of current working directory\n");
@@ -2098,7 +2098,7 @@ static int updatecustomdb(const char *url, int *signo, const struct optstruct *o
 int downloadmanager(const struct optstruct *opts, const char *hostname, unsigned int attempt)
 {
 	time_t currtime;
-	int ret, updated = 0, outdated = 0, signo = 0, logerr;
+	int ret, custret, updated = 0, outdated = 0, signo = 0, logerr;
 	unsigned int ttl;
 	char ipaddr[46], *dnsreply = NULL, *pt, *localip = NULL, *newver = NULL;
 	const struct optstruct *opt;
@@ -2197,11 +2197,33 @@ int downloadmanager(const struct optstruct *opts, const char *hostname, unsigned
 
     memset(ipaddr, 0, sizeof(ipaddr));
 
+    /* custom dbs */
+    if((opt = optget(opts, "DatabaseCustomURL"))->enabled) {
+	while(opt) {
+	    if((custret = updatecustomdb(opt->strarg, &signo, opts, localip, logerr)) == 0)
+		updated = 1;
+	    opt = opt->nextarg;
+	}
+    }
+
     if((opt = optget(opts, "update-db"))->enabled) {
 	    const char *u_dnsreply;
 	    int u_extra;
 
 	while(opt) {
+	    if(!strcmp(opt->strarg, "custom")) {
+		if(!optget(opts, "DatabaseCustomURL")->enabled) {
+		    logg("!--update-db=custom requires DatabaseCustomURL\n");
+		    custret = 56;
+		}
+		free(dnsreply);
+		free(newver);
+		mirman_write("mirrors.dat", dbdir, &mdat);
+		mirman_free(&mdat);
+		cli_rmdirs(updtmpdir);
+		return custret;
+	    }
+
 	    if(!strcmp(opt->strarg, "main") || !strcmp(opt->strarg, "daily") || !strcmp(opt->strarg, "safebrowsing") || !strcmp(opt->strarg, "bytecode")) {
 		u_dnsreply = dnsreply;
 		u_extra = 0;
@@ -2326,15 +2348,6 @@ int downloadmanager(const struct optstruct *opts, const char *hostname, unsigned
 
     mirman_write("mirrors.dat", dbdir, &mdat);
     mirman_free(&mdat);
-
-    /* custom dbs */
-    if((opt = optget(opts, "DatabaseCustomURL"))->enabled) {
-	while(opt) {
-	    if(updatecustomdb(opt->strarg, &signo, opts, localip, logerr) == 0)
-		updated = 1;
-	    opt = opt->nextarg;
-	}
-    }
 
     cli_rmdirs(updtmpdir);
 

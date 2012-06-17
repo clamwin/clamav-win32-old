@@ -45,6 +45,11 @@ static	char	const	rcsid[] = "$Id: untar.c,v 1.35 2007/02/12 20:46:09 njh Exp $";
 #include "matcher.h"
 
 #define BLOCKSIZE 512
+#define TARSIZEOFFSET 124
+#define TARSIZELEN 12
+#define TARCHECKSUMOFFSET 148
+#define TARCHECKSUMLEN 8
+#define TARFILETYPEOFFSET 156
 
 static int
 octal(const char *str)
@@ -56,14 +61,74 @@ octal(const char *str)
 	return ret;
 }
 
+/**
+ * Retrieve checksum values from a tar header block.
+ * @param header Header data block, padded with zeroes to reach BLOCKSIZE
+ * @return int value of checksum, -1 (from octal()) if bad value
+ */
+static int
+getchecksum(const char *header)
+{
+	char ochecksum[TARCHECKSUMLEN + 1];
+	int checksum = -1;
+
+	strncpy(ochecksum, header+TARCHECKSUMOFFSET, TARCHECKSUMLEN);
+	ochecksum[TARCHECKSUMLEN] = '\0';
+	checksum = octal(ochecksum);
+	return checksum;
+}
+
+/**
+ * Calculate checksum values for tar header blocks.
+ * @param header Header data block, padded with zeroes to reach BLOCKSIZE
+ * @param targetsum Check value to match (as int not octal!)
+ * @return 0 if checksum matches target, -1 if not
+ */
+static int
+testchecksum(const char *header, int targetsum)
+{
+	const unsigned char *posix;	
+	const signed char *legacy;
+	int posix_sum = 0, legacy_sum = 0;
+	int i;
+
+	// targetsum -1 represents an error from octal()
+	if (targetsum == -1) {
+		return -1;
+	}
+
+	/* Build checksums. POSIX is unsigned; some legacy tars use signed. */
+	posix = (unsigned char *)header;
+	legacy = (signed char *)header;
+	for (i = 0; i < BLOCKSIZE; i++ ) {
+		if ((i >= TARCHECKSUMOFFSET) && (i < TARCHECKSUMOFFSET + TARCHECKSUMLEN)) {
+			/* Use ascii value of space in place of checksum value */
+			posix_sum += 32;
+			legacy_sum += 32;
+		}
+		else {
+			posix_sum += posix[i];
+			legacy_sum += legacy[i];
+		}
+	}
+
+	if ((targetsum == posix_sum) || (targetsum == legacy_sum)) {
+		return 0;
+	}
+	return -1;
+}
+
 int
 cli_untar(const char *dir, unsigned int posix, cli_ctx *ctx)
 {
 	int size = 0, ret, fout=-1;
 	int in_block = 0;
+	int last_header_bad = 0;
+	int limitnear = 0;
 	unsigned int files = 0;
 	char fullname[NAME_MAX + 1];
 	size_t pos = 0;
+	size_t currsize = 0;
         char zero[BLOCKSIZE];
 
 	cli_dbgmsg("In untar(%s)\n", dir);
@@ -74,6 +139,7 @@ cli_untar(const char *dir, unsigned int posix, cli_ctx *ctx)
 		size_t nread;
 
 		block = fmap_need_off_once_len(*ctx->fmap, pos, BLOCKSIZE, &nread); 
+		cli_dbgmsg("cli_untar: pos = %lu\n", (unsigned long)pos);
 
 		if(!in_block && !nread)
 			break;
@@ -92,7 +158,9 @@ cli_untar(const char *dir, unsigned int posix, cli_ctx *ctx)
 		if(!in_block) {
 			char type;
 			int directory, skipEntry = 0;
-			char magic[7], name[101], osize[13];
+			int checksum = -1;
+			char magic[7], name[101], osize[TARSIZELEN + 1];
+			currsize = 0;
 
 			if(fout>=0) {
 				lseek(fout, 0, SEEK_SET);
@@ -110,6 +178,21 @@ cli_untar(const char *dir, unsigned int posix, cli_ctx *ctx)
 			if((ret=cli_checklimits("cli_untar", ctx, 0, 0, 0))!=CL_CLEAN)
 				return ret;
 
+			checksum = getchecksum(block);
+			cli_dbgmsg("cli_untar: Candidate checksum = %d, [%o in octal]\n", checksum, checksum);
+			if(testchecksum(block, checksum) != 0) {
+				// If checksum is bad, dump and look for next header block
+				cli_dbgmsg("cli_untar: Invalid checksum in tar header. Skip to next...\n");
+				if (last_header_bad == 0) {
+					last_header_bad++;
+					cli_dbgmsg("cli_untar: Invalid checksum found inside archive!\n");
+				}
+				continue;
+			} else {
+				last_header_bad = 0;
+				cli_dbgmsg("cli_untar: Checksum %d is valid.\n", checksum);
+			}
+
 			/* Notice assumption that BLOCKSIZE > 262 */
 			if(posix) {
 				strncpy(magic, block+257, 5);
@@ -120,7 +203,7 @@ cli_untar(const char *dir, unsigned int posix, cli_ctx *ctx)
 				}
 			}
 
-			type = block[156];
+			type = block[TARFILETYPEOFFSET];
 
 			switch(type) {
 				default:
@@ -164,23 +247,35 @@ cli_untar(const char *dir, unsigned int posix, cli_ctx *ctx)
 				continue;
 			}
 
-			strncpy(osize, block+124, 12);
-			osize[12] = '\0';
+			strncpy(osize, block+TARSIZEOFFSET, TARSIZELEN);
+			osize[TARSIZELEN] = '\0';
 			size = octal(osize);
 			if(size < 0) {
 				cli_dbgmsg("cli_untar: Invalid size in tar header\n");
 				skipEntry++;
 			} else {
 				cli_dbgmsg("cli_untar: size = %d\n", size);
-				if((ret=cli_checklimits("cli_untar", ctx, size, 0, 0))!=CL_CLEAN)
-					skipEntry++;
+				ret = cli_checklimits("cli_untar", ctx, size, 0, 0);
+				switch(ret) {
+					case CL_EMAXFILES: // Scan no more files 
+						skipEntry++;
+						limitnear = 0;
+						break;
+					case CL_EMAXSIZE: // Either single file limit or total byte limit would be exceeded
+						cli_dbgmsg("cli_untar: would exceed limit, will try up to max");
+						limitnear = 1;
+						break;
+					default: // Ok based on reported content size
+						limitnear = 0;
+						break;
+				}
 			}
 
 			if(skipEntry) {
 				const int nskip = (size % BLOCKSIZE || !size) ? size + BLOCKSIZE - (size % BLOCKSIZE) : size;
 
 				if(nskip < 0) {
-					cli_dbgmsg("cli_untar: got nagative skip size, giving up\n");
+					cli_dbgmsg("cli_untar: got negative skip size, giving up\n");
 					return CL_CLEAN;
 				}
 				cli_dbgmsg("cli_untar: skipping entry\n");
@@ -208,20 +303,39 @@ cli_untar(const char *dir, unsigned int posix, cli_ctx *ctx)
 			in_block = 1;
 		} else { /* write or continue writing file contents */
                         int nbytes, nwritten;
+                        int skipwrite = 0;
                         char err[128];
 
 			nbytes = size>512? 512:size;
                         if (nread && nread < nbytes)
                             nbytes = nread;
-			nwritten = (int)cli_writen(fout, block, (size_t)nbytes);
 
-			if(nwritten != nbytes) {
-				cli_errmsg("cli_untar: only wrote %d bytes to file %s (out of disc space?): %s\n",
-					nwritten, fullname, cli_strerror(errno, err, sizeof(err)));
-				close(fout);
-				return CL_EWRITE;
+			if (limitnear > 0) {
+				currsize += nbytes;
+				cli_dbgmsg("cli_untar: Approaching limit...\n");
+				if (cli_checklimits("cli_untar", ctx, (unsigned long)currsize, 0, 0) != CL_SUCCESS) {
+					// Limit would be exceeded by this file, suppress writing beyond limit
+					// Need to keep reading to get to end of file chunk
+					skipwrite++;
+				}
+			}
+
+			if (skipwrite == 0) {
+				nwritten = (int)cli_writen(fout, block, (size_t)nbytes);
+
+				if(nwritten != nbytes) {
+					cli_errmsg("cli_untar: only wrote %d bytes to file %s (out of disc space?): %s\n",
+						nwritten, fullname, cli_strerror(errno, err, sizeof(err)));
+					close(fout);
+					return CL_EWRITE;
+				}
 			}
 			size -= nbytes;
+			if ((size != 0) && (nread == 0)) {
+				// Truncated tar file, so end file content like tar behavior
+				cli_dbgmsg("cli_untar: No bytes read! Forcing end of file content.\n");
+				size = 0;
+			}
 		}
 		if (size == 0)
 			in_block = 0;
