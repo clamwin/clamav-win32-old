@@ -392,9 +392,6 @@
 /* Define to 1 if you have the <sys/stat.h> header file. */
 #define HAVE_SYS_STAT_H 1
 
-/* Define to 1 if you have the <sys/times.h> header file. */
-#undef HAVE_SYS_TIMES_H
-
 /* Define to 1 if you have the <sys/types.h> header file. */
 #define HAVE_SYS_TYPES_H 1
 
@@ -520,7 +517,7 @@
 #undef USE_SYSLOG
 
 /* Stable releases tag */
-#define CLAMWIN_RELEASE "0.97.4"
+#define CLAMWIN_RELEASE "0.97.5"
 
 /* Version number of package */
 #ifdef CLAMWIN_RELEASE
