@@ -2361,15 +2361,48 @@ static int magic_scandesc(int desc, cli_ctx *ctx, cli_file_t type)
     if(type != CL_TYPE_IGNORED && (type != CL_TYPE_HTML || !(DCONF_DOC & DOC_CONF_HTML_SKIPRAW)) && !ctx->engine->sdb) {
 	res = cli_scanraw(ctx, type, typercg, &dettype, hash);
 	if(res != CL_CLEAN) {
-	    if(res == CL_VIRUS)
-		ret =  cli_checkfp(hash, hashed_size, ctx);
-	    else
-		ret = res;
-	    funmap(*ctx->fmap);
-	    ctx->fmap--;
-	    cli_bitset_free(ctx->hook_lsig_matches);
-	    ctx->hook_lsig_matches = old_hook_lsig_matches;
-	    ret_from_magicscan(ret);
+	    switch(res) {
+		/* List of scan halts, runtime errors only! */
+		case CL_EUNLINK:
+		case CL_ESTAT:
+		case CL_ESEEK:
+		case CL_EWRITE:
+		case CL_EDUP:
+		case CL_ETMPFILE:
+		case CL_ETMPDIR:
+		case CL_EMEM:
+		case CL_ETIMEOUT:
+		    cli_dbgmsg("Descriptor[%d]: cli_scanraw error %s\n", desc, cl_strerror(res));
+		    funmap(*ctx->fmap);
+		    ctx->fmap--;
+		    cli_bitset_free(ctx->hook_lsig_matches);
+		    ctx->hook_lsig_matches = old_hook_lsig_matches;
+		    ret_from_magicscan(res);
+		/* CL_VIRUS = malware found, check FP and report */
+		case CL_VIRUS:
+		    ret = cli_checkfp(hash, hashed_size, ctx);
+		    funmap(*ctx->fmap);
+		    ctx->fmap--;
+		    cli_bitset_free(ctx->hook_lsig_matches);
+		    ctx->hook_lsig_matches = old_hook_lsig_matches;
+		    ret_from_magicscan(ret);
+		/* "MAX" conditions should still fully scan the current file */
+		case CL_EMAXREC:
+		case CL_EMAXSIZE:
+		case CL_EMAXFILES:
+		    ret = res;
+		    cli_dbgmsg("Descriptor[%d]: Continuing after cli_scanraw reached %s\n",
+			desc, cl_strerror(res));
+		    break;
+		/* Other errors must not block further scans below
+		 * This specifically includes CL_EFORMAT & CL_EREAD & CL_EUNPACK
+		 * Malformed/truncated files could report as any of these three.
+		 */
+		default:
+		    ret = res;
+		    cli_dbgmsg("Descriptor[%d]: Continuing after cli_scanraw error %s\n",
+			desc, cl_strerror(res));
+	    }
 	}
     }
 
@@ -2412,11 +2445,16 @@ static int magic_scandesc(int desc, cli_ctx *ctx, cli_file_t type)
     ctx->hook_lsig_matches = old_hook_lsig_matches;
 
     switch(ret) {
+	/* Malformed file cases */
 	case CL_EFORMAT:
+	case CL_EREAD:
+	case CL_EUNPACK:
+	/* Limits exceeded */
 	case CL_EMAXREC:
 	case CL_EMAXSIZE:
 	case CL_EMAXFILES:
 	    cli_dbgmsg("Descriptor[%d]: %s\n", desc, cl_strerror(ret));
+	    ret_from_magicscan(CL_CLEAN);
 	case CL_CLEAN:
 	    cache_add(hash, hashed_size, ctx);
 	    ret_from_magicscan(CL_CLEAN);
