@@ -141,7 +141,7 @@ typedef	enum {
 #include <netdb.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#ifndef	C_BEOS
+#if !defined(C_BEOS) && !defined(C_INTERIX)
 #include <net/if.h>
 #include <arpa/inet.h>
 #endif
@@ -580,7 +580,7 @@ parseEmailFile(fmap_t *map, size_t *at, const table_t *rfc821, const char *first
 	if(ret == NULL)
 		return NULL;
 
-	strcpy(buffer, firstLine);
+	strncpy(buffer, firstLine, sizeof(buffer)-1);
 	do {
 		const char *line;
 
@@ -2803,9 +2803,9 @@ rfc1341(message *m, const char *dir)
 		free(id);
 		return -1;
 	} else if(errno == EEXIST) {
-		struct stat statb;
+		STATBUF statb;
 
-		if(stat(pdir, &statb) < 0) {
+		if(STAT(pdir, &statb) < 0) {
 			char err[128];
 			cli_errmsg("Partial directory %s: %s\n", pdir,
 				cli_strerror(errno, err, sizeof(err)));
@@ -2917,8 +2917,9 @@ rfc1341(message *m, const char *dir)
 					FILE *fin;
 					char buffer[BUFSIZ], fullname[NAME_MAX + 1];
 					int nblanks;
-					struct stat statb;
+					STATBUF statb;
 					const char *dentry_idpart;
+                    int test_fd;
 
 					if(dent->d_ino == 0)
 						continue;
@@ -2934,8 +2935,15 @@ rfc1341(message *m, const char *dir)
 							strcmp(filename, dentry_idpart) != 0) {
 						if(!m->ctx->engine->keeptmp)
 							continue;
-						if(stat(fullname, &statb) < 0)
+
+                        if ((test_fd = open(fullname, O_RDONLY)) < 0)
+                            continue;
+
+						if(FSTAT(test_fd, &statb) < 0) {
+                            close(test_fd);
 							continue;
+                        }
+
 						if(now - statb.st_mtime > (time_t)(7 * 24 * 3600)) {
 							if (cli_unlink(fullname)) {
 								cli_unlink(outname);
@@ -2944,9 +2952,12 @@ rfc1341(message *m, const char *dir)
 								free(id);
 								free(number);
 								closedir(dd);
+                                close(test_fd);
 								return -1;
 							}
 						}
+
+                        close(test_fd);
 						continue;
 					}
 
@@ -2955,6 +2966,7 @@ rfc1341(message *m, const char *dir)
 						cli_errmsg("Can't open '%s' for reading", fullname);
 						fclose(fout);
 						cli_unlink(outname);
+						free(md5_hex);
 						free(id);
 						free(number);
 						closedir(dd);

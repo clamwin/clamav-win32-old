@@ -274,8 +274,10 @@ int cli_parse_add(struct cli_matcher *root, const char *virname, const char *hex
 	}
 
 	free(hexcpy);
-	if(error)
+	if(error) {
+	    cli_errmsg("cli_parseadd(): Problem adding signature (1b).\n");
 	    return CL_EMALFDB;
+	}
 
     } else if(strchr(hexsig, '*')) {
 	root->ac_partsigs++;
@@ -584,6 +586,7 @@ static int cli_loaddb(FILE *fs, struct cl_engine *engine, unsigned int *signo, u
 	if(*pt == '=') continue;
 
 	if((ret = cli_parse_add(root, start, pt, 0, 0, "*", 0, NULL, options))) {
+	    cli_dbgmsg("cli_loaddb: cli_parse_add failed on line %d\n", line);
 	    ret = CL_EMALFDB;
 	    break;
 	}
@@ -1162,6 +1165,11 @@ static int lsigattribs(char *attribs, struct cli_lsig_tdb *tdb)
 		memcpy(&tdb->str[cnt], pt, strlen(pt));
 		tdb->str[tdb->cnt[CLI_TDB_STR] - 1] = 0;
 		break;
+
+	    default:
+		/* All known TDB types handled above, skip unknown */
+		cli_dbgmsg("lsigattribs: Unknown attribute type '%u'\n", apt->type);
+		return 1; /* +1 = skip */
 	}
     }
 
@@ -2671,7 +2679,7 @@ static int cli_loaddbdir(const char *dirname, struct cl_engine *engine, unsigned
 
 int cl_load(const char *path, struct cl_engine *engine, unsigned int *signo, unsigned int dboptions)
 {
-	struct stat sb;
+	STATBUF sb;
 	int ret;
 
     if(!engine) {
@@ -2684,7 +2692,7 @@ int cl_load(const char *path, struct cl_engine *engine, unsigned int *signo, uns
 	return CL_EARG;
     }
 
-    if(stat(path, &sb) == -1) {
+    if(STAT(path, &sb) == -1) {
         cli_errmsg("cl_load(): Can't get status of %s\n", path);
         return CL_ESTAT;
     }
@@ -2768,7 +2776,7 @@ int cl_statinidir(const char *dirname, struct cl_stat *dbstat)
 	{
 	    if(strcmp(dent->d_name, ".") && strcmp(dent->d_name, "..") && CLI_DBEXT(dent->d_name)) {
 		dbstat->entries++;
-		dbstat->stattab = (struct stat *) cli_realloc2(dbstat->stattab, dbstat->entries * sizeof(struct stat));
+		dbstat->stattab = (STATBUF *) cli_realloc2(dbstat->stattab, dbstat->entries * sizeof(STATBUF));
 		if(!dbstat->stattab) {
 		    cl_statfree(dbstat);
 		    closedir(dd);
@@ -2801,7 +2809,7 @@ int cl_statinidir(const char *dirname, struct cl_stat *dbstat)
 
 		strcpy(dbstat->statdname[dbstat->entries - 1], dent->d_name);
 #endif
-		stat(fname, &dbstat->stattab[dbstat->entries - 1]);
+		STAT(fname, &dbstat->stattab[dbstat->entries - 1]);
 		free(fname);
 	    }
 	}
@@ -2821,7 +2829,7 @@ int cl_statchkdir(const struct cl_stat *dbstat)
 	    char b[offsetof(struct dirent, d_name) + NAME_MAX + 1];
 	} result;
 #endif
-	struct stat sb;
+	STATBUF sb;
 	unsigned int i, found;
 	char *fname;
 
@@ -2855,7 +2863,7 @@ int cl_statchkdir(const struct cl_stat *dbstat)
 		}
 
 		sprintf(fname, "%s"PATHSEP"%s", dbstat->dir, dent->d_name);
-		stat(fname, &sb);
+		STAT(fname, &sb);
 		free(fname);
 
 		found = 0;
@@ -3190,7 +3198,7 @@ static int countsigs(const char *dbname, unsigned int options, unsigned int *sig
 
 int cl_countsigs(const char *path, unsigned int countoptions, unsigned int *sigs)
 {
-	struct stat sb;
+	STATBUF sb;
 	char fname[1024];
 	struct dirent *dent;
 #if defined(HAVE_READDIR_R_3) || defined(HAVE_READDIR_R_2)
@@ -3205,7 +3213,7 @@ int cl_countsigs(const char *path, unsigned int countoptions, unsigned int *sigs
     if(!sigs)
 	return CL_ENULLARG;
 
-    if(stat(path, &sb) == -1) {
+    if(STAT(path, &sb) == -1) {
 	cli_errmsg("cl_countsigs: Can't stat %s\n", path);
 	return CL_ESTAT;
     }

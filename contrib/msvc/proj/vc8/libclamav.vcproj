@@ -496,6 +496,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\..\libclamav\iowrap.c"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\..\libclamav\is_tar.c"
 				>
 			</File>
@@ -1243,6 +1247,10 @@
 					>
 				</File>
 				<File
+					RelativePath="..\..\..\..\libclamav\tomsfastmath\bin\fp_toradix_n.c"
+					>
+				</File>
+				<File
 					RelativePath="..\..\..\..\libclamav\tomsfastmath\bin\fp_unsigned_bin_size.c"
 					>
 				</File>
@@ -1463,6 +1471,10 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\libclamav\inflate64_priv.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\iowrap.h"
 				>
 			</File>
 			<File

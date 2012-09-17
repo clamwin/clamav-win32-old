@@ -257,10 +257,11 @@ static cl_error_t meta(const char* container_type, unsigned long fsize_container
 
 static void scanfile(const char *filename, struct cl_engine *engine, const struct optstruct *opts, unsigned int options)
 {
-	int ret = 0, fd, included, printclean = 1, i;
+	int ret = 0, fd, included;
+	unsigned i;
 	const struct optstruct *opt;
 	const char *virname;
-	struct stat sb;
+	STATBUF sb;
 	struct metachain chain;
 
     if((opt = optget(opts, "exclude"))->enabled) {
@@ -291,7 +292,7 @@ static void scanfile(const char *filename, struct cl_engine *engine, const struc
     }
 
     /* argh, don't scan /proc files */
-    if(stat(filename, &sb) != -1) {
+    if(STAT(filename, &sb) != -1) {
 #ifdef C_LINUX
 	if(procdev && sb.st_dev == procdev) {
 	    if(!printinfected)
@@ -397,7 +398,7 @@ static void scandirs(const char *dirname, struct cl_engine *engine, const struct
 {
 	DIR *dd;
 	struct dirent *dent;
-	struct stat sb;
+	STATBUF sb;
 	char *fname;
 	int included;
 	const struct optstruct *opt;
@@ -454,7 +455,7 @@ static void scandirs(const char *dirname, struct cl_engine *engine, const struct
             NORMALIZE_PATH(fname, 1, continue);
 #endif
 		    /* stat the file */
-		    if(lstat(fname, &sb) != -1) {
+		    if(LSTAT(fname, &sb) != -1) {
 			if(!optget(opts, "cross-fs")->enabled) {
 			    if(sb.st_dev != dev) {
 				if(!printinfected)
@@ -467,7 +468,7 @@ static void scandirs(const char *dirname, struct cl_engine *engine, const struct
 			    if(dirlnk != 2 && filelnk != 2) {
 				if(!printinfected)
 				    logg("%s: Symbolic link\n", fname);
-			    } else if(stat(fname, &sb) != -1) {
+			    } else if(STAT(fname, &sb) != -1) {
 				if(S_ISREG(sb.st_mode) && filelnk == 2) {
 				    scanfile(fname, engine, opts, options);
 				} else if(S_ISDIR(sb.st_mode) && dirlnk == 2) {
@@ -522,7 +523,10 @@ static int scanstdin(const struct cl_engine *engine, const struct optstruct *opt
 	return 2;
     }
 
-    file = cli_gentemp(tmpdir);
+    if(!(file = cli_gentemp(tmpdir))) {
+	logg("!Can't generate tempfile name\n");
+	return 2;
+    }
 
     if(!(fs = fopen(file, "wb"))) {
 	logg("!Can't open %s for writing\n", file);
@@ -571,7 +575,7 @@ int scanmanager(const struct optstruct *opts)
 	int ret = 0, i;
 	unsigned int options = 0, dboptions = 0, dirlnk = 1, filelnk = 1;
 	struct cl_engine *engine;
-	struct stat sb;
+	STATBUF sb;
 	char *file, cwd[1024], *pua_cats = NULL;
 	const char *filename;
 	const struct optstruct *opt;
@@ -645,6 +649,7 @@ int scanmanager(const struct optstruct *opts)
 	    while(opt) {
 		if(!(pua_cats = realloc(pua_cats, i + strlen(opt->strarg) + 3))) {
 		    logg("!Can't allocate memory for pua_cats\n");
+		    cl_engine_free(engine);
 		    return 2;
 		}
 		sprintf(pua_cats + i, ".%s", opt->strarg);
@@ -878,7 +883,7 @@ int scanmanager(const struct optstruct *opts)
 
 #ifdef C_LINUX
     procdev = (dev_t) 0;
-    if(stat("/proc", &sb) != -1 && !sb.st_size)
+    if(STAT("/proc", &sb) != -1 && !sb.st_size)
 	procdev = sb.st_dev;
 #endif
 #ifdef _WIN32
@@ -894,7 +899,7 @@ int scanmanager(const struct optstruct *opts)
 	    logg("!Can't get absolute pathname of current working directory\n");
 	    ret = 2;
 	} else {
-	    stat(cwd, &sb);
+	    STAT(cwd, &sb);
 	    scandirs(cwd, engine, opts, options, 1, sb.st_dev);
 	}
 
@@ -913,7 +918,7 @@ int scanmanager(const struct optstruct *opts)
 #ifdef _WIN32
         NORMALIZE_PATH(file, 1, continue);
 #endif
-	    if(lstat(file, &sb) == -1) {
+	    if(LSTAT(file, &sb) == -1) {
 		logg("^%s: Can't access file\n", file);
 		perror(file);
 		ret = 2;
@@ -931,7 +936,7 @@ int scanmanager(const struct optstruct *opts)
 		    if(dirlnk == 0 && filelnk == 0) {
 			if(!printinfected)
 			    logg("%s: Symbolic link\n", file);
-		    } else if(stat(file, &sb) != -1) {
+		    } else if(STAT(file, &sb) != -1) {
 			if(S_ISREG(sb.st_mode) && filelnk) {
 			    scanfile(file, engine, opts, options);
 			} else if(S_ISDIR(sb.st_mode) && dirlnk) {

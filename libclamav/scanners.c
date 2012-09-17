@@ -116,7 +116,7 @@ static int cli_scandir(const char *dirname, cli_ctx *ctx)
 	    char b[offsetof(struct dirent, d_name) + NAME_MAX + 1];
 	} result;
 #endif
-	struct stat statbuf;
+	STATBUF statbuf;
 	char *fname;
 
 
@@ -141,7 +141,7 @@ static int cli_scandir(const char *dirname, cli_ctx *ctx)
 		    sprintf(fname, "%s"PATHSEP"%s", dirname, dent->d_name);
 
 		    /* stat the file */
-		    if(lstat(fname, &statbuf) != -1) {
+		    if(LSTAT(fname, &statbuf) != -1) {
 			if(S_ISDIR(statbuf.st_mode) && !S_ISLNK(statbuf.st_mode)) {
 			    if(cli_scandir(fname, ctx) == CL_VIRUS) {
 				free(fname);
@@ -423,6 +423,7 @@ static int cli_scangzip_with_zib_from_the_80s(cli_ctx *ctx, unsigned char *buff)
     if((ret = cli_gentempfd(ctx->engine->tmpdir, &tmpname, &fd)) != CL_SUCCESS) {
 	cli_dbgmsg("GZip: Can't generate temporary file.\n");
 	gzclose(gz);
+	close(fd);
 	return ret;
     }
     
@@ -801,7 +802,7 @@ static int cli_vba_scandir(const char *dirname, cli_ctx *ctx, struct uniq *U)
 	    char b[offsetof(struct dirent, d_name) + NAME_MAX + 1];
 	} result;
 #endif
-	struct stat statbuf;
+	STATBUF statbuf;
 	char *fullname, vbaname[1024];
 	unsigned char *data;
 	char *hash;
@@ -950,7 +951,7 @@ static int cli_vba_scandir(const char *dirname, cli_ctx *ctx, struct uniq *U)
 		    sprintf(fullname, "%s"PATHSEP"%s", dirname, dent->d_name);
 
 		    /* stat the file */
-		    if(lstat(fullname, &statbuf) != -1) {
+		    if(LSTAT(fullname, &statbuf) != -1) {
 			if(S_ISDIR(statbuf.st_mode) && !S_ISLNK(statbuf.st_mode))
 			  if (cli_vba_scandir(fullname, ctx, U) == CL_VIRUS) {
 			    	ret = CL_VIRUS;
@@ -1053,13 +1054,20 @@ static int cli_scanscript(cli_ctx *ctx)
 	struct text_norm_state state;
 	char *tmpname = NULL;
 	int ofd = -1, ret;
-	struct cli_matcher *troot = ctx->engine->root[7];
-	uint32_t maxpatlen = troot ? troot->maxpatlen : 0, offset = 0;
-	struct cli_matcher *groot = ctx->engine->root[0];
+	struct cli_matcher *troot;
+	uint32_t maxpatlen, offset = 0;
+	struct cli_matcher *groot;
 	struct cli_ac_data gmdata, tmdata;
 	struct cli_ac_data *mdata[2];
 	fmap_t *map = *ctx->fmap;
 	size_t at = 0;
+
+    if (!ctx || !ctx->engine->root)
+        return CL_ENULLARG;
+
+    groot = ctx->engine->root[0];
+    troot = ctx->engine->root[7];
+    maxpatlen = troot ? troot->maxpatlen : 0;
 
 	cli_dbgmsg("in cli_scanscript()\n");
 
@@ -1123,7 +1131,7 @@ static int cli_scanscript(cli_ctx *ctx)
 		state.out_pos = maxpatlen;
 	    }
 	    if(!len) break;
-	    if(text_normalize_buffer(&state, buff, len) != len) {
+	    if(!buff || text_normalize_buffer(&state, buff, len) != len) {
 		cli_dbgmsg("cli_scanscript: short read during normalizing\n");
 	    }
 	}
@@ -1570,7 +1578,7 @@ static int cli_scan_structured(cli_ctx *ctx)
 	unsigned int cc_count = 0;
 	unsigned int ssn_count = 0;
 	int done = 0;
-	fmap_t *map = *ctx->fmap;
+	fmap_t *map;
 	size_t pos = 0;
 	int (*ccfunc)(const unsigned char *buffer, int length);
 	int (*ssnfunc)(const unsigned char *buffer, int length);
@@ -1578,6 +1586,8 @@ static int cli_scan_structured(cli_ctx *ctx)
 
     if(ctx == NULL)
 	return CL_ENULLARG;
+
+    map = *ctx->fmap;
 
     if(ctx->engine->min_cc_count == 1)
 	ccfunc = dlp_has_cc;
@@ -1770,8 +1780,8 @@ static void get_thread_times(uint64_t *kt, uint64_t *ut)
     struct tms tbuf;
     if (times(&tbuf) != -1) {
 	clock_t tck = sysconf(_SC_CLK_TCK);
-	*kt = 1000000*tbuf.tms_stime / tck;
-	*ut = 1000000*tbuf.tms_utime / tck;
+	*kt = 1000000UL*tbuf.tms_stime / tck;
+	*ut = 1000000UL*tbuf.tms_utime / tck;
     } else {
 	*kt = *ut = 0;
     }
@@ -2536,13 +2546,44 @@ static int magic_scandesc(cli_ctx *ctx, cli_file_t type)
     if(type != CL_TYPE_IGNORED && (type != CL_TYPE_HTML || !(DCONF_DOC & DOC_CONF_HTML_SKIPRAW)) && !ctx->engine->sdb) {
 	res = cli_scanraw(ctx, type, typercg, &dettype, hash);
 	if(res != CL_CLEAN) {
-	    if(res == CL_VIRUS)
-		ret =  cli_checkfp(hash, hashed_size, ctx);
-	    else
-		ret = res;
-	    cli_bitset_free(ctx->hook_lsig_matches);
-	    ctx->hook_lsig_matches = old_hook_lsig_matches;
-	    ret_from_magicscan(ret);
+	    switch(res) {
+		/* List of scan halts, runtime errors only! */
+		case CL_EUNLINK:
+		case CL_ESTAT:
+		case CL_ESEEK:
+		case CL_EWRITE:
+		case CL_EDUP:
+		case CL_ETMPFILE:
+		case CL_ETMPDIR:
+		case CL_EMEM:
+		case CL_ETIMEOUT:
+		    cli_dbgmsg("Descriptor[%d]: cli_scanraw error %s\n", fmap_fd(*ctx->fmap), cl_strerror(res));
+		    cli_bitset_free(ctx->hook_lsig_matches);
+		    ctx->hook_lsig_matches = old_hook_lsig_matches;
+		    ret_from_magicscan(res);
+		/* CL_VIRUS = malware found, check FP and report */
+		case CL_VIRUS:
+		    ret = cli_checkfp(hash, hashed_size, ctx);
+		    cli_bitset_free(ctx->hook_lsig_matches);
+		    ctx->hook_lsig_matches = old_hook_lsig_matches;
+		    ret_from_magicscan(ret);
+		/* "MAX" conditions should still fully scan the current file */
+		case CL_EMAXREC:
+		case CL_EMAXSIZE:
+		case CL_EMAXFILES:
+		    ret = res;
+		    cli_dbgmsg("Descriptor[%d]: Continuing after cli_scanraw reached %s\n",
+			fmap_fd(*ctx->fmap), cl_strerror(res));
+		    break;
+		/* Other errors must not block further scans below
+		 * This specifically includes CL_EFORMAT & CL_EREAD & CL_EUNPACK
+		 * Malformed/truncated files could report as any of these three.
+		 */
+		default:
+		    ret = res;
+		    cli_dbgmsg("Descriptor[%d]: Continuing after cli_scanraw error %s\n",
+			fmap_fd(*ctx->fmap), cl_strerror(res));
+	    }
 	}
     }
 
@@ -2585,11 +2626,16 @@ static int magic_scandesc(cli_ctx *ctx, cli_file_t type)
     ctx->hook_lsig_matches = old_hook_lsig_matches;
 
     switch(ret) {
+	/* Malformed file cases */
 	case CL_EFORMAT:
+	case CL_EREAD:
+	case CL_EUNPACK:
+	/* Limits exceeded */
 	case CL_EMAXREC:
 	case CL_EMAXSIZE:
 	case CL_EMAXFILES:
 	    cli_dbgmsg("Descriptor[%d]: %s\n", fmap_fd(*ctx->fmap), cl_strerror(ret));
+	    ret_from_magicscan(CL_CLEAN);
 	case CL_CLEAN:
 	    cache_clean = 1;
 	    ret_from_magicscan(CL_CLEAN);
@@ -2600,14 +2646,14 @@ static int magic_scandesc(cli_ctx *ctx, cli_file_t type)
 
 int cli_magic_scandesc(int desc, cli_ctx *ctx)
 {
-    struct stat sb;
+    STATBUF sb;
     int ret;
 
 #ifdef HAVE__INTERNAL__SHA_COLLECT
     if(ctx->sha_collect>0) ctx->sha_collect = 0;
 #endif
     cli_dbgmsg("in cli_magic_scandesc (reclevel: %u/%u)\n", ctx->recursion, ctx->engine->maxreclevel);
-    if(fstat(desc, &sb) == -1) {
+    if(FSTAT(desc, &sb) == -1) {
 	cli_errmsg("magic_scandesc: Can't fstat descriptor %d\n", desc);
 	early_ret_from_magicscan(CL_ESTAT);
     }
@@ -2649,7 +2695,7 @@ int cli_map_scandesc(cl_fmap_t *map, off_t offset, size_t length, cli_ctx *ctx)
     off_t old_off = map->nested_offset;
     size_t old_len = map->len;
     size_t old_real_len = map->real_len;
-    int ret;
+    int ret = CL_CLEAN;
 
     cli_dbgmsg("cli_map_scandesc: [%ld, +%ld), [%ld, +%ld)\n",
 	       old_off, old_len, offset, length);
@@ -2733,7 +2779,7 @@ static int scan_common(int desc, cl_fmap_t *map, const char **virname, unsigned 
 
 	snprintf(link, sizeof(link), "/proc/self/fd/%u", desc);
 	link[sizeof(link)-1]='\0';
-	if((linksz=readlink(link, ctx.entry_filename, sizeof(ctx.entry_filename)))==-1) {
+	if((linksz=readlink(link, ctx.entry_filename, sizeof(ctx.entry_filename)-1))==-1) {
 	    cli_errmsg("failed to resolve filename for descriptor %d (%s)\n", desc, link);
 	    strcpy(ctx.entry_filename, "NO_IDEA");
 	} else

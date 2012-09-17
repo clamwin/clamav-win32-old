@@ -108,7 +108,11 @@ static int isremote(const struct optstruct *opts) {
     }
     memcpy((void *)&testsock, (void *)&tcpsock, sizeof(testsock));
     testsock.sin_port = htons(INADDR_ANY);
-    if(!(s = socket(testsock.sin_family, SOCK_STREAM, 0))) return 0;
+    if((s = socket(testsock.sin_family, SOCK_STREAM, 0)) < 0) {
+      logg("isremote: socket() returning: %s.\n", strerror(errno));
+      mainsa = NULL;
+      return 0;
+    }
     ret = (bind(s, (struct sockaddr *)&testsock, sizeof(testsock)) != 0);
     closesocket(s);
     return ret;
@@ -256,8 +260,12 @@ int client(const struct optstruct *opts, int *infected, int *err)
 
     if(scandash) {
 	int sockd, ret;
-	struct stat sb;
-	fstat(0, &sb);
+	STATBUF sb;
+	if(FSTAT(0, &sb) < 0) {
+	    logg("client.c: fstat failed for file name \"%s\", with %s\n.", 
+		 opts->filename[0], strerror(errno));
+	    return 2;
+	}
 	if((sb.st_mode & S_IFMT) != S_IFREG) scantype = STREAM;
 	if((sockd = dconnect()) >= 0 && (ret = dsresult(sockd, scantype, NULL, &ret, NULL)) >= 0)
 	    *infected = ret;

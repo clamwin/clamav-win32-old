@@ -199,7 +199,7 @@ int command(client_conn_t *conn, int *virus)
     struct scan_cb_data scandata;
     struct cli_ftw_cbdata data;
     unsigned ok, error, total;
-    struct stat sb;
+    STATBUF sb;
     jobgroup_t *group = NULL;
 
     if (thrmgr_group_need_terminate(conn->group)) {
@@ -235,7 +235,7 @@ int command(client_conn_t *conn, int *virus)
 	    int multiscan, max, alive;
 
 	    /* use MULTISCAN only for directories (bb #1869) */
-	    if (stat(conn->filename, &sb) == 0 &&
+	    if (STAT(conn->filename, &sb) == 0 &&
 		!S_ISDIR(sb.st_mode)) {
 		thrmgr_setactivetask(NULL, "CONTSCAN");
 		type = TYPE_CONTSCAN;
@@ -265,8 +265,12 @@ int command(client_conn_t *conn, int *virus)
 	    thrmgr_setactivetask(NULL, "MULTISCAN");
 	    type = TYPE_MULTISCAN;
 	    scandata.group = group = thrmgr_group_new();
-	    if (!group)
-		return CL_EMEM;
+	    if (!group) {
+	      if(optget(opts, "ExitOnOOM")->enabled)
+		return -1;
+	      else
+		return 1;
+	    }
 	    break;
 	    }
 	case COMMAND_MULTISCANFILE:
@@ -280,29 +284,34 @@ int command(client_conn_t *conn, int *virus)
 	    *virus = scandata.infected;
 	    if (ret == CL_BREAK) {
 		thrmgr_group_terminate(conn->group);
-		return CL_BREAK;
+		return 1;
 	    }
 	    return scandata.errors > 0 ? scandata.errors : 0;
 	case COMMAND_FILDES:
 	    thrmgr_setactivetask(NULL, "FILDES");
 #ifdef HAVE_FD_PASSING
-	    if (conn->scanfd == -1)
+	    if (conn->scanfd == -1) {
 		conn_reply_error(conn, "FILDES: didn't receive file descriptor.");
+		return 1;
+	    }
 	    else {
 		ret = scanfd(conn, NULL, engine, options, opts, desc, 0);
 		if (ret == CL_VIRUS) {
 		    *virus = 1;
+		    ret = 0;
 		} else if (ret == CL_EMEM) {
 		    if(optget(opts, "ExitOnOOM")->enabled)
 			ret = -1;
+		    else
+		        ret = 1;
 		} else if (ret == CL_ETIMEOUT) {
 			thrmgr_group_terminate(conn->group);
 			ret = 1;
 		} else
 		    ret = 0;
+		logg("$Closed fd %d\n", conn->scanfd);
+		close(conn->scanfd);
 	    }
-	    logg("$Closed fd %d\n", conn->scanfd);
-	    close(conn->scanfd);
 	    return ret;
 #else
 	    conn_reply_error(conn, "FILDES support not compiled in.");
@@ -323,6 +332,8 @@ int command(client_conn_t *conn, int *virus)
 	    if (ret == CL_EMEM) {
 		if(optget(opts, "ExitOnOOM")->enabled)
 		    return -1;
+		else
+		    return 1;
 	    }
 	    return 0;
 	case COMMAND_INSTREAMSCAN:
@@ -330,9 +341,12 @@ int command(client_conn_t *conn, int *virus)
 	    ret = scanfd(conn, NULL, engine, options, opts, desc, 1);
 	    if (ret == CL_VIRUS) {
 		*virus = 1;
+		ret = 0;
 	    } else if (ret == CL_EMEM) {
 		if(optget(opts, "ExitOnOOM")->enabled)
 		    ret = -1;
+		else
+ 		    ret = 1;
 	    } else if (ret == CL_ETIMEOUT) {
 		thrmgr_group_terminate(conn->group);
 		ret = 1;
@@ -359,14 +373,17 @@ int command(client_conn_t *conn, int *virus)
 	flags |= CLI_FTW_FOLLOW_FILE_SYMLINK;
 
     if(!optget(opts, "CrossFilesystems")->enabled)
-	if(stat(conn->filename, &sb) == 0)
+	if(STAT(conn->filename, &sb) == 0)
 	    scandata.dev = sb.st_dev;
 
     ret = cli_ftw(conn->filename, flags,  maxdirrec ? maxdirrec : INT_MAX, scan_callback, &data, scan_pathchk);
-    if (ret == CL_EMEM)
+    if (ret == CL_EMEM) {
 	if(optget(opts, "ExitOnOOM")->enabled)
 	    return -1;
-    if (scandata.group && conn->cmdtype == COMMAND_MULTISCAN) {
+	else
+	    return 1;
+    }
+    if (scandata.group && type == TYPE_MULTISCAN) {
 	thrmgr_group_waitforall(group, &ok, &error, &total);
 	pthread_mutex_lock(&conn->thrpool->pool_mutex);
 	conn->thrpool->thr_multiscan--;

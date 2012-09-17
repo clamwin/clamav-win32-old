@@ -388,6 +388,7 @@ cli_vba_readdir(const char *dir, struct uniq *U, uint32_t which)
 		if(ptr == NULL) break;
 		if (!(vba_project->colls[i]=uniq_get(U, ptr, strlen(ptr), &hash))) {
 			cli_dbgmsg("vba_readdir: cannot find project %s (%s)\n", ptr, hash);
+			free(ptr);
 			break;
 		}
 		cli_dbgmsg("vba_readdir: project name: %s (%s)\n", ptr, hash);
@@ -548,7 +549,7 @@ cli_scan_ole10(int fd, cli_ctx *ctx)
 {
 	int ofd, ret;
 	uint32_t object_size;
-	struct stat statbuf;
+	STATBUF statbuf;
 	char *fullname;
 
 	if(fd < 0)
@@ -558,7 +559,7 @@ cli_scan_ole10(int fd, cli_ctx *ctx)
 	if(!read_uint32(fd, &object_size, FALSE))
 		return CL_CLEAN;
 
-	if(fstat(fd, &statbuf) == -1)
+	if(FSTAT(fd, &statbuf) == -1)
 		return CL_ESTAT;
 
 	if ((statbuf.st_size - object_size) >= 4) {
@@ -1058,7 +1059,8 @@ cli_wm_readdir(int fd)
 
 	end_offset = fib.macro_offset + fib.macro_len;
 	done = FALSE;
-	memset(&macro_info, '\0', sizeof(macro_info));
+	macro_info.entries = NULL;
+	macro_info.count = 0;
 
 	while((lseek(fd, 0, SEEK_CUR) < end_offset) && !done) {
 		if (cli_readn(fd, &info_id, 1) != 1) {

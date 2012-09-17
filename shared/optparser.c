@@ -89,6 +89,7 @@ const struct clam_option __clam_options[] = {
     { NULL, "no-summary", 0, TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_CLAMSCAN | OPT_CLAMDSCAN, "", "" },
     { NULL, "file-list", 'f', TYPE_STRING, NULL, -1, NULL, 0, OPT_CLAMSCAN | OPT_CLAMDSCAN, "", "" },
     { NULL, "infected", 'i', TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_CLAMSCAN | OPT_CLAMDSCAN, "", "" },
+    { NULL, "suppress-ok-results", 'o', TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_CLAMSCAN, "", "" },
     { NULL, "move", 0, TYPE_STRING, NULL, -1, NULL, 0, OPT_CLAMSCAN | OPT_CLAMDSCAN, "", "" },
     { NULL, "copy", 0, TYPE_STRING, NULL, -1, NULL, 0, OPT_CLAMSCAN | OPT_CLAMDSCAN, "", "" },
     { NULL, "remove", 0, TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_CLAMSCAN | OPT_CLAMDSCAN, "", "" },
@@ -198,6 +199,8 @@ const struct clam_option __clam_options[] = {
     { "LogFacility", NULL, 0, TYPE_STRING, NULL, -1, "LOG_LOCAL6", FLAG_REQUIRED, OPT_CLAMD | OPT_FRESHCLAM | OPT_MILTER, "Type of syslog messages.\nPlease refer to 'man syslog' for the facility names.", "LOG_MAIL" },
 
     { "LogVerbose", NULL, 0, TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_CLAMD | OPT_FRESHCLAM | OPT_MILTER, "Enable verbose logging.", "yes" },
+
+    { "LogRotate", "log-rotate", 0, TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_CLAMD | OPT_FRESHCLAM | OPT_MILTER, "Rotate log file. Requires LogFileMaxSize option set prior to this option.", "yes" },
 
     { "ExtendedDetectionInfo", NULL, 0, TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_CLAMD, "Log additional information about the infected file, such as its\nsize and hash, together with the virus name.", "yes" },
 
@@ -993,14 +996,22 @@ struct optstruct *optparse(const char *cfgfile, int argc, char **argv, int verbo
 		}
 		break;
 
-	    case TYPE_NUMBER:
-		numarg = atoi(arg);
-		arg = NULL;
-		break;
+            case TYPE_NUMBER:
+                if (arg)
+                    numarg = atoi(arg);
+                else
+                    numarg = 0;
+                arg = NULL;
+                break;
 
-	    case TYPE_SIZE:
-		errno = 0;
-		lnumarg = strtoul(arg, &buff, 0);
+            case TYPE_SIZE:
+                errno = 0;
+                if(arg)
+                    lnumarg = strtoul(arg, &buff, 0);
+                else {
+                    numarg = 0;
+                    break;
+                }
 		if(errno != ERANGE) {
 		    switch(*buff) {
 		    case 'M':
@@ -1076,7 +1087,7 @@ struct optstruct *optparse(const char *cfgfile, int argc, char **argv, int verbo
 	return NULL;
     }
 
-    if(!cfgfile && (optind < argc)) {
+    if(!cfgfile && opts && (optind < argc)) {
 	opts->filename = (char **) calloc(argc - optind + 1, sizeof(char *));
 	if(!opts->filename) {
 	    fprintf(stderr, "ERROR: optparse: calloc failed\n");

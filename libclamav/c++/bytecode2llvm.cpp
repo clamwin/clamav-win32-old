@@ -2523,6 +2523,7 @@ void cli_bytecode_debug_printsrc(const struct cli_bc_ctx *ctx)
 #endif
 	if (!lines->buffer) {
 	    errs() << "Unable to open file '" << path << "'\n";
+	    delete lines;
 	    return ;
 	}
 	LinePrinter.files[path] = lines;

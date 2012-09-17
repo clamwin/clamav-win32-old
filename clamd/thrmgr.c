@@ -138,8 +138,10 @@ static void remove_frompools(threadpool_t *t)
 		prev = l;
 		l = l->nxt;
 	}
-	if(!l)
+	if(!l) {
+        pthread_mutex_unlock(&pools_lock);
 		return;
+    }
 	if(prev)
 		prev->nxt = l->nxt;
 	if(l == pools)
@@ -157,7 +159,7 @@ static void remove_frompools(threadpool_t *t)
 
 static void print_queue(int f, work_queue_t *queue, struct timeval *tv_now)
 {
-    long umin=~0UL, umax=0, usum=0;
+    long umin=LONG_MAX, umax=0, usum=0;
     unsigned invalids = 0, cnt = 0;
     work_item_t *q;
 

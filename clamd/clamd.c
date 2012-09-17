@@ -127,7 +127,7 @@ int main(int argc, char **argv)
 	int lsockets[2], nlsockets = 0;
 	unsigned int dboptions = 0;
 #ifdef C_LINUX
-	struct stat sb;
+	STATBUF sb;
 #endif
 
     if(check_flevel())
@@ -246,6 +246,8 @@ int main(int argc, char **argv)
     logok = optget(opts, "LogClean")->enabled;
     logg_size = optget(opts, "LogFileMaxSize")->numarg;
     logg_verbose = mprintf_verbose = optget(opts, "LogVerbose")->enabled;
+    if (logg_size)
+        logg_rotate = optget(opts, "LogRotate")->enabled;
     mprintf_send_timeout = optget(opts, "SendBufTimeout")->numarg;
 
     do { /* logger initialized */
@@ -298,7 +300,7 @@ int main(int argc, char **argv)
 
 #ifdef C_LINUX
     procdev = 0;
-    if(stat("/proc", &sb) != -1 && !sb.st_size)
+    if(STAT("/proc", &sb) != -1 && !sb.st_size)
 	procdev = sb.st_dev;
 #endif
 
