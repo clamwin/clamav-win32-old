@@ -205,13 +205,23 @@ static void dynLoad(void)
     }
 
     /* ws2_32 ipv6 */
-    if (!(cw_helpers.ws2.hLib = LoadLibraryA("wship6.dll")))
-        cw_helpers.ws2.hLib = LoadLibraryA("ws2_32.dll");
-    if (cw_helpers.ws2.hLib)
+    if ((cw_helpers.ws2.hLib = LoadLibraryA("wship6.dll")))
     {
         cw_helpers.ws2.ok = TRUE;
         IMPORT_FUNC_OR_FAIL(ws2, getaddrinfo);
         IMPORT_FUNC_OR_FAIL(ws2, freeaddrinfo);
+    }
+
+    if (!cw_helpers.ws2.ok)
+    {
+        if (cw_helpers.ws2.hLib)
+            FreeLibrary(cw_helpers.ws2.hLib);
+        if ((cw_helpers.ws2.hLib = LoadLibraryA("ws2_32.dll"))) /* Unlikely */
+        {
+            cw_helpers.ws2.ok = TRUE;
+            IMPORT_FUNC_OR_FAIL(ws2, getaddrinfo);
+            IMPORT_FUNC_OR_FAIL(ws2, freeaddrinfo);
+        }
     }
 
     /* psapi */
