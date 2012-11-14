@@ -261,6 +261,7 @@ static void scanfile(const char *filename, struct cl_engine *engine, const struc
 	unsigned i;
 	const struct optstruct *opt;
 	const char *virname;
+	const char **virpp = &virname;
 	STATBUF sb;
 	struct metachain chain;
 
@@ -344,7 +345,7 @@ static void scanfile(const char *filename, struct cl_engine *engine, const struc
     cbdata.size = lseek(fd, 0, SEEK_END);
     lseek(fd, 0, SEEK_SET);
 
-    if((ret = cl_scandesc_callback(fd, &virname, &info.blocks, engine, options, &chain)) == CL_VIRUS) {
+    if((ret = cl_scandesc_callback(fd, virpp, &info.blocks, engine, options, &chain)) == CL_VIRUS) {
 	if(optget(opts, "archive-verbose")->enabled) {
 	    if (chain.n > 1) {
 		char str[128];
@@ -353,7 +354,16 @@ static void scanfile(const char *filename, struct cl_engine *engine, const struc
 	    } else if (chain.lastvir)
 		logg("~%s!(%d): %s FOUND\n", filename, chain.lastvir-1, virname);
 	}
-	logg("~%s: %s FOUND\n", filename, virname);
+	if (options & CL_SCAN_ALLMATCHES) {
+	    int i = 0;
+	    virpp = (const char **)*virpp; /* horrible */
+	    virname = virpp[0];
+	    while (virpp[i])
+		logg("~%s: %s FOUND\n", filename, virpp[i++]);
+	    free((void *)virpp);
+	}
+	else
+	    logg("~%s: %s FOUND\n", filename, virname);
 	info.files++;
 	info.ifiles++;
 
@@ -502,6 +512,8 @@ static int scanstdin(const struct cl_engine *engine, const struct optstruct *opt
 	int ret;
 	unsigned int fsize = 0;
 	const char *virname, *tmpdir;
+	const char **virpp = &virname;
+
 	char *file, buff[FILEBUFF];
 	size_t bread;
 	FILE *fs;
@@ -550,7 +562,17 @@ static int scanstdin(const struct cl_engine *engine, const struct optstruct *opt
     info.rblocks += fsize / CL_COUNT_PRECISION;
 
     if((ret = cl_scanfile(file, &virname, &info.blocks, engine, options)) == CL_VIRUS) {
-	logg("stdin: %s FOUND\n", virname);
+        if (options & CL_SCAN_ALLMATCHES) {
+            int i = 0;
+            virpp = (const char **)*virpp; /* temp hack for scanall mode until api augmentation */
+            virname = virpp[0];
+            while (virpp[i])
+                logg("stdin: %s FOUND\n", virpp[i++]);
+            free((void *)virpp);
+        }
+	else
+	    logg("stdin: %s FOUND\n", virname);
+
 	info.ifiles++;
 
 	if(bell)
@@ -792,6 +814,9 @@ int scanmanager(const struct optstruct *opts)
     }
 
     /* set scan options */
+    if(optget(opts, "allmatch")->enabled)
+	options |= CL_SCAN_ALLMATCHES;
+
     if(optget(opts,"phishing-ssl")->enabled)
 	options |= CL_SCAN_PHISHING_BLOCKSSL;
 

@@ -557,8 +557,8 @@ else
     if test "$ZLIB_HOME" != "/usr"; then
 	CPPFLAGS="$CPPFLAGS -I$ZLIB_HOME/include"
 	save_LDFLAGS="$LDFLAGS"
-	LDFLAGS="$LDFLAGS -L$ZLIB_HOME/lib"
-	AC_CHECK_LIB([z], [inflateEnd], [LIBCLAMAV_LIBS="$LIBCLAMAV_LIBS -L$ZLIB_HOME/lib -lz"; FRESHCLAM_LIBS="$FRESHCLAM_LIBS -L$ZLIB_HOME/lib -lz"], AC_MSG_ERROR([Please install zlib and zlib-devel packages]))
+	LDFLAGS="$LDFLAGS -Wl,-rpath=$ZLIB_HOME/lib"
+	AC_CHECK_LIB([z], [inflateEnd], [LIBCLAMAV_LIBS="$LIBCLAMAV_LIBS -Wl,-rpath=$ZLIB_HOME/lib -lz"; FRESHCLAM_LIBS="$FRESHCLAM_LIBS -Wl,-rpath=$ZLIB_HOME/lib -lz"], AC_MSG_ERROR([Please install zlib and zlib-devel packages]))
 	AC_CHECK_LIB([z], [gzopen], [], AC_MSG_ERROR([Your zlib is missing gzopen()]))
 	LDFLAGS="$save_LDFLAGS"
     else
@@ -1495,7 +1495,6 @@ AC_MSG_CHECKING([stat64])
 AC_TRY_RUN([
 #define _LARGEFILE_SOURCE
 #define _LARGEFILE64_SOURCE
-#define _FILE_OFFSET_BITS 64
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -1518,7 +1517,7 @@ int main(void) {
 
 if test "$enable_stat64" != "no"; then
 AC_DEFINE([HAVE_STAT64],1,[enable stat64])
-CFLAGS="$CFLAGS -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64"
+CFLAGS="$CFLAGS -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE"
 fi
 AC_MSG_RESULT([$enable_stat64])
 

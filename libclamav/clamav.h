@@ -32,13 +32,17 @@
 #define STAT stat64
 #define LSTAT lstat64
 #define FSTAT fstat64
-
+#define safe_open(a, b) open(a, b|O_LARGEFILE)
 #else
 
 #define STATBUF struct stat
 #define STAT stat
 #define LSTAT lstat
 #define FSTAT fstat
+/* Nothing is safe in windows, not even open, safe_open defined under /win32 */
+#ifndef _WIN32
+#define safe_open open
+#endif
 
 #endif
 
@@ -142,6 +146,7 @@ typedef enum {
 #define CL_SCAN_PARTIAL_MESSAGE         0x40000
 #define CL_SCAN_HEURISTIC_PRECEDENCE    0x80000
 #define CL_SCAN_BLOCKMACROS		0x100000
+#define CL_SCAN_ALLMATCHES		0x200000
 
 #define CL_SCAN_PERFORMANCE_INFO        0x40000000 /* collect performance timings */
 #define CL_SCAN_INTERNAL_COLLECT_SHA    0x80000000 /* Enables hash output in sha-collect builds - for internal use only */

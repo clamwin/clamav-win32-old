@@ -341,6 +341,7 @@ MalwareName:TargetType:Offset:HexSignature[:MinFL:[MaxFL]]
 	\item 7 = ASCII text file (normalized)
 	\item 8 = Unused
 	\item 9 = Mach-O files
+	\item 10 = PDF files
     \end{itemize}
     And	\verb+Offset+ is an asterisk or a decimal number \verb+n+ possibly
     combined with a special modifier:
@@ -578,6 +579,32 @@ $ echo 460069006c0065004400650073006300720069007000740069006f006e
 FileDescription
 Entertainment Pack FreeCell Game
     \end{verbatim}
+
+    \subsection{Trusted and Revoked Certificates}
+    Clamav 0.98 checks signed PE files for certificates and verifies each
+    certificate in the chain against a database of trusted and revoked
+    certificates. The sinagure format is
+\begin{verbatim}
+Name;Trusted;Subject;Pubkey;Exponent;CodeSign;TimeSign;NotBefore;Comment
+[;minFL[;maxFL]]
+\end{verbatim}
+    where the corresponding fields are:
+    \begin{itemize}
+        \item \verb+Name:+ name of the entry
+        \item \verb+Trusted:+ bit field, specifying whether the cert is
+            trusted. 1 for trusted. 0 for revoked
+        \item \verb+Subject:+ sha1 of the Subject field in hex
+        \item \verb+Pubkey:+ the public key in hex
+        \item \verb+Exponent:+ the exponent in hex. Currently ignored and
+            hardcoded to 010001 (in hex)
+        \item \verb+CodeSign:+ bit field, specifying whether this cert
+            can sign code. 1 for true, 0 for false
+        \item \verb+TimeSign:+ bit field. 1 for true, 0 for false
+        \item \verb+NotBefore:+ integer, cert should not be added before
+            this variable. Defaults to 0 if left empty
+        \item \verb+Comment:+ comments for this entry
+    \end{itemize}
+    The signatures for certs are stored inside \verb+.crt+ files.
 
     \subsection{Signatures based on container metadata}
     ClamAV 0.96 allows creating generic signatures matching files stored

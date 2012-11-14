@@ -1,6 +1,6 @@
 /*
  * This file includes code from libmspack adapted for libclamav by
- * tkojm@clamav.net
+ * tkojm@clamav.net and draynor@sourcefire.com
  *
  * Copyright (C) 2003-2004 Stuart Caie
  *
@@ -126,12 +126,22 @@ static const unsigned short mszip_bit_mask_tab[17] = {
 static int mszip_read_input(struct mszip_stream *zip) {
   int nread = zip->read_cb(zip->file, zip->inbuf, (int)zip->inbuf_size);
   if (nread < 0) {
-    if (zip->file->error == CL_BREAK)
-      return zip->error = CL_BREAK;
+    if (zip->file->error == CL_BREAK) {
+      if (nread == zip->last) {
+        cli_dbgmsg("mszip_read_input: Two consecutive CL_BREAKs reached.\n");
+        return CL_BREAK;
+      }
+      // Need short circuit to ensure scanning small files
+      cli_dbgmsg("mszip_read_input: First CL_BREAK reached.\n");
+      zip->i_ptr = zip->i_end;
+      zip->last = nread;
+      return CL_SUCCESS;
+    }
     else
       return zip->error = CL_EFORMAT;
   }
 
+  zip->last = nread;
   zip->i_ptr = &zip->inbuf[0];
   zip->i_end = &zip->inbuf[nread];
 
@@ -622,7 +632,7 @@ struct mszip_stream *mszip_init(int ofd,
   return zip;
 }
 
-int mszip_decompress(struct mszip_stream *zip, off_t out_bytes) {
+int mszip_decompress(struct mszip_stream *zip, uint32_t out_bytes) {
   /* for the bit buffer */
   register unsigned int bit_buffer;
   register int bits_left;
@@ -1089,7 +1099,7 @@ void lzx_set_output_length(struct lzx_stream *lzx, off_t out_bytes) {
   if (lzx) lzx->length = out_bytes;
 }
 
-int lzx_decompress(struct lzx_stream *lzx, off_t out_bytes) {
+int lzx_decompress(struct lzx_stream *lzx, uint32_t out_bytes) {
   /* bitstream reading and huffman variables */
   register unsigned int bit_buffer;
   register int bits_left, i=0;
@@ -1822,7 +1832,7 @@ struct qtm_stream *qtm_init(int ofd,
   return qtm;
 }
 
-int qtm_decompress(struct qtm_stream *qtm, off_t out_bytes) {
+int qtm_decompress(struct qtm_stream *qtm, uint32_t out_bytes) {
   unsigned int frame_start, frame_end, window_posn, match_offset, range;
   unsigned char *window, *i_ptr, *i_end, *runsrc, *rundest;
   int i, j, selector, extra, sym, match_length, ret;

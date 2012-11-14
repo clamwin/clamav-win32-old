@@ -300,6 +300,8 @@ static	const	struct tableinit {
 #ifdef	CL_THREAD_SAFE
 static	pthread_mutex_t	tables_mutex = PTHREAD_MUTEX_INITIALIZER;
 #endif
+static	table_t *rfc821 = NULL;
+static	table_t *subtype = NULL;
 
 int
 cli_mbox(const char *dir, cli_ctx *ctx)
@@ -333,7 +335,6 @@ cli_parse_mbox(const char *dir, cli_ctx *ctx)
 	message *body;
 	char buffer[RFC2821LENGTH + 1];
 	mbox_ctx mctx;
-	static table_t *rfc821, *subtype;
 	size_t at = 0;
 	fmap_t *map = *ctx->fmap;
 
@@ -434,7 +435,7 @@ cli_parse_mbox(const char *dir, cli_ctx *ctx)
 						continue;
 					} else if(rc == VIRUS) {
 						cli_dbgmsg("Message number %d is infected\n",
-							messagenumber);
+							messagenumber-1);
 						retcode = CL_VIRUS;
 						m = NULL;
 						break;
@@ -543,11 +544,12 @@ cli_parse_mbox(const char *dir, cli_ctx *ctx)
 		 */
 		messageDestroy(body);
 	}
-
-	if((retcode == CL_CLEAN) && ctx->found_possibly_unwanted && (*ctx->virname == NULL)) {
-		*ctx->virname = "Heuristics.Phishing.Email";
-		ctx->found_possibly_unwanted = 0;
-		retcode = CL_VIRUS;
+	
+	if((retcode == CL_CLEAN) && ctx->found_possibly_unwanted &&
+	   (*ctx->virname == NULL || SCAN_ALL)) {
+	    cli_append_virus(ctx, "Heuristics.Phishing.Email");
+	    ctx->found_possibly_unwanted = 0;
+	    retcode = CL_VIRUS;
 	}
 
 	cli_dbgmsg("cli_mbox returning %d\n", retcode);
