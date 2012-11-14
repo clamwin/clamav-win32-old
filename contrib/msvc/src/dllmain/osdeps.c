@@ -256,6 +256,7 @@ int cw_getaddrinfo(const char *node, const char *service, const struct addrinfo 
 {
     struct hostent *he;
     struct addrinfo *ai;
+    struct addrinfo default_hints;
     u_short port = 0;
     char *p = NULL;
     int i;
@@ -265,6 +266,13 @@ int cw_getaddrinfo(const char *node, const char *service, const struct addrinfo 
 
     if (!(node || service))
         return EAI_NONAME;
+
+    if (hints == NULL)
+    {
+        memset(&default_hints, 0, sizeof(default_hints));
+        default_hints.ai_family = AF_UNSPEC;
+        hints = &default_hints;
+    }
 
     if (hints->ai_flags)
     {
@@ -282,9 +290,6 @@ int cw_getaddrinfo(const char *node, const char *service, const struct addrinfo 
 
     if ((hints->ai_family != AF_UNSPEC) && (hints->ai_family != AF_INET))
         return EAI_FAMILY;
-
-    if ((hints->ai_socktype != SOCK_STREAM) && (hints->ai_socktype != SOCK_DGRAM))
-        return EAI_SOCKTYPE;
 
     if (!(he = gethostbyname(node)))
     {
