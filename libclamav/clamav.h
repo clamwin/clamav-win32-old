@@ -120,6 +120,7 @@ typedef enum {
 #define CL_DB_SIGNED	    0x4000  /* internal */
 #define CL_DB_BYTECODE_UNSIGNED	0x8000
 #define CL_DB_UNSIGNED	    0x10000 /* internal */
+#define CL_DB_BYTECODE_STATS 0x20000
 
 /* recommended db settings */
 #define CL_DB_STDOPT	    (CL_DB_PHISHING | CL_DB_PHISHING_URLS | CL_DB_BYTECODE)
@@ -147,12 +148,13 @@ typedef enum {
 #define CL_SCAN_HEURISTIC_PRECEDENCE    0x80000
 #define CL_SCAN_BLOCKMACROS		0x100000
 #define CL_SCAN_ALLMATCHES		0x200000
+#define CL_SCAN_SWF			0x400000
 
 #define CL_SCAN_PERFORMANCE_INFO        0x40000000 /* collect performance timings */
 #define CL_SCAN_INTERNAL_COLLECT_SHA    0x80000000 /* Enables hash output in sha-collect builds - for internal use only */
 
 /* recommended scan settings */
-#define CL_SCAN_STDOPT		(CL_SCAN_ARCHIVE | CL_SCAN_MAIL | CL_SCAN_OLE2 | CL_SCAN_PDF | CL_SCAN_HTML | CL_SCAN_PE | CL_SCAN_ALGORITHMIC | CL_SCAN_ELF)
+#define CL_SCAN_STDOPT		(CL_SCAN_ARCHIVE | CL_SCAN_MAIL | CL_SCAN_OLE2 | CL_SCAN_PDF | CL_SCAN_HTML | CL_SCAN_PE | CL_SCAN_ALGORITHMIC | CL_SCAN_ELF | CL_SCAN_SWF)
 
 /* cl_countsigs options */
 #define CL_COUNTSIGS_OFFICIAL	    0x1
@@ -185,7 +187,12 @@ enum cl_engine_field {
     CL_ENGINE_KEEPTMP,		    /* uint32_t */
     CL_ENGINE_BYTECODE_SECURITY,    /* uint32_t */
     CL_ENGINE_BYTECODE_TIMEOUT,     /* uint32_t */
-    CL_ENGINE_BYTECODE_MODE         /* uint32_t */
+    CL_ENGINE_BYTECODE_MODE,        /* uint32_t */
+    CL_ENGINE_MAX_EMBEDDEDPE,       /* uint64_t */
+    CL_ENGINE_MAX_HTMLNORMALIZE,    /* uint64_t */
+    CL_ENGINE_MAX_HTMLNOTAGS,       /* uint64_t */
+    CL_ENGINE_MAX_SCRIPTNORMALIZE,  /* uint64_t */
+    CL_ENGINE_MAX_ZIPTYPERCG        /* uint64_t */
 };
 
 enum bytecode_security {

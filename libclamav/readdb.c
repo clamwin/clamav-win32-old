@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2007-2010 Sourcefire, Inc.
+ *  Copyright (C) 2007-2012 Sourcefire, Inc.
  *
  *  Authors: Tomasz Kojm
  *
@@ -153,7 +153,7 @@ int cli_parse_add(struct cli_matcher *root, const char *virname, const char *hex
 	patt->length = root->ac_mindepth;
 	/* dummy */
 	patt->pattern = mpool_calloc(root->mempool, patt->length, sizeof(*patt->pattern));
-	if (patt->pattern) {
+	if (!patt->pattern) {
 	    free(patt);
 	    return CL_EMEM;
 	}
@@ -1487,7 +1487,7 @@ static int cli_loadcbc(FILE *fs, struct cl_engine *engine, unsigned int *signo, 
 	    security_trust = 0;
     }
 
-    rc = cli_bytecode_load(bc, fs, dbio, security_trust);
+    rc = cli_bytecode_load(bc, fs, dbio, security_trust, options&CL_DB_BYTECODE_STATS);
     /* read remainder of DB, needed because cvd.c checks that we read the entire
      * file */
     while (cli_dbgets(buf, sizeof(buf), fs, dbio)) {}
@@ -1973,7 +1973,7 @@ static int cli_loadhash(FILE *fs, struct cl_engine *engine, unsigned int *signo,
 	    }
 	}
 
-	size = strtol(tokens[size_field], (char **)&pt, 10);
+	size = strtoul(tokens[size_field], (char **)&pt, 10);
 	if(*pt || !size || size >= 0xffffffff) {
 	    cli_errmsg("cli_loadhash: Invalid value for the size field\n");
 	    ret = CL_EMALFDB;
@@ -2363,24 +2363,23 @@ static int cli_loadcdb(FILE *fs, struct cl_engine *engine, unsigned int *signo, 
 }
 
 /* 
- * name;trusted;subject;pubkey;exp;codesign;timesign;notbefore;comment[;minFL[;maxFL]]
+ * name;trusted;subject;serial;pubkey;exp;codesign;timesign;certsign;notbefore;comment[;minFL[;maxFL]]
  * Name and comment are ignored. They're just for the end user.
  * Exponent is ignored for now and hardcoded to \x01\x00\x01.
  */
-#define CRT_TOKENS 11
+#define CRT_TOKENS 13
 static int cli_loadcrt(FILE *fs, struct cl_engine *engine, struct cli_dbio *dbio) {
     char buffer[FILEBUFF];
     char *tokens[CRT_TOKENS+1];
     size_t line=0, tokens_count, i, j;
     cli_crt ca;
     int ret=CL_SUCCESS;
-    char *subject, *pubkey, *exponent;
+    char *subject, *pubkey, *exponent, *serial;
     const uint8_t exp[] = "\x01\x00\x01";
     char c;
 
     cli_crt_init(&ca);
     memset(ca.issuer, '\xca', sizeof(ca.issuer));
-    memset(ca.serial, '\xca', sizeof(ca.serial));
 
     while (cli_dbgets(buffer, FILEBUFF, fs, dbio)) {
         line++;
@@ -2394,14 +2393,14 @@ static int cli_loadcrt(FILE *fs, struct cl_engine *engine, struct cli_dbio *dbio
 
         tokens_count = cli_strtokenize(buffer, ';', CRT_TOKENS + 1, (const char **)tokens);
         if (tokens_count > CRT_TOKENS || tokens_count < CRT_TOKENS - 2) {
-            cli_errmsg("cli_loadcrt: line %u: Invalid number of tokens: %u\n", line, tokens_count);
+            cli_errmsg("cli_loadcrt: line %u: Invalid number of tokens: %u\n", (unsigned int)line, (unsigned int)tokens_count);
             ret = CL_EMALFDB;
             goto end;
         }
 
         if (tokens_count > CRT_TOKENS - 2) {
             if (!cli_isnumber(tokens[CRT_TOKENS-1])) {
-                cli_errmsg("cli_loadcrt: line %u: Invalid minimum feature level\n", line);
+                cli_errmsg("cli_loadcrt: line %u: Invalid minimum feature level\n", (unsigned int)line);
                 ret = CL_EMALFDB;
                 goto end;
             }
@@ -2412,7 +2411,7 @@ static int cli_loadcrt(FILE *fs, struct cl_engine *engine, struct cli_dbio *dbio
 
             if (tokens_count == CRT_TOKENS) {
                 if (!cli_isnumber(tokens[CRT_TOKENS])) {
-                    cli_errmsg("cli_loadcrt: line %u: Invalid maximum feature level\n", line);
+                    cli_errmsg("cli_loadcrt: line %u: Invalid maximum feature level\n", (unsigned int)line);
                     ret = CL_EMALFDB;
                     goto end;
                 }
@@ -2432,33 +2431,47 @@ static int cli_loadcrt(FILE *fs, struct cl_engine *engine, struct cli_dbio *dbio
                 ca.isBlacklisted = 1;
                 break;
             default:
-                cli_errmsg("cli_loadcrt: line %u: Invalid trust specification. Expected 0 or 1\n", line);
+                cli_errmsg("cli_loadcrt: line %u: Invalid trust specification. Expected 0 or 1\n", (unsigned int)line);
                 ret = CL_EMALFDB;
                 goto end;
         }
 
         subject = cli_hex2str(tokens[2]);
-        pubkey = cli_hex2str(tokens[3]);
+        if (strlen(tokens[3])) {
+            serial = cli_hex2str(tokens[3]);
+            if (!serial) {
+                cli_errmsg("cli_loadcrt: line %u: Cannot convert serial to binary string\n", (unsigned int)line);
+                ret = CL_EMALFDB;
+                goto end;
+            }
+            memcpy(ca.serial, serial, sizeof(ca.serial));
+            free(serial);
+        } else {
+            memset(ca.serial, 0xca, sizeof(ca.serial));
+        }
+        pubkey = cli_hex2str(tokens[4]);
+        cli_dbgmsg("cli_loadcrt: subject: %s\n", tokens[2]);
+        cli_dbgmsg("cli_loadcrt: public key: %s\n", tokens[4]);
 
         if (!subject) {
-            cli_errmsg("cli_loadcrt: line %u: Cannot convert subject to binary string\n", line);
+            cli_errmsg("cli_loadcrt: line %u: Cannot convert subject to binary string\n", (unsigned int)line);
             ret = CL_EMALFDB;
             goto end;
         }
         if (!pubkey) {
-            cli_errmsg("cli_loadcrt: line %u: Cannot convert public key to binary string\n", line);
+            cli_errmsg("cli_loadcrt: line %u: Cannot convert public key to binary string\n", (unsigned int)line);
             ret = CL_EMALFDB;
             goto end;
         }
 
         memcpy(ca.subject, subject, sizeof(ca.subject));
-        if (mp_read_unsigned_bin(&(ca.n), pubkey, strlen(tokens[3])/2) || mp_read_unsigned_bin(&(ca.e), exp, sizeof(exp)-1)) {
-            cli_errmsg("cli_loadcrt: line %u: Cannot convert exponent to binary data\n", line);
+        if (mp_read_unsigned_bin(&(ca.n), pubkey, strlen(tokens[4])/2) || mp_read_unsigned_bin(&(ca.e), exp, sizeof(exp)-1)) {
+            cli_errmsg("cli_loadcrt: line %u: Cannot convert exponent to binary data\n", (unsigned int)line);
             ret = CL_EMALFDB;
             goto end;
         }
 
-        switch (tokens[5][0]) {
+        switch (tokens[6][0]) {
             case '1':
                 ca.codeSign = 1;
                 break;
@@ -2466,12 +2479,12 @@ static int cli_loadcrt(FILE *fs, struct cl_engine *engine, struct cli_dbio *dbio
                 ca.codeSign = 0;
                 break;
             default:
-                cli_errmsg("cli_loadcrt: line %u: Invalid code sign specification. Expected 0 or 1\n", line);
+                cli_errmsg("cli_loadcrt: line %u: Invalid code sign specification. Expected 0 or 1\n", (unsigned int)line);
                 ret = CL_EMALFDB;
                 goto end;
         }
 
-        switch (tokens[6][0]) {
+        switch (tokens[7][0]) {
             case '1':
                 ca.timeSign = 1;
                 break;
@@ -2479,20 +2492,40 @@ static int cli_loadcrt(FILE *fs, struct cl_engine *engine, struct cli_dbio *dbio
                 ca.timeSign = 0;
                 break;
             default:
-                cli_errmsg("cli_loadcrt: line %u: Invalid time sign specification. Expected 0 or 1\n", line);
+                cli_errmsg("cli_loadcrt: line %u: Invalid time sign specification. Expected 0 or 1\n", (unsigned int)line);
                 ret = CL_EMALFDB;
                 goto end;
         }
 
-        if (strlen(tokens[7]))
-            ca.not_before = atoi(tokens[7]);
+        switch (tokens[8][0]) {
+            case '1':
+                ca.certSign = 1;
+                break;
+            case '0':
+                ca.certSign = 0;
+                break;
+            default:
+                cli_errmsg("cli_loadcrt: line %u: Invalid cert sign specification. Expected 0 or 1\n", (unsigned int)line);
+                ret = CL_EMALFDB;
+                goto end;
+        }
+
+        if (strlen(tokens[9]))
+            ca.not_before = atoi(tokens[8]);
         ca.not_after = (-1U)>>1;
-        ca.certSign = 1;
 
         crtmgr_add(&(engine->cmgr), &ca);
+        free(subject);
+        free(pubkey);
+        subject = pubkey = NULL;
     }
 
 end:
+    if (subject)
+        free(subject);
+    if (pubkey)
+        free(pubkey);
+
     cli_dbgmsg("Number of certs: %d\n", engine->cmgr.items);
     cli_crt_clear(&ca);
     return ret;
@@ -2558,7 +2591,7 @@ int cli_load(const char *filename, struct cl_engine *engine, unsigned int *signo
     } else if(cli_strbcasestr(dbname, ".cud")) {
 	ret = cli_cvdload(fs, engine, signo, options, 2, filename, 0);
 
-    } else if (cli_strbcasestr(dbname, ".crt")) {
+    } else if (cli_strbcasestr(dbname, ".crtdb")) {
         ret = cli_loadcrt(fs, engine, dbio);
 
     } else if(cli_strbcasestr(dbname, ".hdb") || cli_strbcasestr(dbname, ".hsb")) {

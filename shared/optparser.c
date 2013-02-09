@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2008-2009 Sourcefire, Inc.
+ *  Copyright (C) 2008-2012 Sourcefire, Inc.
  *
  *  Author: Tomasz Kojm <tkojm@clamav.net>
  *
@@ -46,7 +46,7 @@
 
 #include "getopt.h"
 
-#define MAXCMDOPTS  100
+#define MAXCMDOPTS  120
 
 #define MATCH_NUMBER "^[0-9]+$"
 #define MATCH_SIZE "^[0-9]+[KM]?$"
@@ -68,6 +68,7 @@ const struct clam_option __clam_options[] = {
     { NULL, "version", 'V', TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_CLAMD | OPT_FRESHCLAM | OPT_CLAMSCAN | OPT_CLAMDSCAN | OPT_SIGTOOL | OPT_MILTER | OPT_CLAMCONF | OPT_CLAMDTOP | OPT_CLAMBC, "", "" },
     { NULL, "debug", 0, TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_CLAMBC | OPT_CLAMD | OPT_FRESHCLAM | OPT_CLAMSCAN | OPT_SIGTOOL, "", "" },
     { NULL, "verbose", 'v', TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_FRESHCLAM | OPT_CLAMSCAN | OPT_CLAMDSCAN | OPT_SIGTOOL, "", "" },
+    { NULL, "dumpcerts", 0, TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_CLAMSCAN, "Dump authenticode certificate chain.", "" },
     { NULL, "quiet", 0, TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_FRESHCLAM | OPT_CLAMSCAN | OPT_CLAMDSCAN | OPT_SIGTOOL, "", "" },
     { NULL, "leave-temps", 0, TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_CLAMSCAN, "", "" },
     { NULL, "no-warnings", 0, TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_FRESHCLAM, "", "" },
@@ -240,11 +241,11 @@ const struct clam_option __clam_options[] = {
 
     { "CommandReadTimeout", NULL, 0, TYPE_NUMBER, MATCH_NUMBER, 5, NULL, 0, OPT_CLAMD, "This option specifies the time (in seconds) after which clamd should\ntimeout if a client doesn't provide any initial command after connecting.", "5" },
 
-    { "SendBufTimeout", NULL, 0, TYPE_NUMBER, MATCH_NUMBER, 500, NULL, 0, OPT_CLAMD, "This option specifies how long to wait (in miliseconds) if the send buffer is full. Keep this value low to prevent clamd hanging\n", "200"},
+    { "SendBufTimeout", NULL, 0, TYPE_NUMBER, MATCH_NUMBER, 500, NULL, 0, OPT_CLAMD, "This option specifies how long to wait (in miliseconds) if the send buffer\nis full. Keep this value low to prevent clamd hanging.", "200"},
 
     { "ReadTimeout", NULL, 0, TYPE_NUMBER, MATCH_NUMBER, 120, NULL, 0, OPT_MILTER, "Waiting for data from clamd will timeout after this time (seconds).", "300" },
 
-    { "MaxQueue", NULL, 0, TYPE_NUMBER, MATCH_NUMBER, 100, NULL, 0, OPT_CLAMD, "Maximum number of queued items (including those being processed by MaxThreads threads)\nIt is recommended to have this value at least twice MaxThreads if possible.\nWARNING: you shouldn't increase this too much to avoid running out  of file descriptors,\n the following condition should hold:\n MaxThreads*MaxRecursion + MaxQueue - MaxThreads  + 6 < RLIMIT_NOFILE (usual max is 1024)\n", "200" },
+    { "MaxQueue", NULL, 0, TYPE_NUMBER, MATCH_NUMBER, 100, NULL, 0, OPT_CLAMD, "Maximum number of queued items (including those being processed by MaxThreads\nthreads). It is recommended to have this value at least twice MaxThreads\nif possible.\nWARNING: you shouldn't increase this too much to avoid running out of file\n descriptors, the following condition should hold:\n MaxThreads*MaxRecursion + MaxQueue - MaxThreads  + 6 < RLIMIT_NOFILE\n (usual max for RLIMIT_NOFILE is 1024)\n", "200" },
 
     { "IdleTimeout", NULL, 0, TYPE_NUMBER, MATCH_NUMBER, 30, NULL, 0, OPT_CLAMD, "This option specifies how long (in seconds) the process should wait\nfor a new job.", "60" },
 
@@ -278,18 +279,20 @@ const struct clam_option __clam_options[] = {
     { "Bytecode", "bytecode", 0, TYPE_BOOL, MATCH_BOOL, 1, NULL, 0, OPT_CLAMD | OPT_CLAMSCAN, "With this option enabled ClamAV will load bytecode from the database. It is highly recommended you keep this option on, otherwise you'll miss detections for many new viruses.", "yes" },
 
     { "BytecodeSecurity", NULL, 0, TYPE_STRING, "^(TrustSigned|Paranoid)$", -1, "TrustSigned", 0, OPT_CLAMD, 
-	"Set bytecode security level.\nPossible values:\n\tTrustSigned - trust bytecode loaded from signed .c[lv]d files,\n\t\t insert runtime safety checks for bytecode loaded from other sources\n\tParanoid - don't trust any bytecode, insert runtime checks for all\nRecommended: TrustSigned, because bytecode in .cvd files already has these checks\n","TrustSigned"},
+	"Set bytecode security level.\nPossible values:\n\tTrustSigned - trust bytecode loaded from signed .c[lv]d files,\n\t\t insert runtime safety checks for bytecode loaded from other sources\n\tParanoid - don't trust any bytecode, insert runtime checks for all\nRecommended: TrustSigned, because bytecode in .cvd files already has these checks.","TrustSigned"},
 
     { "BytecodeTimeout", "bytecode-timeout", 0, TYPE_NUMBER, MATCH_NUMBER, 5000, NULL, 0, OPT_CLAMD | OPT_CLAMSCAN, 
-	"Set bytecode timeout in miliseconds.\n","5000"},
+	"Set bytecode timeout in miliseconds.","5000"},
 
     { "BytecodeUnsigned", "bytecode-unsigned", 0, TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_CLAMD | OPT_CLAMSCAN, 
-	"Allow loading bytecode from outside digitally signed .c[lv]d files.\n","no"},
+	"Allow loading bytecode from outside digitally signed .c[lv]d files.","no"},
 
     { "BytecodeMode", "bytecode-mode", 0, TYPE_STRING, "^(Auto|ForceJIT|ForceInterpreter|Test)$", -1, "Auto", FLAG_REQUIRED, OPT_CLAMD | OPT_CLAMSCAN,
-	"Set bytecode execution mode.\nPossible values:\n\tAuto - automatically choose JIT if possible, fallback to interpreter\nForceJIT - always choose JIT, fail if not possible\nForceIntepreter - always choose interpreter\nTest - run with both JIT and interpreter and compare results. Make all failures fatal\n","Auto"},
+	"Set bytecode execution mode.\nPossible values:\n\tAuto - automatically choose JIT if possible, fallback to interpreter\nForceJIT - always choose JIT, fail if not possible\nForceIntepreter - always choose interpreter\nTest - run with both JIT and interpreter and compare results. Make all failures fatal.","Auto"},
 
-    { "DetectPUA", "detect-pua", 0, TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_CLAMD | OPT_CLAMSCAN, "Detect Potentially Unwanted Applications.", "yes" },
+    { "BytecodeStatistics", "bytecode-statistics", 0, TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_CLAMSCAN, "Collect and print bytecode execution statistics.", "no" },
+
+   { "DetectPUA", "detect-pua", 0, TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_CLAMD | OPT_CLAMSCAN, "Detect Potentially Unwanted Applications.", "yes" },
 
     { "ExcludePUA", "exclude-pua", 0, TYPE_STRING, NULL, -1, NULL, FLAG_MULTIPLE, OPT_CLAMD | OPT_CLAMSCAN, "Exclude a specific PUA category. This directive can be used multiple times.\nSee http://www.clamav.net/support/pua for the complete list of PUA\ncategories.", "NetTool\nPWTool" },
 
@@ -335,6 +338,8 @@ const struct clam_option __clam_options[] = {
 
     { "ScanPDF", "scan-pdf", 0, TYPE_BOOL, MATCH_BOOL, 1, NULL, 0, OPT_CLAMD | OPT_CLAMSCAN, "This option enables scanning within PDF files.\nIf you turn off this option, the original files will still be scanned, but\nwithout decoding and additional processing.", "yes" },
 
+    { "ScanSWF", "scan-swf", 0, TYPE_BOOL, MATCH_BOOL, 1, NULL, 0, OPT_CLAMD | OPT_CLAMSCAN, "This option enables scanning within SWF files.\nIf you turn off this option, the original files will still be scanned, but\nwithout decoding and additional processing.", "yes" },
+
     { "ScanArchive", "scan-archive", 0, TYPE_BOOL, MATCH_BOOL, 1, NULL, 0, OPT_CLAMD | OPT_CLAMSCAN, "Scan within archives and compressed files.\nIf you turn off this option, the original files will still be scanned, but\nwithout unpacking and additional processing.", "yes" },
 
     { "ArchiveBlockEncrypted", "block-encrypted", 0, TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_CLAMD | OPT_CLAMSCAN, "Mark encrypted archives as viruses (Encrypted.Zip, Encrypted.RAR).", "no" },
@@ -347,6 +352,18 @@ const struct clam_option __clam_options[] = {
 
     { "MaxFiles", "max-files", 0, TYPE_NUMBER, MATCH_NUMBER, CLI_DEFAULT_MAXFILES, NULL, 0, OPT_CLAMD | OPT_CLAMSCAN, "Number of files to be scanned within an archive, a document, or any other\ncontainer file.\nThe value of 0 disables the limit.\nWARNING: disabling this limit or setting it too high may result in severe\ndamage to the system.", "10000" },
 
+    /* Engine maximums */
+    { "MaxEmbeddedPE", "max-embeddedpe", 0, TYPE_SIZE, MATCH_SIZE, CLI_DEFAULT_MAXEMBEDDEDPE, NULL, 0, OPT_CLAMD | OPT_CLAMSCAN, "This option sets the maximum size of a file to check for embedded PE.\nFiles larger than this value will skip the additional analysis step.\nNegative values are not allowed.\nWARNING: setting this limit too high may result in severe damage or impact performance.", "10M" },
+
+    { "MaxHTMLNormalize", "max-htmlnormalize", 0, TYPE_SIZE, MATCH_SIZE, CLI_DEFAULT_MAXHTMLNORMALIZE, NULL, 0, OPT_CLAMD | OPT_CLAMSCAN, "This option sets the maximum size of a HTML file to normalize.\nHTML files larger than this value will not be normalized or scanned.\nNegative values are not allowed.\nWARNING: setting this limit too high may result in severe damage or impact performance.", "10M" },
+
+    { "MaxHTMLNoTags", "max-htmlnotags", 0, TYPE_SIZE, MATCH_SIZE, CLI_DEFAULT_MAXHTMLNOTAGS, NULL, 0, OPT_CLAMD | OPT_CLAMSCAN, "This option sets the maximum size of a normalized HTML file to scan.\nHTML files larger than this value after normalization will not be scanned.\nNegative values are not allowed.\nWARNING: setting this limit too high may result in severe damage or impact performance.", "2M" },
+
+    { "MaxScriptNormalize", "max-scriptnormalize", 0, TYPE_SIZE, MATCH_SIZE, CLI_DEFAULT_MAXSCRIPTNORMALIZE, NULL, 0, OPT_CLAMD | OPT_CLAMSCAN, "This option sets the maximum size of a script file to normalize.\nScript content larger than this value will not be normalized or scanned.\nNegative values are not allowed.\nWARNING: setting this limit too high may result in severe damage or impact performance.", "5M" },
+
+    { "MaxZipTypeRcg", "max-ziptypercg", 0, TYPE_SIZE, MATCH_SIZE, CLI_DEFAULT_MAXZIPTYPERCG, NULL, 0, OPT_CLAMD | OPT_CLAMSCAN, "This option sets the maximum size of a ZIP file to reanalyze type recognition.\nZIP files larger than this value will skip the step to potentially reanalyze as PE.\nNegative values are not allowed.\nWARNING: setting this limit too high may result in severe damage or impact performance.", "1M" },
+
+    /* OnAccess settings */
     { "ScanOnAccess", NULL, 0, TYPE_BOOL, MATCH_BOOL, -1, NULL, 0, OPT_CLAMD, "This option enables on-access scanning (Linux only)", "no" },
 
     { "OnAccessIncludePath", NULL, 0, TYPE_STRING, NULL, -1, NULL, FLAG_MULTIPLE, OPT_CLAMD, "This option specifies a directory (including all files and directories\ninside it), which should be scanned on access. This option can\nbe used multiple times.", "/home\n/students" },
@@ -391,7 +408,7 @@ const struct clam_option __clam_options[] = {
 
     { "CompressLocalDatabase", NULL, 0, TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_FRESHCLAM, "By default freshclam will keep the local databases (.cld) uncompressed to\nmake their handling faster. With this option you can enable the compression.\nThe change will take effect with the next database update.", "" },
 
-    { "ExtraDatabase", NULL, 0, TYPE_STRING, NULL, -1, NULL, FLAG_MULTIPLE, OPT_FRESHCLAM, "Download an additional 3rd party signature database distributed through\nthe ClamAV mirrors. Here you can find a list of available databases:\nhttp://www.clamav.net/download/cvd/3rdparty\nThis option can be used multiple times.", "dbname1\ndbname2" },
+    { "ExtraDatabase", NULL, 0, TYPE_STRING, NULL, -1, NULL, FLAG_MULTIPLE, OPT_FRESHCLAM, "Download an additional 3rd party signature database distributed through\nthe ClamAV mirrors. This option can be used multiple times.\nHere you can find a list of available databases:\nhttp://www.clamav.net/download/cvd/3rdparty", "dbname1\ndbname2" },
 
     { "DatabaseCustomURL", NULL, 0, TYPE_STRING, NULL, -1, NULL, FLAG_MULTIPLE, OPT_FRESHCLAM, "With this option you can provide custom sources (http:// or file://) for database files.\nThis option can be used multiple times.", "http://myserver.com/mysigs.ndb\nfile:///mnt/nfs/local.hdb" },
 
@@ -429,6 +446,8 @@ const struct clam_option __clam_options[] = {
     { "SafeBrowsing", NULL, 0, TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_FRESHCLAM, "This option enables support for Google Safe Browsing. When activated for\nthe first time, freshclam will download a new database file (safebrowsing.cvd)\nwhich will be automatically loaded by clamd and clamscan during the next\nreload, provided that the heuristic phishing detection is turned on. This\ndatabase includes information about websites that may be phishing sites or\npossible sources of malware. When using this option, it's mandatory to run\nfreshclam at least every 30 minutes.\nFreshclam uses the ClamAV's mirror infrastructure to distribute the\ndatabase and its updates but all the contents are provided under Google's\nterms of use. See http://code.google.com/support/bin/answer.py?answer=70015\nand http://safebrowsing.clamav.net for more information.", "yes" },
 
     { "Bytecode", NULL, 0, TYPE_BOOL, MATCH_BOOL, 1, NULL, 0, OPT_FRESHCLAM, "This option enables downloading of bytecode.cvd, which includes additional\ndetection mechanisms and improvements to the ClamAV engine.", "yes" },
+
+    { "DisableCertCheck", "nocerts", 0, TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_CLAMD | OPT_CLAMSCAN, "Disable authenticode certificate chain verification in PE files.", "no" },
 
     /* Deprecated options */
 

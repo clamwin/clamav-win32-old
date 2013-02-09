@@ -63,50 +63,6 @@
 #include "libclamav/readdb.h"
 #include "libclamav/cltypes.h"
 
-#ifdef _WIN32 /* scan memory */
-extern int scanmem(struct cl_engine *trie, const struct optstruct *opts, int options);
-#endif
-
-/* Callback */
-typedef struct _cb_data_t
-{
-    const char *filename;
-    size_t size, count;
-    int oldvalue;
-    int fd;
-} cb_data_t;
-
-static cb_data_t cbdata;
-static const char *rotation = "|/-\\";
-
-/* Callback function for scanning */
-cl_error_t scancallback(int desc, int bytes, void *context)
-{
-    cb_data_t *cbctx = context;
-    if (desc == cbctx->fd)
-    {
-        int percent;
-        cbctx->count += bytes;
-        percent = MIN(100, (int) (((double) cbctx->count) * 100.0f / ((double) cbctx->size)));
-        if (percent != cbctx->oldvalue)
-        {
-            mprintf("~%s: [%3i%%]\r", cbctx->filename, percent);
-            cbctx->oldvalue = percent;
-        }
-    }
-    else /* archives or stdin */
-    {
-        int rotator = (int) time(NULL) % sizeof(rotation);
-        if (rotator != cbctx->oldvalue)
-        {
-            mprintf("~%s: [%c]\r", cbctx->filename, rotation[rotator]);
-            cbctx->oldvalue = rotator;
-        }
-    }
-
-    return 1;
-}
-
 #ifdef C_LINUX
 dev_t procdev;
 #endif
@@ -338,12 +294,6 @@ static void scanfile(const char *filename, struct cl_engine *engine, const struc
 	return;
     }
 
-    cbdata.count = 0;
-    cbdata.fd = fd;
-    cbdata.oldvalue = 0;
-    cbdata.filename = filename;
-    cbdata.size = lseek(fd, 0, SEEK_END);
-    lseek(fd, 0, SEEK_SET);
 
     if((ret = cl_scandesc_callback(fd, virpp, &info.blocks, engine, options, &chain)) == CL_VIRUS) {
 	if(optget(opts, "archive-verbose")->enabled) {
@@ -372,7 +322,7 @@ static void scanfile(const char *filename, struct cl_engine *engine, const struc
 
     } else if(ret == CL_CLEAN) {
 	if(!printinfected && printclean)
-	    mprintf("~%s: OK    \n", filename);
+	    mprintf("~%s: OK\n", filename);
 	info.files++;
     } else {
 	if(!printinfected)
@@ -452,11 +402,15 @@ static void scandirs(const char *dirname, struct cl_engine *engine, const struct
 	info.dirs++;
 	depth++;
 	while((dent = readdir(dd))) {
-	    if(dent->d_ino)
-	    {
+	    if(dent->d_ino) {
 		if(strcmp(dent->d_name, ".") && strcmp(dent->d_name, "..")) {
 		    /* build the full name */
 		    fname = malloc(strlen(dirname) + strlen(dent->d_name) + 2);
+		    if (fname == NULL) { /* oops, malloc() failed, print warning and return */
+			logg("!scandirs: Memory allocation failed for fname\n");
+			break;
+		    }
+
 		    if(!strcmp(dirname, PATHSEP))
 			sprintf(fname, PATHSEP"%s", dent->d_name);
 		    else
@@ -706,6 +660,9 @@ int scanmanager(const struct optstruct *opts)
     if(optget(opts, "bytecode-unsigned")->enabled)
 	dboptions |= CL_DB_BYTECODE_UNSIGNED;
 
+    if(optget(opts, "bytecode-statistics")->enabled)
+	dboptions |= CL_DB_BYTECODE_STATS;
+
     if((opt = optget(opts,"bytecode-timeout"))->enabled)
 	cl_engine_set_num(engine, CL_ENGINE_BYTECODE_TIMEOUT, opt->numarg);
     if((opt = optget(opts,"bytecode-mode"))->enabled) {
@@ -768,6 +725,12 @@ int scanmanager(const struct optstruct *opts)
         cl_engine_set_clcb_progress(engine, scancallback, &cbdata);
     }
 
+    if (optget(opts, "nocerts")->enabled)
+        engine->dconf->pe |= PE_CONF_DISABLECERT;
+
+    if (optget(opts, "dumpcerts")->enabled)
+        engine->dconf->pe |= PE_CONF_DUMPCERT;
+
     /* set limits */
 
     if((opt = optget(opts, "max-scansize"))->active) {
@@ -813,6 +776,48 @@ int scanmanager(const struct optstruct *opts)
 	}
     }
 
+    /* Engine max sizes */
+
+    if((opt = optget(opts, "max-embeddedpe"))->active) {
+	if((ret = cl_engine_set_num(engine, CL_ENGINE_MAX_EMBEDDEDPE, opt->numarg))) {
+	    logg("!cli_engine_set_num(CL_ENGINE_MAX_EMBEDDEDPE) failed: %s\n", cl_strerror(ret));
+	    cl_engine_free(engine);
+	    return 2;
+	}
+    }
+
+    if((opt = optget(opts, "max-htmlnormalize"))->active) {
+	if((ret = cl_engine_set_num(engine, CL_ENGINE_MAX_HTMLNORMALIZE, opt->numarg))) {
+	    logg("!cli_engine_set_num(CL_ENGINE_MAX_HTMLNORMALIZE) failed: %s\n", cl_strerror(ret));
+	    cl_engine_free(engine);
+	    return 2;
+	}
+    }
+
+    if((opt = optget(opts, "max-htmlnotags"))->active) {
+	if((ret = cl_engine_set_num(engine, CL_ENGINE_MAX_HTMLNOTAGS, opt->numarg))) {
+	    logg("!cli_engine_set_num(CL_ENGINE_MAX_HTMLNOTAGS) failed: %s\n", cl_strerror(ret));
+	    cl_engine_free(engine);
+	    return 2;
+	}
+    }
+
+    if((opt = optget(opts, "max-scriptnormalize"))->active) {
+	if((ret = cl_engine_set_num(engine, CL_ENGINE_MAX_SCRIPTNORMALIZE, opt->numarg))) {
+	    logg("!cli_engine_set_num(CL_ENGINE_MAX_SCRIPTNORMALIZE) failed: %s\n", cl_strerror(ret));
+	    cl_engine_free(engine);
+	    return 2;
+	}
+    }
+
+    if((opt = optget(opts, "max-ziptypercg"))->active) {
+	if((ret = cl_engine_set_num(engine, CL_ENGINE_MAX_ZIPTYPERCG, opt->numarg))) {
+	    logg("!cli_engine_set_num(CL_ENGINE_MAX_ZIPTYPERCG) failed: %s\n", cl_strerror(ret));
+	    cl_engine_free(engine);
+	    return 2;
+	}
+    }
+
     /* set scan options */
     if(optget(opts, "allmatch")->enabled)
 	options |= CL_SCAN_ALLMATCHES;
@@ -846,6 +851,9 @@ int scanmanager(const struct optstruct *opts)
 
     if(optget(opts, "scan-pdf")->enabled)
 	options |= CL_SCAN_PDF;
+
+    if(optget(opts, "scan-swf")->enabled)
+	options |= CL_SCAN_SWF;
 
     if(optget(opts, "scan-html")->enabled)
 	options |= CL_SCAN_HTML;
@@ -982,6 +990,11 @@ int scanmanager(const struct optstruct *opts)
 	    }
 	    free(file);
 	}
+    }
+
+    if(optget(opts, "bytecode-statistics")->enabled) {
+	cli_sigperf_print();
+	cli_sigperf_events_destroy();
     }
 
     /* free the engine */

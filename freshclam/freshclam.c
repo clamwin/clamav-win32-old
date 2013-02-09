@@ -48,6 +48,7 @@
 
 #include "target.h"
 #include "clamav.h"
+#include "freshclamcodes.h"
 
 #include "libclamav/others.h"
 #include "libclamav/str.h"
@@ -217,7 +218,7 @@ download (const struct optstruct *opts, const char *cfgfile)
     {
         logg ("^You must specify at least one database mirror in %s\n",
               cfgfile);
-        return 56;
+        return FCE_CONFIG;
     }
     else
     {
@@ -227,7 +228,8 @@ download (const struct optstruct *opts, const char *cfgfile)
 #ifndef _WIN32
             alarm (0);
 #endif
-            if (ret == 52 || ret == 54 || ret == 58 || ret == 59)
+            if (ret == FCE_CONNECTION || ret == FCE_BADCVD
+                || ret == FCE_FAILEDGET || ret == FCE_MIRRORNOTSYNC)
             {
                 if (try < maxattempts)
                 {
@@ -277,7 +279,7 @@ msg_callback (enum cl_msg severity, const char *fullmsg, const char *msg,
 int
 main (int argc, char **argv)
 {
-    int ret = 52, retcl;
+    int ret = FCE_CONNECTION, retcl;
     const char *cfgfile, *arg = NULL;
     char *pt;
     struct optstruct *opts;
@@ -294,19 +296,19 @@ main (int argc, char **argv)
     struct mirdat mdat;
 
     if (check_flevel ())
-        exit (40);
+        exit (FCE_INIT);
 
     if ((retcl = cl_init (CL_INIT_DEFAULT)))
     {
         mprintf ("!Can't initialize libclamav: %s\n", cl_strerror (retcl));
-        return 40;
+        return FCE_INIT;
     }
 
     if ((opts =
          optparse (NULL, argc, argv, 1, OPT_FRESHCLAM, 0, NULL)) == NULL)
     {
         mprintf ("!Can't parse command line options\n");
-        return 40;
+        return FCE_INIT;
     }
 
 #ifdef _WIN32
@@ -341,7 +343,7 @@ main (int argc, char **argv)
     {
         fprintf (stderr, "ERROR: Can't open/parse the config file %s\n", pt);
         free (pt);
-        return 40;
+        return FCE_INIT;
     }
     free (pt);
 
@@ -358,7 +360,7 @@ main (int argc, char **argv)
         {
             logg ("^Can't stat %s (critical error)\n", cfgfile);
             optfree (opts);
-            return 56;
+            return FCE_CONFIG;
         }
 
 #ifndef _WIN32
@@ -368,7 +370,7 @@ main (int argc, char **argv)
         {
             logg ("^Insecure permissions (for HTTPProxyPassword): %s must have no more than 0700 permissions.\n", cfgfile);
             optfree (opts);
-            return 56;
+            return FCE_CONFIG;
         }
 #endif
     }
@@ -383,7 +385,7 @@ main (int argc, char **argv)
         {
             logg ("^Can't get information about user %s.\n", dbowner);
             optfree (opts);
-            return 60;
+            return FCE_USERINFO;
         }
 
         if (optget (opts, "AllowSupplementaryGroups")->enabled)
@@ -393,7 +395,7 @@ main (int argc, char **argv)
             {
                 logg ("^initgroups() failed.\n");
                 optfree (opts);
-                return 61;
+                return FCE_USERORGROUP;
             }
 #endif
         }
@@ -404,7 +406,7 @@ main (int argc, char **argv)
             {
                 logg ("^setgroups() failed.\n");
                 optfree (opts);
-                return 61;
+                return FCE_USERORGROUP;
             }
 #endif
         }
@@ -413,14 +415,14 @@ main (int argc, char **argv)
         {
             logg ("^setgid(%d) failed.\n", (int) user->pw_gid);
             optfree (opts);
-            return 61;
+            return FCE_USERORGROUP;
         }
 
         if (setuid (user->pw_uid))
         {
             logg ("^setuid(%d) failed.\n", (int) user->pw_uid);
             optfree (opts);
-            return 61;
+            return FCE_USERORGROUP;
         }
     }
 #endif /* HAVE_PWD_H */
@@ -460,7 +462,7 @@ main (int argc, char **argv)
             mprintf ("!Problem with internal logger (UpdateLogFile = %s).\n",
                      logg_file);
             optfree (opts);
-            return 62;
+            return FCE_LOGGING;
         }
     }
     else
@@ -478,7 +480,7 @@ main (int argc, char **argv)
                 mprintf ("!LogFacility: %s: No such facility.\n",
                          opt->strarg);
                 optfree (opts);
-                return 62;
+                return FCE_LOGGING;
             }
         }
 
@@ -494,7 +496,7 @@ main (int argc, char **argv)
         logg ("!Can't change dir to %s\n",
               optget (opts, "DatabaseDirectory")->strarg);
         optfree (opts);
-        return 50;
+        return FCE_DIRECTORY;
     }
     else
     {
@@ -502,7 +504,7 @@ main (int argc, char **argv)
         {
             logg ("!getcwd() failed\n");
             optfree (opts);
-            return 50;
+            return FCE_DIRECTORY;
         }
         logg ("*Current working dir is %s\n", dbdir);
     }
@@ -514,7 +516,7 @@ main (int argc, char **argv)
         {
             printf ("Can't read mirrors.dat\n");
             optfree (opts);
-            return 55;
+            return FCE_FILE;
         }
         mirman_list (&mdat);
         mirman_free (&mdat);
@@ -534,7 +536,7 @@ main (int argc, char **argv)
             {
                 logg ("!PrivateMirror: *.clamav.net is not allowed in this mode\n");
                 optfree (opts);
-                return 45;
+                return FCE_PRIVATEMIRROR;
             }
 
             if (dbm->strarg)
@@ -544,7 +546,7 @@ main (int argc, char **argv)
             {
                 logg ("!strdup() failed\n");
                 optfree (opts);
-                return 75;
+                return FCE_MEM;
             }
             if (!dbm->nextarg)
             {
@@ -555,7 +557,7 @@ main (int argc, char **argv)
                 {
                     logg ("!calloc() failed\n");
                     optfree (opts);
-                    return 75;
+                    return FCE_MEM;
                 }
             }
             opth = dbm;
@@ -608,7 +610,7 @@ main (int argc, char **argv)
         {
             logg ("^Number of checks must be a positive integer.\n");
             optfree (opts);
-            return 41;
+            return FCE_CHECKS;
         }
 
         if (!optget (opts, "DNSDatabaseInfo")->enabled
@@ -618,7 +620,7 @@ main (int argc, char **argv)
             {
                 logg ("^Number of checks must be between 1 and 50.\n");
                 optfree (opts);
-                return 41;
+                return FCE_CHECKS;
             }
         }
 
@@ -631,7 +633,7 @@ main (int argc, char **argv)
             {
                 logg ("!daemonize() failed\n");
                 optfree (opts);
-                return 70;      /* FIXME */
+                return FCE_FAILEDUPDATE;
             }
             foreground = 0;
             mprintf_disabled = 1;

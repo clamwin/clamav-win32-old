@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2007-2009 Sourcefire, Inc.
+ *  Copyright (C) 2007-2012 Sourcefire, Inc.
  *
  *  Authors: Tomasz Kojm
  *
@@ -222,6 +222,7 @@ void help(void)
     mprintf("    --official-db-only[=yes/no(*)]       Only load official signatures\n");
     mprintf("    --log=FILE            -l FILE        Save scan report to FILE\n");
     mprintf("    --recursive[=yes/no(*)]  -r          Scan subdirectories recursively\n");
+    mprintf("    --allmatch[=yes/no(*)]   -z          Continue scanning within file after finding a match\n");
     mprintf("    --cross-fs[=yes(*)/no]               Scan files and directories on other filesystems\n");
     mprintf("    --follow-dir-symlinks[=0/1(*)/2]     Follow directory symlinks (0 = never, 1 = direct, 2 = always)\n");
     mprintf("    --follow-file-symlinks[=0/1(*)/2]    Follow file symlinks (0 = never, 1 = direct, 2 = always)\n");
@@ -242,6 +243,7 @@ void help(void)
     mprintf("    --bytecode[=yes(*)/no]               Load bytecode from the database\n");
     mprintf("    --bytecode-unsigned[=yes/no(*)]      Load unsigned bytecode\n");
     mprintf("    --bytecode-timeout=N                 Set bytecode timeout (in milliseconds)\n");
+    mprintf("    --bytecode-statistics[=yes/no(*)]    Collect and print bytecode statistics\n");
     mprintf("    --detect-pua[=yes/no(*)]             Detect Possibly Unwanted Applications\n");
     mprintf("    --exclude-pua=CAT                    Skip PUA sigs of category CAT\n");
     mprintf("    --include-pua=CAT                    Load PUA sigs of category CAT\n");
@@ -260,17 +262,24 @@ void help(void)
     mprintf("    --scan-elf[=yes(*)/no]               Scan ELF files\n");
     mprintf("    --scan-ole2[=yes(*)/no]              Scan OLE2 containers\n");
     mprintf("    --scan-pdf[=yes(*)/no]               Scan PDF files\n");
+    mprintf("    --scan-swf[=yes(*)/no]               Scan SWF files\n");
     mprintf("    --scan-html[=yes(*)/no]              Scan HTML files\n");
     mprintf("    --scan-archive[=yes(*)/no]           Scan archive files (supported by libclamav)\n");
     mprintf("    --detect-broken[=yes/no(*)]          Try to detect broken executable files\n");
     mprintf("    --block-encrypted[=yes/no(*)]        Block encrypted archives\n");
+    mprintf("    --nocerts                            Disable authenticode certificate chain verification in PE files\n");
+    mprintf("    --dumpcerts                          Dump authenticode certificate chain in PE files\n");
     mprintf("\n");
     mprintf("    --max-filesize=#n                    Files larger than this will be skipped and assumed clean\n");
     mprintf("    --max-scansize=#n                    The maximum amount of data to scan for each container file (**)\n");
     mprintf("    --max-files=#n                       The maximum number of files to scan for each container file (**)\n");
     mprintf("    --max-recursion=#n                   Maximum archive recursion level for container file (**)\n");
     mprintf("    --max-dir-recursion=#n               Maximum directory recursion level\n");
-
+    mprintf("    --max-embeddedpe=#n                  Maximum size file to check for embedded PE\n");
+    mprintf("    --max-htmlnormalize=#n               Maximum size of HTML file to normalize\n");
+    mprintf("    --max-htmlnotags=#n                  Maximum size of normalized HTML file to scan\n");
+    mprintf("    --max-scriptnormalize=#n             Maximum size of script file to normalize\n");
+    mprintf("    --max-ziptypercg=#n                  Maximum size zip to type reanalyze\n");
     mprintf("\n");
     mprintf("(*) Default scan settings\n");
     mprintf("(**) Certain files (e.g. documents, archives, etc.) may in turn contain other\n");
