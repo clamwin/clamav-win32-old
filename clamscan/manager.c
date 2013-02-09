@@ -63,6 +63,50 @@
 #include "libclamav/readdb.h"
 #include "libclamav/cltypes.h"
 
+#ifdef _WIN32 /* scan memory */
+extern int scanmem(struct cl_engine *trie, const struct optstruct *opts, int options);
+#endif
+
+/* Callback */
+typedef struct _cb_data_t
+{
+    const char *filename;
+    size_t size, count;
+    int oldvalue;
+    int fd;
+} cb_data_t;
+
+static cb_data_t cbdata;
+static const char *rotation = "|/-\\";
+
+/* Callback function for scanning */
+cl_error_t scancallback(int desc, int bytes, void *context)
+{
+    cb_data_t *cbctx = context;
+    if (desc == cbctx->fd)
+    {
+        int percent;
+        cbctx->count= bytes;
+        percent = MIN(100, (int) (((double) cbctx->count) * 100.0f / ((double) cbctx->size)));
+        if (percent != cbctx->oldvalue)
+        {
+            mprintf("~%s: [%3i%%]\r", cbctx->filename, percent);
+            cbctx->oldvalue = percent;
+        }
+    }
+    else /* archives or stdin */
+    {
+        int rotator = (int) time(NULL) % sizeof(rotation);
+        if (rotator != cbctx->oldvalue)
+        {
+            mprintf("~%s: [%c]\r", cbctx->filename, rotation[rotator]);
+            cbctx->oldvalue = rotator;
+        }
+    }
+
+    return 1;
+}
+
 #ifdef C_LINUX
 dev_t procdev;
 #endif
@@ -294,6 +338,12 @@ static void scanfile(const char *filename, struct cl_engine *engine, const struc
 	return;
     }
 
+    cbdata.count = 0;
+    cbdata.fd = fd;
+    cbdata.oldvalue = 0;
+    cbdata.filename = filename;
+    cbdata.size = lseek(fd, 0, SEEK_END);
+    lseek(fd, 0, SEEK_SET);
 
     if((ret = cl_scandesc_callback(fd, virpp, &info.blocks, engine, options, &chain)) == CL_VIRUS) {
 	if(optget(opts, "archive-verbose")->enabled) {
