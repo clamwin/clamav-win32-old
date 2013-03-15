@@ -360,13 +360,13 @@ static void header(void)
 static void show_bar(WINDOW *win, size_t i, unsigned live, unsigned idle,
 		unsigned max, int blink)
 {
-	int y,x;
+	int y,x,z = 0;
 	unsigned len  = 39;
 	unsigned start = 1;
 	unsigned activ = max ? ((live-idle)*(len - start - 2) + (max/2)) / max : 0;
 	unsigned dim   = max ? idle*(len - start - 2) / max : 0;
 	unsigned rem = len - activ - dim - start-2;
-
+        
 	assert(activ + 2 < len && activ+dim + 2 < len && activ+dim+rem + 2 < len && "Invalid values");
 	mvwaddch(win, i, start, '[' | A_BOLD);
 	wattron(win, A_BOLD | COLOR_PAIR(activ_color));
@@ -382,8 +382,11 @@ static void show_bar(WINDOW *win, size_t i, unsigned live, unsigned idle,
 	waddch(win, ']' | A_BOLD);
 	if(blink) {
 		getyx(win, y, x);
-		mvwaddch(win, y, x-2, '>' | A_BLINK | COLOR_PAIR(red_color));
-		move(y, x);
+		if (x >= 2) {
+			z = x - 2;         
+		}	
+		mvwaddch(win, y, z, '>' | A_BLINK | COLOR_PAIR(red_color));
+		move(y, z);
 	}
 }
 
@@ -520,9 +523,11 @@ static int make_connection_real(const char *soname, conn_t *conn)
 		memset(&addr, 0, sizeof(addr));
 		addr.sun_family = AF_UNIX;
 		strncpy(addr.sun_path, soname, sizeof(addr.sun_path));
+		addr.sun_path[sizeof(addr.sun_path) - 1] = 0x0;
 		print_con_info(conn, "Connecting to: %s\n", soname);
 		if (connect(s, (struct sockaddr *)&addr, sizeof(addr))) {
 			perror("connect");
+            close(s);
 			return -1;
 		}
 	} else {
@@ -532,6 +537,7 @@ static int make_connection_real(const char *soname, conn_t *conn)
 		unsigned port = 0;
 		char *name, *pt = strdup(soname);
 		const char *host = pt;
+        memset(&server, 0x00, sizeof(struct sockaddr_in));
 		conn->tcp=1;
 		name = strchr(pt, ':');
 		if(name) {
@@ -555,8 +561,9 @@ static int make_connection_real(const char *soname, conn_t *conn)
 		server.sin_port = htons(port);
 		server.sin_addr.s_addr = ((struct in_addr*)(hp->h_addr))->s_addr;
 		print_con_info(conn, "Connecting to: %s:%u\n", inet_ntoa(server.sin_addr), port);
-		if (connect(s, (struct sockaddr *)&server, sizeof(server))) {
+		if (connect(s, (struct sockaddr *)&server, (socklen_t)sizeof(server))) {
 			perror("connect");
+            close(s);
 			return -1;
 		}
 	}
@@ -933,7 +940,7 @@ static void output_all(void)
 
 static void parse_stats(conn_t *conn, struct stats *stats, unsigned idx)
 {
-	char buf[1024];
+	char buf[1025];
 	size_t j;
 	struct timeval tv;
 	unsigned conn_dt;
@@ -1004,12 +1011,12 @@ static void parse_stats(conn_t *conn, struct stats *stats, unsigned idx)
 	stats->conn_min = (conn_dt/60)%60;
 	stats->conn_sec = conn_dt%60;
 	stats->current_q = 0;
-
-	while(recv_line(conn, buf, sizeof(buf)) && strcmp("END\n",buf) != 0) {
+	buf[sizeof(buf) - 1] = 0x0;
+	while(recv_line(conn, buf, sizeof(buf)-1) && strcmp("END\n",buf) != 0) {
 		char *val = strchr(buf, ':');
 
 		if(buf[0] == '\t') {
-			parse_queue(conn, buf, sizeof(buf), idx);
+			parse_queue(conn, buf, sizeof(buf)-1, idx);
 			continue;
 		} else if(val)
 			*val++ = '\0';

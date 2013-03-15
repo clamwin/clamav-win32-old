@@ -326,6 +326,9 @@ static void pdfobj_flag(struct pdf_struct *pdf, struct pdf_obj *obj, enum pdf_fl
 	case MANY_FILTERS:
 	    s = "more than 2 filters per obj";
 	    break;
+	case DECRYPTABLE_PDF:
+	    s = "decryptable PDF";
+	    break;
     }
     cli_dbgmsg("cli_pdf: %s flagged in object %u %u\n", s, obj->id>>8, obj->id&0xff);
 }
@@ -955,7 +958,7 @@ static int pdf_extract_obj(struct pdf_struct *pdf, struct pdf_obj *obj)
 	    if (obj->flags & (1 << OBJ_FILTER_AH)) {
 		ascii_decoded = cli_malloc(length/2 + 1);
 		if (!ascii_decoded) {
-		    cli_errmsg("Cannot allocate memory for asciidecode\n");
+		    cli_errmsg("Cannot allocate memory for ascii_decoded\n");
 		    rc = CL_EMEM;
 		    break;
 		}
@@ -965,7 +968,7 @@ static int pdf_extract_obj(struct pdf_struct *pdf, struct pdf_obj *obj)
 	    } else if (obj->flags & (1 << OBJ_FILTER_A85)) {
 		ascii_decoded = cli_malloc(length*5);
 		if (!ascii_decoded) {
-		    cli_errmsg("Cannot allocate memory for asciidecode\n");
+		    cli_errmsg("Cannot allocate memory for ascii_decoded\n");
 		    rc = CL_EMEM;
 		    break;
 		}
@@ -1306,56 +1309,50 @@ static void pdf_parseobj(struct pdf_struct *pdf, struct pdf_obj *obj)
     q = dict;
     blockopens++;
     bytesleft = objsize - (q - start);
+    enddict = q + bytesleft - 1;
 
     /* find end of dictionary block */
-    do {
-        /* find end of object within bytesleft */
-	nextobj = pdf_nextobject(q, bytesleft);
-	if (!nextobj)
-            return;
-	bytesleft -= nextobj - q;
-	if (bytesleft < 0) {
-	    return;
-	}
+    if (bytesleft < 0) {
+        return;
+    }
 
-        /* while still looking ... */
-        while ((q+1 < nextobj) && (blockopens > 0)) {
-            /* find next close */
-            nextclose = memchr(q-1, '>', nextobj-q+1);
-            if (nextclose && (nextclose[1] == '>')) {
-                /* check for nested open */
-                while (nextopen = memchr(q-1, '<', nextclose-q+1)) {
-                    if (nextopen[1] == '<') {
-                        /* nested open */
-                        blockopens++;
-                        q = nextopen + 2;
-                    }
-                    else {
-                        /* unmatched < */
-                        q = nextopen + 2;
-                    }
+    /* while still looking ... */
+    while ((q < enddict-1) && (blockopens > 0)) {
+        /* find next close */
+        nextclose = memchr(q, '>', enddict-q);
+        if (nextclose && (nextclose[1] == '>')) {
+            /* check for nested open */
+            while ((nextopen = memchr(q-1, '<', nextclose-q+1)) != NULL) {
+                if (nextopen[1] == '<') {
+                    /* nested open */
+                    blockopens++;
+                    q = nextopen + 2;
                 }
-                /* close block */
-                blockopens--;
-                q = nextclose + 2;
-            }
-            else {
-                /* unmatched > */
-                if (nextclose)
-                    q = nextclose + 2;
                 else {
-                    break;
+                    /* unmatched < before next close */
+                    q = nextopen + 2;
                 }
             }
+            /* close block */
+            blockopens--;
+            q = nextclose + 2;
         }
+        else if (nextclose) {
+            /* found one > but not two */
+            q = nextclose + 2;
+        }
+        else {
+            /* next closing not found */
+            break;
+        }
+    }
 
-        /* prepare for next object check */
-	nextobj++;
-	bytesleft--;
-	q = nextobj;
-    } while (blockopens > 0);
-
-    /* End of dictionary found, would have early returned otherwise */
+    /* Was end of dictionary found? */
+    if (blockopens) {
+        /* probably truncated */
+        cli_dbgmsg("cli_pdf: %u %u obj broken dictionary\n", obj->id>>8, obj->id&0xff);
+        return;
+    }
     enddict = nextclose;
     obj->flags |= 1 << OBJ_DICT;
     full_dict_length = dict_length = enddict - dict;
@@ -1364,7 +1361,12 @@ static void pdf_parseobj(struct pdf_struct *pdf, struct pdf_obj *obj)
     {
         char * dictionary = malloc(dict_length + 1);
         if (dictionary) {
-            strncpy(dictionary, dict, dict_length);
+            for (i = 0; i < dict_length; i++) {
+                if (isprint(dict[i]) || isspace(dict[i]))
+                    dictionary[i] = dict[i];
+                else
+                    dictionary[i] = '*';
+            }
             dictionary[dict_length] = '\0';
             cli_dbgmsg("cli_pdf: dictionary is <<%s>>\n", dictionary);
             free(dictionary);
@@ -1483,6 +1485,9 @@ static const char *pdf_getdict(const char *q0, int* len, const char *key)
 	cli_dbgmsg("cli_pdf: bad length %d\n", *len);
 	return NULL;
     }
+    if (!q0) {
+        return NULL;
+    }
     q = cli_memstr(q0, *len, key, strlen(key));
     if (!q) {
 	cli_dbgmsg("cli_pdf: %s not found in dict\n", key);
@@ -1536,8 +1541,10 @@ static char *pdf_readstring(const char *q0, int len, const char *key, unsigned *
 	q--;
 	len  = q - start;
 	s0 = s = cli_malloc(len + 1);
-	if (!s)
-	    return NULL;
+	if (!s) {
+        cli_errmsg("pdf_readstring: Unable to allocate buffer\n");
+        return NULL;
+    }
 	end = start + len;
         if (noescape) {
             memcpy(s0, start, len);
@@ -1620,7 +1627,11 @@ static char *pdf_readstring(const char *q0, int len, const char *key, unsigned *
 	  cli_dbgmsg("cli_pdf: unable to allocate memory...\n");
 	  return NULL;
 	}
-	cli_hex2str_to(start, s, q - start);
+	if (cli_hex2str_to(start, s, q - start)) {
+	    cli_dbgmsg("cli_pdf: %s has bad hex value\n", key);
+	    free(s);
+	    return NULL;
+	}
 	s[(q-start)/2] = '\0';
 	if (slen)
 	    *slen = (q - start)/2;
@@ -1726,13 +1737,15 @@ static void check_user_password(struct pdf_struct *pdf, int R, const char *O,
 	    } else {
 		pdf->keylen = 32;
 		pdf->key = cli_malloc(32);
-		if (!pdf->key)
-		    return;
+		if (!pdf->key) {
+            cli_errmsg("check_user_password: Cannot allocate memory for pdf->key\n");
+            return;
+        }
 		aes_decrypt(UE, &n, pdf->key, result2, 32, 0);
 		dbg_printhex("cli_pdf: Candidate encryption key", pdf->key, pdf->keylen);
 	    }
 	}
-    } else {
+    } else if ((R >= 2) && (R <= 4)) {
 	/* 7.6.3.3 Algorithm 2 */
 	cli_md5_init(&md5);
 	/* empty password, password == padding */
@@ -1746,9 +1759,9 @@ static void check_user_password(struct pdf_struct *pdf, int R, const char *O,
 	    cli_md5_update(&md5, &v, 4);
 	}
 	cli_md5_final(result, &md5);
+	if (length > 128)
+	    length = 128;
 	if (R >= 3) {
-	    if (length > 128)
-		length = 128;
 	    for (i=0;i<50;i++) {
 		cli_md5_init(&md5);
 		cli_md5_update(&md5, result, length/8);
@@ -1799,6 +1812,12 @@ static void check_user_password(struct pdf_struct *pdf, int R, const char *O,
 	    cli_dbgmsg("cli_pdf: invalid revision %d\n", R);
 	    noisy_warnmsg("cli_pdf: invalid revision %d\n", R);
 	}
+    }
+    else {
+	/* Supported R is in {2,3,4,5} */
+	cli_dbgmsg("cli_pdf: R value out of range\n");
+	noisy_warnmsg("cli_pdf: R value out of range\n");
+	return;
     }
     if (password_empty) {
 	cli_dbgmsg("cli_pdf: user password is empty\n");
@@ -1907,6 +1926,11 @@ static void pdf_handle_enc(struct pdf_struct *pdf)
 	if (R == ~0u) {
 	    cli_dbgmsg("cli_pdf: invalid R\n");
 	    noisy_warnmsg("cli_pdf: invalid R\n");
+	    break;
+	}
+	if ((R > 5) || (R < 2)) {
+	    cli_dbgmsg("cli_pdf: R value outside supported range [2..5]\n");
+	    noisy_warnmsg("cli_pdf: R value outside supported range [2..5]\n");
 	    break;
 	}
 
@@ -2240,7 +2264,7 @@ ascii85decode(const char *buf, off_t len, unsigned char *output)
 	while(len > 0) {
 		int byte = (len--) ? (int)*ptr++ : EOF;
 
-		if((byte == '~') && (*ptr == '>'))
+		if((byte == '~') && (len > 0) && (*ptr == '>'))
 			byte = EOF;
 
 		if(byte >= '!' && byte <= 'u') {

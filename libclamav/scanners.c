@@ -135,6 +135,7 @@ static int cli_scandir(const char *dirname, cli_ctx *ctx)
 		    fname = cli_malloc(strlen(dirname) + strlen(dent->d_name) + 2);
 		    if(!fname) {
 			closedir(dd);
+            cli_dbgmsg("cli_scandir: Unable to allocate memory for filename\n");
 			return CL_EMEM;
 		    }
 
@@ -247,7 +248,10 @@ static int cli_scanrar(int desc, cli_ctx *ctx, off_t sfx_offset, uint32_t *sfx_c
 	if(ret == UNRAR_PASSWD) {
 	    cli_dbgmsg("RAR: Encrypted main header\n");
 	    if(DETECT_ENCRYPTED) {
-		lseek(desc, 0, SEEK_SET);
+		if (lseek(desc, 0, SEEK_SET) == -1) {
+            cli_dbgmsg("RAR: call to lseek() failed\n");
+            return CL_ESEEK;
+        }
 		ret = cli_scandesc(desc, ctx, 0, 0, NULL, AC_SCAN_VIR, NULL);
 		if(ret != CL_VIRUS)
 		    cli_append_virus(ctx, "Heuristics.Encrypted.RAR");
@@ -294,7 +298,10 @@ static int cli_scanrar(int desc, cli_ctx *ctx, off_t sfx_offset, uint32_t *sfx_c
 	    ret = CL_EFORMAT;
 
 	if(rar_state.ofd > 0) {
-	    lseek(rar_state.ofd,0,SEEK_SET);
+	    if (lseek(rar_state.ofd,0,SEEK_SET) == -1) {
+            cli_dbgmsg("RAR: Call to lseek() failed\n");
+            ret = CL_ESEEK;
+        }
 	    rc = cli_magic_scandesc(rar_state.ofd,ctx);
 	    close(rar_state.ofd);
 	    if(!ctx->engine->keeptmp) 
@@ -396,7 +403,9 @@ static int cli_scanarj(cli_ctx *ctx, off_t sfx_offset, uint32_t *sfx_check)
 	   cli_dbgmsg("ARJ: cli_unarj_extract_file Error: %s\n", cl_strerror(ret));
 	}
 	if (metadata.ofd >= 0) {
-	    lseek(metadata.ofd, 0, SEEK_SET);
+	    if (lseek(metadata.ofd, 0, SEEK_SET) == -1) {
+            cli_dbgmsg("ARJ: call to lseek() failed\n");
+        }
 	    rc = cli_magic_scandesc(metadata.ofd, ctx);
 	    close(metadata.ofd);
 	    if (rc == CL_VIRUS) {
@@ -438,7 +447,10 @@ static int cli_scangzip_with_zib_from_the_80s(cli_ctx *ctx, unsigned char *buff)
     char *tmpname;
     gzFile gz;
 
-    fd = dup(fmap_fd(map));
+    ret = fmap_fd(map);
+    if(ret < 0)
+	return CL_EDUP;
+    fd = dup(ret);
     if(fd < 0)
 	return CL_EDUP;
 
@@ -1005,6 +1017,7 @@ static int cli_vba_scandir(const char *dirname, cli_ctx *ctx, struct uniq *U)
 		    /* build the full name */
 		    fullname = cli_malloc(strlen(dirname) + strlen(dent->d_name) + 2);
 		    if(!fullname) {
+                cli_dbgmsg("cli_vba_scandir: Unable to allocate memory for fullname\n");
 			ret = CL_EMEM;
 			break;
 		    }
@@ -1138,14 +1151,16 @@ static int cli_scanscript(cli_ctx *ctx)
     struct cli_matcher *groot;
     struct cli_ac_data gmdata, tmdata;
     struct cli_ac_data *mdata[2];
-    fmap_t *map = *ctx->fmap;
+    fmap_t *map;
     size_t at = 0;
     unsigned int viruses_found = 0;
-    uint64_t curr_len = map->len;
+    uint64_t curr_len;
 
     if (!ctx || !ctx->engine->root)
         return CL_ENULLARG;
 
+    map = *ctx->fmap;
+    curr_len = map->len;
     groot = ctx->engine->root[0];
     troot = ctx->engine->root[7];
     maxpatlen = troot ? troot->maxpatlen : 0;
@@ -2247,16 +2262,18 @@ static void emax_reached(cli_ctx *ctx) {
 #define CALL_PRESCAN_CB(scanfn)	                                                     \
     if(ctx->engine->scanfn) {				\
 	perf_start(ctx, PERFT_PRECB);                                                        \
-	switch(ctx->engine->scanfn(fmap_fd(*ctx->fmap), filetype, ctx->cb_ctx)) {	\
+	switch(ctx->engine->scanfn(fmap_fd(*ctx->fmap), filetype, ctx->cb_ctx)) {            \
 	case CL_BREAK:                                                                       \
 	    cli_dbgmsg("cli_magic_scandesc: file whitelisted by "#scanfn" callback\n");                \
 	    perf_stop(ctx, PERFT_PRECB);                                                     \
+	    ctx->hook_lsig_matches = old_hook_lsig_matches;                                  \
 	    ret_from_magicscan(CL_CLEAN);                                                    \
 	case CL_VIRUS:                                                                       \
 	    cli_dbgmsg("cli_magic_scandesc: file blacklisted by "#scanfn" callback\n");                \
 	    cli_append_virus(ctx, "Detected.By.Callback");		                     \
 	    perf_stop(ctx, PERFT_PRECB);                                                     \
-	    ret_from_magicscan(cli_checkfp(hash, hashed_size, ctx));                          \
+	    ctx->hook_lsig_matches = old_hook_lsig_matches;                                  \
+	    ret_from_magicscan(cli_checkfp(hash, hashed_size, ctx));                         \
 	case CL_CLEAN:                                                                       \
 	    break;                                                                           \
 	default:                                                                             \
@@ -2300,6 +2317,7 @@ static int magic_scandesc(cli_ctx *ctx, cli_file_t type)
 	emax_reached(ctx);
         early_ret_from_magicscan(CL_CLEAN);
     }
+    old_hook_lsig_matches = ctx->hook_lsig_matches;
 
     perf_start(ctx, PERFT_FT);
     if(type == CL_TYPE_ANY)
@@ -2322,7 +2340,6 @@ static int magic_scandesc(cli_ctx *ctx, cli_file_t type)
 
     perf_stop(ctx, PERFT_CACHE);
     hashed_size = (*ctx->fmap)->len;
-    old_hook_lsig_matches = ctx->hook_lsig_matches;
     ctx->hook_lsig_matches = NULL;
 
     if(!(ctx->options&~CL_SCAN_ALLMATCHES) || (ctx->recursion == ctx->engine->maxreclevel)) { /* raw mode (stdin, etc.) or last level of recursion */
@@ -2404,7 +2421,9 @@ static int magic_scandesc(cli_ctx *ctx, cli_file_t type)
 			    }
 			}
 		    } while (len > 0);
-		    lseek(desc, 0, SEEK_SET);
+		    if (lseek(desc, 0, SEEK_SET) == -1) {
+                cli_dbgmsg("magic_scandesc: call to lseek() failed\n");
+            }
 		}
 		ret = cli_scanrar(desc, ctx, 0, NULL);
 		if (tmpname) {
@@ -2812,8 +2831,9 @@ int cli_map_scandesc(cl_fmap_t *map, off_t offset, size_t length, cli_ctx *ctx)
     size_t old_real_len = map->real_len;
     int ret = CL_CLEAN;
 
-    cli_dbgmsg("cli_map_scandesc: [%ld, +%ld), [%ld, +%ld)\n",
-	       old_off, old_len, offset, length);
+    cli_dbgmsg("cli_map_scandesc: [%ld, +%lu), [%ld, +%lu)\n",
+	       (long)old_off, (unsigned long)old_len,
+	       (long)offset, (unsigned long)length);
     if (offset < 0 || offset >= old_len) {
 	cli_dbgmsg("Invalid offset: %ld\n", (long)offset);
 	return CL_CLEAN;
@@ -2821,8 +2841,8 @@ int cli_map_scandesc(cl_fmap_t *map, off_t offset, size_t length, cli_ctx *ctx)
 
     if (!length) length = old_len - offset;
     if (length > old_len - offset) {
-	cli_dbgmsg("Data truncated: %ld -> %ld\n",
-		   length, old_len - offset);
+	cli_dbgmsg("Data truncated: %lu -> %lu\n",
+		   (unsigned long)length, old_len - offset);
 	length = old_len - offset;
     }
 
@@ -2840,8 +2860,11 @@ int cli_map_scandesc(cl_fmap_t *map, off_t offset, size_t length, cli_ctx *ctx)
     if (CLI_ISCONTAINED(old_off, old_len, map->nested_offset, map->len)) {
 	ret = magic_scandesc(ctx, CL_TYPE_ANY);
     } else {
-	cli_warnmsg("internal map error: %ld, %ld; %ld, %ld\n", old_off, old_off + old_len,
-		    map->offset,map->nested_offset+map->len);
+	long long len1, len2;
+	len1 = old_off + old_len;
+        len2 = map->nested_offset + map->len;
+	cli_warnmsg("internal map error: %ld, %lld; %ld, %lld\n", old_off,
+		    len1, map->offset, len2);
     }
 
     ctx->fmap--;

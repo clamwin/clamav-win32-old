@@ -137,6 +137,7 @@ static int cli_untgz(int fd, const char *destdir)
 	    if(outfile) {
 		if(fclose(outfile)) {
 		    cli_errmsg("cli_untgz: Cannot close file %s\n", path);
+		    outfile = NULL;
 		    cli_untgz_cleanup(path, infile, outfile, fdd);
 		    return -1;
 		}
@@ -207,14 +208,19 @@ static int cli_tgzload(int fd, struct cl_engine *engine, unsigned int *signo, un
 
     cli_dbgmsg("in cli_tgzload()\n");
 
-    lseek(fd, 512, SEEK_SET);
+    if(lseek(fd, 512, SEEK_SET) < 0) {
+        return CL_ESEEK;
+    }
+
     if(cli_readn(fd, block, 7) != 7)
 	return CL_EFORMAT; /* truncated file? */
 
     if(!strncmp(block, "COPYING", 7))
 	compr = 0;
 
-    lseek(fd, 512, SEEK_SET);
+    if(lseek(fd, 512, SEEK_SET) < 0) {
+        return CL_ESEEK;
+    }
 
     if((fdd = dup(fd)) == -1) {
 	cli_errmsg("cli_tgzload: Can't duplicate descriptor %d\n", fd);

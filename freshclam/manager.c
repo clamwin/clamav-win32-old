@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2002 - 2006 Tomasz Kojm <tkojm@clamav.net>
+ *  Copyright (C) 2002 - 2013 Tomasz Kojm <tkojm@clamav.net>
  *  HTTP/1.1 compliance by Arkadiusz Miskiewicz <misiek@pld.org.pl>
  *  Proxy support by Nigel Horne <njh@bandsman.co.uk>
  *  Proxy authorization support by Gernot Tenchio <g.tenchio@telco-tech.de>
@@ -126,6 +126,10 @@ textrecordfield (const char * dbname)
     {
         return 2;
     }
+    else if (!strcmp (dbname, "enhanced"))
+    {
+        return 8;
+    }
     else if (!strcmp (dbname, "bytecode"))
     {
         return 7;
@@ -150,7 +154,7 @@ getclientsock (const char *localip, int prot)
         socketfd = socket (AF_INET, SOCK_STREAM, 0);
     if (socketfd < 0)
     {
-        logg ("!Can't create new socket\n");
+        logg ("!Can't create new socket: %s\n", strerror(errno));
         return -1;
     }
 
@@ -171,7 +175,7 @@ getclientsock (const char *localip, int prot)
         {
             char ipaddr[46];
 
-            if (bind (socketfd, res->ai_addr, res->ai_addrlen) != 0)
+            if (bind (socketfd, res->ai_addr, (socklen_t)res->ai_addrlen) != 0)
             {
                 logg ("!Could not bind to local ip address '%s': %s\n",
                       localip, strerror (errno));
@@ -214,7 +218,7 @@ getclientsock (const char *localip, int prot)
             client.sin_addr = *(struct in_addr *) he->h_addr_list[0];
             if (bind
                 (socketfd, (struct sockaddr *) &client,
-                 sizeof (struct sockaddr_in)) != 0)
+                 (socklen_t)sizeof (struct sockaddr_in)) != 0)
             {
                 logg ("!Could not bind to local ip address '%s': %s\n",
                       localip, strerror (errno));
@@ -701,12 +705,19 @@ submitstats (const char *clamdcfg, const struct optstruct *opts)
         logg ("*Connecting via %s\n", proxy);
     }
 
-    if ((clamsockd = clamd_connect (clamdcfg, "SubmitDetectionStats")) < 0)
+    if ((clamsockd = clamd_connect (clamdcfg, "SubmitDetectionStats")) < 0){
+        if(auth){
+	    free(auth);
+	}    
         return FCE_CONNECTION;
+    }	
 
     recvlninit (&rcv, clamsockd);
     if (sendln (clamsockd, "zDETSTATS", 10))
     {
+        if(auth){
+	    free(auth);
+	}    
         closesocket (clamsockd);
         return FCE_CONNECTION;
     }
@@ -1495,6 +1506,8 @@ getpatch (const char *dbname, const char *tmpdir, int version,
         return FCE_DIRECTORY;
 
     tempname = cli_gentemp (".");
+    if(!tempname)
+        return FCE_MEM;
     snprintf (patch, sizeof (patch), "%s-%d.cdiff", dbname, version);
 
     logg ("*Retrieving http://%s/%s\n", hostname, patch);
@@ -1776,7 +1789,7 @@ test_database (const char *newfile, const char *newdb, int bytecode)
     if ((ret =
          cl_load (newfile, engine, &newsigs,
                   CL_DB_PHISHING | CL_DB_PHISHING_URLS | CL_DB_BYTECODE |
-                  CL_DB_PUA)) != CL_SUCCESS)
+                  CL_DB_PUA | CL_DB_ENHANCED)) != CL_SUCCESS)
     {
         logg ("!Failed to load new database: %s\n", cl_strerror (ret));
         cl_engine_free (engine);
@@ -1822,7 +1835,8 @@ test_database_wrap (const char *file, const char *newdb, int bytecode)
     {
     case 0:
         close (pipefd[0]);
-        dup2 (pipefd[1], 2);
+        if (dup2 (pipefd[1], 2) == -1)
+            logg("^dup2() failed: %s\n", strerror(errno));
         exit (test_database (file, newdb, bytecode));
     case -1:
         close (pipefd[0]);
@@ -2092,7 +2106,7 @@ updatedb (const char *dbname, const char *hostname, char *ip, int *signo,
             return FCE_FAILEDUPDATE;
         }
 
-        if (pt = cli_strtok (dnsreply, field, ":"))
+        if ((pt = cli_strtok (dnsreply, field, ":")))
         {
             if (!cli_isnumber (pt))
             {
@@ -2297,6 +2311,9 @@ updatedb (const char *dbname, const char *hostname, char *ip, int *signo,
         nodb = 1;
 
     newfile = cli_gentemp (updtmpdir);
+    if(!newfile)
+        return FCE_MEM;
+
     if (nodb)
     {
         if (optget (opts, "PrivateMirror")->enabled)
@@ -2314,10 +2331,12 @@ updatedb (const char *dbname, const char *hostname, char *ip, int *signo,
                             mdat, logerr, can_whitelist, opts, attempt);
         }
         else
+        {
             ret =
                 getcvd (cvdfile, newfile, hostname, ip, localip, proxy, port,
                         user, pass, uas, newver, ctimeout, rtimeout, mdat,
                         logerr, can_whitelist, opts, attempt);
+        }
 
         if (ret)
         {
@@ -2342,6 +2361,11 @@ updatedb (const char *dbname, const char *hostname, char *ip, int *signo,
         ret = 0;
 
         tmpdir = cli_gentemp (updtmpdir);
+	if(!tmpdir){
+	    free(newfile);
+	    return FCE_MEM;
+	}    
+
         maxattempts = optget (opts, "MaxAttempts")->numarg;
         for (i = currver + 1; i <= newver; i++)
         {
@@ -2440,6 +2464,7 @@ updatedb (const char *dbname, const char *hostname, char *ip, int *signo,
             logg ("!Can't allocate memory for filename!\n");
             unlink (newfile);
             free (newfile);
+            cl_cvdfree(current);
             return FCE_TESTFAIL;
         }
         newfile2[strlen (newfile2) - 4] = '.';
@@ -2453,6 +2478,7 @@ updatedb (const char *dbname, const char *hostname, char *ip, int *signo,
             unlink (newfile);
             free (newfile);
             free (newfile2);
+            cl_cvdfree(current);
             return FCE_DBDIRACCESS;
         }
         free (newfile);
@@ -2464,6 +2490,7 @@ updatedb (const char *dbname, const char *hostname, char *ip, int *signo,
             logg ("!Failed to load new database\n");
             unlink (newfile);
             free (newfile);
+            cl_cvdfree(current);
             return FCE_TESTFAIL;
         }
         sigchld_wait = 1;
@@ -2963,6 +2990,39 @@ downloadmanager (const struct optstruct *opts, const char *hostname,
         }
         else if (ret == 0)
             updated = 1;
+
+        if (optget(opts, "EnhancedSigs")->enabled) {
+            ret = updatedb("enhanced", hostname, ipaddr, &signo, opts,
+                           dnsreply, localip, outdated, &mdat, logerr, 0,
+                           attempt);
+            if (ret > 50) {
+                if (dnsreply)
+                    free (dnsreply);
+                if (newver)
+                    free (newver);
+                mirman_write ("mirrors.dat", dbdir, &mdat);
+                mirman_free (&mdat);
+                cli_rmdirs (updtmpdir);
+                return ret;
+            } else if (ret == 0) {
+                updated = 1;
+            }
+        }
+        else {
+            const char *enhanceddb = NULL;
+
+            if (!access("enhanced.cvd", R_OK))
+                enhanceddb = "enhanced.cvd";
+            else if (!access ("enhanced.cld", R_OK))
+                enhanceddb = "enhanced.cld";
+
+            if (enhanceddb) {
+                if (unlink (enhanceddb))
+                    logg ("^EnhancedSigs is disabled but can't remove old %s\n", enhanceddb);
+                else
+                    logg ("*%s removed\n", enhanceddb);
+             }
+        }
 
         if (!optget (opts, "SafeBrowsing")->enabled)
         {

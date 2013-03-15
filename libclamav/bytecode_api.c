@@ -161,7 +161,10 @@ uint32_t cli_bcapi_disasm_x86(struct cli_bc_ctx *ctx, struct DISASM_RESULT *res,
      * When we'll support mmx/sse instructions this should be updated! */
     n = MIN(32, ctx->fmap->len - ctx->off);
     buf = fmap_need_off_once(ctx->fmap, ctx->off, n);
-    next = cli_disasm_one(buf, n, res, 0);
+    if (buf)
+        next = cli_disasm_one(buf, n, res, 0);
+    else
+        next = NULL;
     if (!next) {
 	cli_dbgmsg("bcapi_disasm: failed\n");
 	cli_event_count(EV, BCEV_DISASM_FAIL);
@@ -499,7 +502,10 @@ int32_t cli_bcapi_extract_new(struct cli_bc_ctx *ctx, int32_t id)
     if (ctx->ctx && cli_updatelimits(ctx->ctx, ctx->written))
 	return -1;
     ctx->written = 0;
-    lseek(ctx->outfd, 0, SEEK_SET);
+    if (lseek(ctx->outfd, 0, SEEK_SET) == -1) {
+        cli_dbgmsg("bytecode: call to lseek() has failed\n");
+        return CL_ESEEK;
+    }
     cli_dbgmsg("bytecode: scanning extracted file %s\n", ctx->tempfile);
     cctx = (cli_ctx*)ctx->ctx;
     if (cctx) {
