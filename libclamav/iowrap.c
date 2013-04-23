@@ -23,7 +23,7 @@
 
 #include <string.h>
 
-#ifdef _WIN32
+#ifdef _MSC_VER
 #include <windows.h>
 #include <excpt.h>
 
@@ -32,7 +32,7 @@
 #endif
 #endif
 
-#ifdef _WIN32
+#ifdef _MSC_VER
 static int filter_memcpy(unsigned int code, struct _EXCEPTION_POINTERS *ep) {
     if ((code == EXCEPTION_IN_PAGE_ERROR) || (code == STATUS_DEVICE_DATA_ERROR)) {
         return EXCEPTION_EXECUTE_HANDLER;
@@ -45,11 +45,11 @@ int cli_memcpy(void *target, const void *source, unsigned long size)
 {
     int ret = 0;
 
-#ifdef _WIN32
+#ifdef _MSC_VER
     __try {
 #endif
     memcpy(target, source, size);
-#ifdef _WIN32
+#ifdef _MSC_VER
     }
     __except (filter_memcpy(GetExceptionCode(), GetExceptionInformation())) {
         ret = 1;
