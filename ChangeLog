@@ -1,3 +1,11 @@
+Fri Apr 5 17:36:54 EDT 2013 (dar)
+------------------------------------
+ * libclamav: Bugs reported by Felix Groebert of the Google Security Team
+
+Thu Feb 28 13:55:04 EDT 2013 (dar)
+------------------------------------
+ * libclamav/pe_icons.c: introduce LOGPARSEICONDETAILS define to reduce parseicon logging in default build
+
 Wed Feb 20 10:05:00 EDT 2012 (multiple)
 ---------------------------------
  * Bug reported by Felix Groebert, Mateusz Jurczyk and Gynvael Coldwind of the
@@ -153,6 +161,10 @@ Tue Aug  2 17:03:33 CEST 2011 (tk)
 Mon Jul 25 14:33:59 CEST 2011 (acab)
 ------------------------------------
  * libclamav/matcher-hash.c: off by one read in cli_hm_scan (bb#2818)
+
+Tue Jul 19 18:30:53 CEST 2011 (acab)
+------------------------------------
+ * libclamav/autoit.c: avoid dumping uninit data on autoit failure (bb#3051)
 
 Thu Jul 14 12:29:17 EEST 2011 (edwin)
 ------------------------------------
