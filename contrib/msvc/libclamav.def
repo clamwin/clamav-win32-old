@@ -60,6 +60,7 @@ cw_movefileex
 cw_unlink
 cw_strerror
 cw_perror
+cw_rename
 cw_getaddrinfo
 cw_freeaddrinfo
 cw_gai_strerror

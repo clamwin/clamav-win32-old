@@ -78,10 +78,12 @@ extern char *strptime (const char *buf, const char *format, struct tm *tm);
 /* Re_routing */
 extern int cw_stat(const char *path, struct stat *buf);
 extern int cw_unlink(const char *pathname);
+extern int cw_rename(const char *oldname, const char *newname);
 
 #define lstat           cw_stat
 #define stat(p, b)      cw_stat(p, b)
 #define unlink          cw_unlink
+#define rename          cw_rename
 #define cli_unlink      cw_unlink
 #define cli_rmdirs      cw_rmdirs
 

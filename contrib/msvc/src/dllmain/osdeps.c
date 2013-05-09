@@ -377,6 +377,16 @@ const char *cw_gai_strerror(int errcode)
     }
 }
 
+/* on Win32 rename() fails if newname exists, and yes this function is not atomic*/
+#undef rename
+int cw_rename(const char *oldname, const char *newname)
+{
+    FIXATTRS(newname);
+    if (!DeleteFileA(newname) && (GetLastError() != ERROR_FILE_NOT_FOUND))
+        return -1;
+    return rename(oldname, newname);
+}
+
 /* A non TLS based and non thread safe canonical rand() implementation */
 /* aCaB <acab@clamav.net> */
 static unsigned long next = 1;
