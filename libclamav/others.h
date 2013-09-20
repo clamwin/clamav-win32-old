@@ -55,7 +55,7 @@
  * in re-enabling affected modules.
  */
 
-#define CL_FLEVEL 75
+#define CL_FLEVEL 74
 #define CL_FLEVEL_DCONF	CL_FLEVEL
 #define CL_FLEVEL_SIGTOOL CL_FLEVEL
 
@@ -235,7 +235,6 @@ struct cl_engine {
 
     /* Filetype definitions */
     struct cli_ftype *ftypes;
-    struct cli_ftype *ptypes;
 
     /* Ignored signatures */
     struct cli_matcher *ignored;
