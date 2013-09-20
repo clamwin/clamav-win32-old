@@ -106,7 +106,7 @@ void hash_callback(int fd, unsigned long long size, const unsigned char *md5, co
 int scan_callback(STATBUF *sb, char *filename, const char *msg, enum cli_ftw_reason reason, struct cli_ftw_cbdata *data)
 {
     struct scan_cb_data *scandata = data->data;
-    const char *virname;
+    const char *virname = NULL;
     const char **virpp = &virname;
     int ret;
     int type = scandata->type;
@@ -233,22 +233,27 @@ int scan_callback(STATBUF *sb, char *filename, const char *msg, enum cli_ftw_rea
 
     if (scandata->options & CL_SCAN_ALLMATCHES) {
 	virpp = (const char **)*virpp; /* temp hack for scanall mode until api augmentation */
-	virname = virpp[0];
+	if (virpp) virname = virpp[0];
     }
 
     if (thrmgr_group_need_terminate(scandata->conn->group)) {
 	free(filename);
-	if (ret == CL_VIRUS && scandata->options & CL_SCAN_ALLMATCHES)
+	if ((scandata->options & CL_SCAN_ALLMATCHES) && (virpp != &virname))
 	    free((void *)virpp);
 	logg("*Client disconnected while scanjob was active\n");
 	return ret == CL_ETIMEOUT ? ret : CL_BREAK;
+    }
+
+    if ((ret == CL_VIRUS) && (virname == NULL)) {
+        logg("*%s: reported CL_VIRUS but no virname returned!\n", filename);
+        ret = CL_EMEM;
     }
 
     if (ret == CL_VIRUS) {
 	scandata->infected++;
 	if (conn_reply_virus(scandata->conn, filename, virname) == -1) {
 	    free(filename);
-	    if (scandata->options & CL_SCAN_ALLMATCHES)
+	    if((scandata->options & CL_SCAN_ALLMATCHES) && (virpp != &virname))
 		free((void *)virpp);
 	    return CL_ETIMEOUT;
 	}
@@ -257,7 +262,8 @@ int scan_callback(STATBUF *sb, char *filename, const char *msg, enum cli_ftw_rea
 	    while (NULL != virpp[i])
 		if (conn_reply_virus(scandata->conn, filename, virpp[i++]) == -1) {
 		    free(filename);
-		    free((void *)virpp);
+		    if (virpp != &virname)
+			free((void *)virpp);
 		    return CL_ETIMEOUT;
 		}
 	}
@@ -276,6 +282,8 @@ int scan_callback(STATBUF *sb, char *filename, const char *msg, enum cli_ftw_rea
     } else if (ret != CL_CLEAN) {
 	scandata->errors++;
 	if (conn_reply(scandata->conn, filename, cl_strerror(ret), "ERROR") == -1) {
+	    if((scandata->options & CL_SCAN_ALLMATCHES) && (virpp != &virname))
+		free((void *)virpp);
 	    free(filename);
 	    return CL_ETIMEOUT;
 	}
@@ -285,7 +293,7 @@ int scan_callback(STATBUF *sb, char *filename, const char *msg, enum cli_ftw_rea
     }
 
     free(filename);
-    if (ret == CL_VIRUS && scandata->options & CL_SCAN_ALLMATCHES)
+    if((scandata->options & CL_SCAN_ALLMATCHES) && (virpp != &virname))
 	free((void *)virpp);
     if(ret == CL_EMEM) /* stop scanning */
 	return ret;

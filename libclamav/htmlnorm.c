@@ -2,7 +2,7 @@
  *  Normalise HTML text.
  *  Decode MS Script Encoder protection. 
  *
- *  Copyright (C) 2007-2008 Sourcefire, Inc.
+ *  Copyright (C) 2007-2013 Sourcefire, Inc.
  *
  *  Authors: Trog
  *
@@ -649,7 +649,7 @@ static int cli_html_normalise(int fd, m_area_t *m_area, const char *dirname, tag
 	html_state state=HTML_NORM, next_state=HTML_BAD_STATE, saved_next_state=HTML_BAD_STATE;
 	char filename[1024], tag[HTML_STR_LENGTH+1], tag_arg[HTML_STR_LENGTH+1];
 	char tag_val[HTML_STR_LENGTH+1], *tmp_file, *arg_value;
-	unsigned char *line, *ptr, *ptr_screnc = NULL;
+	unsigned char *line = NULL, *ptr, *ptr_screnc = NULL;
 	tag_arguments_t tag_args;
 	quoted_state quoted = NOT_QUOTED;
 	unsigned long length = 0;
@@ -1781,6 +1781,8 @@ static int cli_html_normalise(int fd, m_area_t *m_area, const char *dirname, tag
 	}
 	retval = TRUE;
 abort:
+	if (line) /* only needed for abort case */
+		free(line);
 	if (in_form_action)
 		free(in_form_action);
         if (in_ahref) /* tag not closed, force closing */

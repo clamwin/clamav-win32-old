@@ -382,9 +382,12 @@ static void show_bar(WINDOW *win, size_t i, unsigned live, unsigned idle,
 	waddch(win, ']' | A_BOLD);
 	if(blink) {
 		getyx(win, y, x);
+		if ((x < 0) || (y < 0)) {
+			return; /* if getyx() failed, nevermind the blinking */
+		}
 		if (x >= 2) {
-			z = x - 2;         
-		}	
+			z = x - 2;
+		}
 		mvwaddch(win, y, z, '>' | A_BLINK | COLOR_PAIR(red_color));
 		move(y, z);
 	}
@@ -831,8 +834,10 @@ static int output_stats(struct stats *stats, unsigned idx)
 
 	OOM_CHECK(line);
 
-	if (stats->mem <= 0 || stats->stats_unsupp)
+	if (stats->mem <= 0 || stats->stats_unsupp) {
 		strncpy(mem, "N/A", sizeof(mem));
+		mem[sizeof(mem)-1]='\0';
+	}
 	else {
 		char c;
 		double s;
@@ -851,8 +856,10 @@ static int output_stats(struct stats *stats, unsigned idx)
 	}
 	i = idx+1;
 
-	if (!stats->db_time.tm_year)
+	if (!stats->db_time.tm_year) {
 		strncpy(timbuf,"N/A",sizeof(timbuf));
+		timbuf[sizeof(timbuf)-1]='\0';
+	}
 	else
 		snprintf(timbuf, sizeof(timbuf), "%04u-%02u-%02u %02uh",
 				1900 + stats->db_time.tm_year,

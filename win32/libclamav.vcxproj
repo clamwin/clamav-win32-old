@@ -298,6 +298,7 @@
     <ClCompile Include="..\libclamav\dconf.c"/>
     <ClCompile Include="..\libclamav\disasm.c"/>
     <ClCompile Include="..\libclamav\dlp.c"/>
+    <ClCompile Include="..\libclamav\dmg.c"/>
     <ClCompile Include="..\libclamav\dsig.c"/>
     <ClCompile Include="..\libclamav\elf.c"/>
     <ClCompile Include="..\libclamav\entconv.c"/>
@@ -307,6 +308,7 @@
     <ClCompile Include="..\libclamav\fmap.c"/>
     <ClCompile Include="..\libclamav\fsg.c"/>
     <ClCompile Include="..\libclamav\hashtab.c"/>
+    <ClCompile Include="..\libclamav\hfsplus.c"/>
     <ClCompile Include="..\libclamav\htmlnorm.c"/>
     <ClCompile Include="..\libclamav\inflate64.c"/>
     <ClCompile Include="..\libclamav\iowrap.c"/>
@@ -372,6 +374,7 @@
     <ClCompile Include="..\libclamav\vba_extract.c"/>
     <ClCompile Include="..\libclamav\version.c"/>
     <ClCompile Include="..\libclamav\wwunpack.c"/>
+    <ClCompile Include="..\libclamav\xar.c"/>
     <ClCompile Include="..\libclamav\yc.c"/>
     <ClCompile Include="..\shared\getopt.c"/>
     <ClCompile Include="..\shared\misc.c"/>
