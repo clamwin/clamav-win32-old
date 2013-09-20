@@ -192,7 +192,7 @@
 #define HAVE_FSEEKO 1
 
 /* have getaddrinfo() */
-#define HAVE_GETADDRINFO 1
+#undef HAVE_GETADDRINFO
 
 /* Define to 1 if getpagesize() is available */
 #undef HAVE_GETPAGESIZE
@@ -517,7 +517,7 @@
 #define STDC_HEADERS 1
 
 /* Support for IPv6 */
-#define SUPPORT_IPv6 1
+#undef SUPPORT_IPv6
 
 /* enable memory pools */
 #define USE_MPOOL 1
@@ -526,7 +526,7 @@
 #undef USE_SYSLOG
 
 /* Stable releases tag */
-/* #define CLAMWIN_RELEASE "0.97" */
+#define CLAMWIN_RELEASE "0.98"
 
 /* Version number of package */
 #ifdef CLAMWIN_RELEASE
