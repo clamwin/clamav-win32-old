@@ -80,6 +80,22 @@ static cb_data_t cbdata;
 static const char *rotation = "|/-\\";
 
 /* Callback function for scanning */
+static void rotate(cb_data_t *cbctx, const char *fmt)
+{
+    int rotator = (int) time(NULL) % sizeof(rotation);
+    if (rotator != cbctx->oldvalue)
+    {
+        mprintf(fmt, cbctx->filename, rotation[rotator]);
+        cbctx->oldvalue = rotator;
+    }
+}
+
+static int sigloadcallback(const char *type, const char *name, unsigned int custom, void *context)
+{
+    rotate(context, "~%s%c\r");
+    return 0;
+}
+
 cl_error_t scancallback(int desc, int bytes, void *context)
 {
     cb_data_t *cbctx = context;
@@ -95,14 +111,7 @@ cl_error_t scancallback(int desc, int bytes, void *context)
         }
     }
     else /* archives or stdin */
-    {
-        int rotator = (int) time(NULL) % sizeof(rotation);
-        if (rotator != cbctx->oldvalue)
-        {
-            mprintf("~%s: [%c]\r", cbctx->filename, rotation[rotator]);
-            cbctx->oldvalue = rotator;
-        }
-    }
+        rotate(cbctx, "~%s: [%c]\r");
 
     return 1;
 }
@@ -736,6 +745,10 @@ int scanmanager(const struct optstruct *opts)
 	}
     }
 
+    /* setup signature loading callback */
+    cbdata.filename = "Loading virus signature database, please wait...";
+    cl_engine_set_clcb_sigload(engine, sigloadcallback, &cbdata);
+
     if((opt = optget(opts, "database"))->active) {
 	while(opt) {
 	    if((ret = cl_load(opt->strarg, engine, &info.sigs, dboptions))) {
@@ -762,6 +775,8 @@ int scanmanager(const struct optstruct *opts)
 	cl_engine_free(engine);
 	return 2;
     }
+
+    cl_engine_set_clcb_sigload(engine, NULL, NULL);
 
     if(optget(opts, "archive-verbose")->enabled) {
 	cl_engine_set_clcb_meta(engine, meta);
