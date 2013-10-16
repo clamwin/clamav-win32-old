@@ -746,7 +746,7 @@ int scanmanager(const struct optstruct *opts)
     }
 
     /* setup signature loading callback */
-    cbdata.filename = "Loading virus signature database, please wait...";
+    cbdata.filename = "Loading virus signature database, please wait... ";
     cl_engine_set_clcb_sigload(engine, sigloadcallback, &cbdata);
 
     if((opt = optget(opts, "database"))->active) {
@@ -777,6 +777,8 @@ int scanmanager(const struct optstruct *opts)
     }
 
     cl_engine_set_clcb_sigload(engine, NULL, NULL);
+    mprintf(cbdata.filename);
+    mprintf("done\n");
 
     if(optget(opts, "archive-verbose")->enabled) {
 	cl_engine_set_clcb_meta(engine, meta);
