@@ -79,14 +79,12 @@ typedef struct _cb_data_t
 static cb_data_t cbdata;
 static const char *rotation = "|/-\\";
 
-/* Callback function for scanning */
 static void rotate(cb_data_t *cbctx, const char *fmt)
 {
-    int rotator = (int) time(NULL) % sizeof(rotation);
-    if (rotator != cbctx->oldvalue)
+    if ((cbctx->count++ % 100000) == 0)
     {
-        mprintf(fmt, cbctx->filename, rotation[rotator]);
-        cbctx->oldvalue = rotator;
+        mprintf(fmt, cbctx->filename, rotation[cbctx->oldvalue]);
+        cbctx->oldvalue = (cbctx->oldvalue + 1) % sizeof(rotation);
     }
 }
 
