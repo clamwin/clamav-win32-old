@@ -236,6 +236,9 @@
 /* Define to '1' if you have the curses.h library */
 #undef HAVE_LIBPDCURSES
 
+/* Define to 1 if you have the 'libxml2' library (-lxml2). */
+#undef HAVE_LIBXML2
+
 /* Define to 1 if you have the `z' library (-lz). */
 #undef HAVE_LIBZ
 
@@ -526,7 +529,7 @@
 #undef USE_SYSLOG
 
 /* Stable releases tag */
-#define CLAMWIN_RELEASE "0.98"
+#define CLAMWIN_RELEASE "0.98.1"
 
 /* Version number of package */
 #ifdef CLAMWIN_RELEASE
