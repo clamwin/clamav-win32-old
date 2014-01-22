@@ -1,6 +1,7 @@
 EXPORTS
 
 ; Engine management
+cl_always_gen_section_hash
 cl_init
 cl_load
 cl_retdbdir
@@ -118,7 +119,7 @@ ftruncate                           @93 NONAME
 ; Internals @ 100
 cli_ac_chklsig                      @100 NONAME
 cli_calloc                          @101 NONAME
-cli_checkfp_pe			    @102 NONAME
+cli_checkfp_pe			            @102 NONAME
 cli_chomp                           @103 NONAME
 cli_ctime                           @104 NONAME
 cli_cvdunpack                       @105 NONAME
