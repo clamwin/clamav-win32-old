@@ -172,9 +172,9 @@ static int hashsig(const struct optstruct *opts, unsigned int mdb, int type)
 
     if(opts->filename) {
 	for(i = 0; opts->filename[i]; i++) {
-	    if(STAT(opts->filename[i], &sb) == -1) {
-		mprintf("!hashsig: Can't access file %s\n", opts->filename[i]);
+	    if(CLAMSTAT(opts->filename[i], &sb) == -1) {
 		perror("hashsig");
+		mprintf("!hashsig: Can't access file %s\n", opts->filename[i]);
 		return -1;
 	    } else {
 		if((sb.st_mode & S_IFMT) == S_IFREG) {
@@ -339,8 +339,8 @@ static char *getdsig(const char *host, const char *user, const unsigned char *da
     server.sin_port = htons(33101);
 
     if(connect(sockd, (struct sockaddr *) &server, sizeof(struct sockaddr_in)) < 0) {
-        closesocket(sockd);
 	perror("connect()");
+        closesocket(sockd);
 	mprintf("!getdsig: Can't connect to ClamAV Signing Service at %s\n", host);
 	memset(pass, 0, sizeof(pass));
 	return NULL;
@@ -523,7 +523,7 @@ static int script2cdiff(const char *script, const char *builder, const struct op
 	int bytes;
 
 
-    if(STAT(script, &sb) == -1) {
+    if(CLAMSTAT(script, &sb) == -1) {
 	mprintf("!script2diff: Can't stat file %s\n", script);
 	return -1;
     }
@@ -639,7 +639,7 @@ static int build(const struct optstruct *opts)
 {
 	int ret, bc = 0;
 	size_t bytes;
-	unsigned int i, sigs = 0, oldsigs = 0, entries = 0, version, real_header, fl;
+	unsigned int i, sigs = 0, oldsigs = 0, entries = 0, version, real_header, fl, maxentries;
 	STATBUF foo;
 	unsigned char buffer[FILEBUFF];
 	char *tarfile, header[513], smbuff[32], builder[32], *pt, olddb[512];
@@ -669,7 +669,7 @@ static int build(const struct optstruct *opts)
     if(optget(opts, "datadir")->active)
 	localdbdir = optget(opts, "datadir")->strarg;
 
-    if(STAT("COPYING", &foo) == -1) {
+    if(CLAMSTAT("COPYING", &foo) == -1) {
 	mprintf("!build: COPYING file not found in current working directory.\n");
 	return -1;
     }
@@ -752,11 +752,15 @@ static int build(const struct optstruct *opts)
 	if(entries != sigs)
 	    mprintf("^build: Signatures in %s db files: %u, loaded by libclamav: %u\n", dbname, entries, sigs);
 
-	if(!entries || (sigs > entries && sigs - entries >= 1000)) {
-	    mprintf("!Bad number of signatures in database files\n");
-	    FREE_LS(dblist2);
-	    return -1;
-	}
+    maxentries = optget(opts, "max-bad-sigs")->numarg;
+
+    if (maxentries) {
+        if(!entries || (sigs > entries && sigs - entries >= maxentries)) {
+            mprintf("!Bad number of signatures in database files\n");
+            FREE_LS(dblist2);
+            return -1;
+        }
+    }
     }
 
     /* try to read cvd header of current database */
@@ -818,16 +822,7 @@ static int build(const struct optstruct *opts)
     sprintf(header + strlen(header), "%u:", sigs);
 
     /* functionality level */
-    if(!strcmp(dbname, "main")) {
-	mprintf("Functionality level: ");
-	if(scanf("%u", &fl) == EOF || !fl || fl > 99) {
-	    mprintf("!build: Incorrect functionality level\n");
-	    FREE_LS(dblist2);
-	    return -1;
-	}
-    } else {
-	fl = CL_FLEVEL_SIGTOOL;
-    }
+    fl = (unsigned int)(optget(opts, "flevel")->numarg);
     sprintf(header + strlen(header), "%u:", fl);
 
     real_header = strlen(header);
@@ -1444,7 +1439,7 @@ static int listsigs(const struct optstruct *opts, int mode)
 	name = optget(opts, "list-sigs")->strarg;
 	if(access(name, R_OK) && localdbdir)
 	    name = localdbdir;
-	if(STAT(name, &sb) == -1) {
+	if(CLAMSTAT(name, &sb) == -1) {
 	    mprintf("--list-sigs: Can't get status of %s\n", name);
 	    return -1;
 	}
@@ -1837,7 +1832,7 @@ static int dircopy(const char *src, const char *dest)
 	char spath[512], dpath[512];
 
 
-    if(STAT(dest, &sb) == -1) {
+    if(CLAMSTAT(dest, &sb) == -1) {
 	if(mkdir(dest, 0755)) {
 	    /* mprintf("!dircopy: Can't create temporary directory %s\n", dest); */
 	    return -1;
@@ -2930,6 +2925,8 @@ static void help(void)
     mprintf("    --utf16-decode=FILE                    decode UTF16 encoded files\n");
     mprintf("    --info=FILE            -i FILE         print database information\n");
     mprintf("    --build=NAME [cvd] -b NAME             build a CVD file\n");
+    mprintf("    --max-bad-sigs=NUMBER                  Maximum number of mismatched signatures when building a CVD. Default: 3000\n");
+    mprintf("    --flevel=FLEVEL                        Specify a custom flevel. Default: %u\n", cl_retflevel());
     mprintf("    --no-cdiff                             Don't generate .cdiff file\n");
     mprintf("    --unsigned                             Create unsigned database file (.cud)\n");
     mprintf("    --print-certs=FILE                     Print Authenticode details from a PE\n");
@@ -3039,7 +3036,7 @@ int main(int argc, char **argv)
 	    mprintf("!--verify-cdiff requires two arguments\n");
 	    ret = -1;
 	} else {
-	    if(STAT(opts->filename[0], &sb) == -1) {
+	    if(CLAMSTAT(opts->filename[0], &sb) == -1) {
 		mprintf("--verify-cdiff: Can't get status of %s\n", opts->filename[0]);
 		ret = -1;
 	    } else {

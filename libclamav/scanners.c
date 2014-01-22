@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2007-2008 Sourcefire, Inc.
+ *  Copyright (C) 2007-2013 Sourcefire, Inc.
  *
  *  Authors: Tomasz Kojm
  *
@@ -94,6 +94,10 @@
 #include "jpeg.h"
 #include "png.h"
 #include "iso9660.h"
+#include "dmg.h"
+#include "xar.h"
+#include "hfsplus.h"
+#include "xz_iface.h"
 
 #ifdef HAVE_BZLIB_H
 #include <bzlib.h>
@@ -595,7 +599,6 @@ static int cli_scangzip(cli_ctx *ctx)
     return ret;
 }
 
-
 #ifndef HAVE_BZLIB_H
 static int cli_scanbzip(cli_ctx *ctx) {
     cli_warnmsg("cli_scanbzip: bzip2 support not compiled in\n");
@@ -697,6 +700,99 @@ static int cli_scanbzip(cli_ctx *ctx)
     return ret;
 }
 #endif
+
+static int cli_scanxz(cli_ctx *ctx)
+{
+    int ret = CL_CLEAN, fd, rc;
+    unsigned long int size = 0;
+    char *tmpname;
+    struct CLI_XZ strm = {{0}};
+    size_t off = 0;
+    size_t avail;
+    unsigned char * buf = cli_malloc(CLI_XZ_OBUF_SIZE);
+
+    if (buf == NULL) {
+	cli_errmsg("cli_scanxz: nomemory for decompress buffer.\n");
+        return CL_EMEM;
+    }
+    strm.next_out = buf;
+    strm.avail_out = CLI_XZ_OBUF_SIZE;
+    rc = cli_XzInit(&strm);
+    if (rc != XZ_RESULT_OK) {
+	cli_errmsg("cli_scanxz: DecompressInit failed: %i\n", rc);
+        free(buf);
+	return CL_EOPEN;
+    }
+
+    if ((ret = cli_gentempfd(ctx->engine->tmpdir, &tmpname, &fd))) {
+	cli_errmsg("cli_scanxz: Can't generate temporary file.\n");
+	cli_XzShutdown(&strm);
+        free(buf);
+	return ret;
+    }
+    cli_dbgmsg("cli_scanxz: decompressing to file %s\n", tmpname);
+
+    do {
+        /* set up input buffer */
+	if (!strm.avail_in) {
+            strm.next_in = (void*)fmap_need_off_once_len(*ctx->fmap, off, CLI_XZ_IBUF_SIZE, &avail);
+	    strm.avail_in = avail;
+	    off += avail;
+	    if (!strm.avail_in) {
+		cli_errmsg("cli_scanxz: premature end of compressed stream\n");
+                ret = CL_EFORMAT;
+		goto xz_exit;
+	    }
+	}
+
+        /* xz decompress a chunk */
+	rc = cli_XzDecode(&strm);
+	if (XZ_RESULT_OK != rc && XZ_STREAM_END != rc) {
+	    cli_errmsg("cli_scanxz: decompress error: %d\n", rc);
+            ret = CL_EFORMAT;
+            goto xz_exit;
+	}
+        //cli_dbgmsg("cli_scanxz: xz decompressed %li of %li available bytes\n",
+        //           avail - strm.avail_in, avail);
+        
+        /* write decompress buffer */
+	if (!strm.avail_out || rc == XZ_STREAM_END) {            
+	    size_t towrite = CLI_XZ_OBUF_SIZE - strm.avail_out;
+	    size += towrite;
+
+            //cli_dbgmsg("Writing %li bytes to XZ decompress temp file(%li byte total)\n",
+            //           towrite, size);
+
+	    if(cli_writen(fd, buf, towrite) != towrite) {
+		cli_errmsg("cli_scanxz: Can't write to file.\n");
+                ret = CL_EWRITE;
+                goto xz_exit;
+	    }
+	    if (cli_checklimits("cli_scanxz", ctx, size, 0, 0) != CL_CLEAN) {
+                cli_warnmsg("cli_scanxz: decompress file size exceeds limits - "
+                            "only scanning %li bytes\n", size);
+		break;
+            }
+	    strm.next_out = buf;
+	    strm.avail_out = CLI_XZ_OBUF_SIZE;
+	}
+    } while (XZ_STREAM_END != rc);
+
+    /* scan decompressed file */
+    if ((ret = cli_magic_scandesc(fd, ctx)) == CL_VIRUS ) {
+	cli_dbgmsg("cli_scanxz: Infected with %s\n", cli_get_last_virus(ctx));
+    }
+
+ xz_exit:
+    cli_XzShutdown(&strm);
+    close(fd);
+    if(!ctx->engine->keeptmp)
+	if (cli_unlink(tmpname) && ret == CL_CLEAN)
+            ret = CL_EUNLINK;
+    free(tmpname);
+    free(buf);
+    return ret;
+}
 
 static int cli_scanszdd(cli_ctx *ctx)
 {
@@ -2035,12 +2131,36 @@ static int cli_scanraw(cli_ctx *ctx, cli_file_t type, uint8_t typercg, cli_file_
 	    while(fpt) {
 		if(fpt->offset) switch(fpt->type) {
 		    case CL_TYPE_RARSFX:
-			if(type != CL_TYPE_RAR && have_rar && SCAN_ARCHIVE && (DCONF_ARCH & ARCH_CONF_RAR)) {
-			    ctx->container_type = CL_TYPE_RAR;
-			    ctx->container_size = map->len - fpt->offset; /* not precise */
-			    cli_dbgmsg("RAR/RAR-SFX signature found at %u\n", (unsigned int) fpt->offset);
-			    nret = cli_scanrar(fmap_fd(map), ctx, fpt->offset, &lastrar);
-			}
+                        if(type != CL_TYPE_RAR && have_rar && SCAN_ARCHIVE && (DCONF_ARCH & ARCH_CONF_RAR)) {
+                            char *tmpname = NULL;
+                            int tmpfd = fmap_fd(map);
+                            ctx->container_type = CL_TYPE_RAR;
+                            ctx->container_size = map->len - fpt->offset; /* not precise */
+                            cli_dbgmsg("RAR/RAR-SFX signature found at %u\n", (unsigned int) fpt->offset);
+                            /* if map is not file-backed, have to dump to file for scanrar */
+                            if(tmpfd == -1) {
+                                nret = fmap_dump_to_file(map, ctx->engine->tmpdir, &tmpname, &tmpfd);
+                                if(nret != CL_SUCCESS) {
+                                    cli_dbgmsg("cli_scanraw: failed to generate temporary file.\n");
+                                    ret = nret;
+                                    break_loop = 1;
+                                    break;
+                                }
+                            }
+                            /* scan existing file */
+                            nret = cli_scanrar(tmpfd, ctx, fpt->offset, &lastrar);
+                            /* if dumped tempfile, need to cleanup */
+                            if(tmpname) {
+                                close(tmpfd);
+                                if(!ctx->engine->keeptmp) {
+                                    if (cli_unlink(tmpname)) {
+                                        ret = nret = CL_EUNLINK;
+                                        break_loop = 1;
+                                    }
+                                }
+                                free(tmpname);
+                            }
+                        }
 			break;
 
 		    case CL_TYPE_ZIPSFX:
@@ -2111,6 +2231,14 @@ static int cli_scanraw(cli_ctx *ctx, cli_file_t type, uint8_t typercg, cli_file_
 			    ctx->container_size = map->len - fpt->offset; /* not precise */
 			    cli_dbgmsg("ISHIELD-MSI signature found at %u\n", (unsigned int) fpt->offset);
 			    nret = cli_scanishield_msi(ctx, fpt->offset + 14);
+			}
+			break;
+
+		    case CL_TYPE_DMG:
+			if(SCAN_ARCHIVE && (DCONF_ARCH & ARCH_CONF_DMG)) {
+			    ctx->container_type = CL_TYPE_DMG;
+			    nret = cli_scandmg(ctx);
+			    cli_dbgmsg("DMG signature found at %u\n", (unsigned int) fpt->offset);
 			}
 			break;
 
@@ -2295,7 +2423,6 @@ static int magic_scandesc(cli_ctx *ctx, cli_file_t type)
 	bitset_t *old_hook_lsig_matches;
 	const char *filetype;
 	int cache_clean = 0, res;
-	unsigned int viruses_found = 0;
 
     if(!ctx->engine) {
 	cli_errmsg("CRITICAL: engine == NULL\n");
@@ -2318,10 +2445,13 @@ static int magic_scandesc(cli_ctx *ctx, cli_file_t type)
         early_ret_from_magicscan(CL_CLEAN);
     }
     old_hook_lsig_matches = ctx->hook_lsig_matches;
+    if(type == CL_TYPE_PART_ANY) {
+	typercg = 0;
+    }
 
     perf_start(ctx, PERFT_FT);
-    if(type == CL_TYPE_ANY)
-	type = cli_filetype2(*ctx->fmap, ctx->engine);
+    if((type == CL_TYPE_ANY) || type == CL_TYPE_PART_ANY)
+	type = cli_filetype2(*ctx->fmap, ctx->engine, type);
     perf_stop(ctx, PERFT_FT);
     if(type == CL_TYPE_ERROR) {
 	cli_dbgmsg("cli_magic_scandesc: cli_filetype2 returned CL_TYPE_ERROR\n");
@@ -2398,32 +2528,12 @@ static int magic_scandesc(cli_ctx *ctx, cli_file_t type)
 		char *tmpname = NULL;
 		int desc = fmap_fd(*ctx->fmap);
 		if (desc == -1) {
-		    size_t pos = 0, len;
-
 		    cli_dbgmsg("fmap not backed by file, dumping ...\n");
-		    if ((ret = cli_gentempfd(((cli_ctx*)ctx)->engine->tmpdir, &tmpname, &desc)) != CL_SUCCESS) {
+		    ret = fmap_dump_to_file(*ctx->fmap, ctx->engine->tmpdir, &tmpname, &desc);
+		    if (ret != CL_SUCCESS) {
 			cli_dbgmsg("fmap_fd: failed to generate temporary file.\n");
 			break;
 		    }
-		    do {
-			const char *b;
-
-			len = 0;
-			b = fmap_need_off_once_len(*ctx->fmap, pos, BUFSIZ, &len);
-			pos += len;
-			if (b && len > 0) {
-			    if (cli_writen(desc, b, len) != len) {
-				close(desc);
-				unlink(tmpname);
-				cli_warnmsg("fmap_fd_dump: write failed\n");
-				ret = CL_EWRITE;
-				break;
-			    }
-			}
-		    } while (len > 0);
-		    if (lseek(desc, 0, SEEK_SET) == -1) {
-                cli_dbgmsg("magic_scandesc: call to lseek() failed\n");
-            }
 		}
 		ret = cli_scanrar(desc, ctx, 0, NULL);
 		if (tmpname) {
@@ -2448,6 +2558,11 @@ static int magic_scandesc(cli_ctx *ctx, cli_file_t type)
 	case CL_TYPE_BZ:
 	    if(SCAN_ARCHIVE && (DCONF_ARCH & ARCH_CONF_BZ))
 		ret = cli_scanbzip(ctx);
+	    break;
+
+	case CL_TYPE_XZ:
+	    if(SCAN_ARCHIVE && (DCONF_ARCH & ARCH_CONF_XZ))
+		ret = cli_scanxz(ctx);
 	    break;
 
 	case CL_TYPE_ARJ:
@@ -2636,6 +2751,18 @@ static int magic_scandesc(cli_ctx *ctx, cli_file_t type)
 		ret = cli_scansis(ctx);
 	    break;
 
+	case CL_TYPE_XAR:
+	    ctx->container_type = CL_TYPE_XAR;
+	    if(SCAN_ARCHIVE && (DCONF_ARCH & ARCH_CONF_XAR))
+		ret = cli_scanxar(ctx);
+	    break;
+
+	case CL_TYPE_PART_HFSPLUS:
+	    ctx->container_type = CL_TYPE_PART_HFSPLUS;
+	    if(SCAN_ARCHIVE && (DCONF_ARCH & ARCH_CONF_HFSPLUS))
+		ret = cli_scanhfsplus(ctx);
+	    break;
+
 	case CL_TYPE_BINARY_DATA:
 	case CL_TYPE_TEXT_UTF16BE:
 	    if(SCAN_ALGO && (DCONF_OTHER & OTHER_CONF_MYDOOMLOG))
@@ -2778,7 +2905,7 @@ static int magic_scandesc(cli_ctx *ctx, cli_file_t type)
     }
 }
 
-int cli_magic_scandesc(int desc, cli_ctx *ctx)
+static int cli_base_scandesc(int desc, cli_ctx *ctx, cli_file_t type)
 {
     STATBUF sb;
     int ret;
@@ -2806,11 +2933,22 @@ int cli_magic_scandesc(int desc, cli_ctx *ctx)
     }
     perf_stop(ctx, PERFT_MAP);
 
-    ret = magic_scandesc(ctx, CL_TYPE_ANY);
+    ret = magic_scandesc(ctx, type);
 
     funmap(*ctx->fmap);
     ctx->fmap--;
     return ret;
+}
+
+int cli_magic_scandesc(int desc, cli_ctx *ctx)
+{
+    return cli_base_scandesc(desc, ctx, CL_TYPE_ANY);
+}
+
+/* Have to keep partition typing separate */
+int cli_partition_scandesc(int desc, cli_ctx *ctx)
+{
+    return cli_base_scandesc(desc, ctx, CL_TYPE_PART_ANY);
 }
 
 int cli_magic_scandesc_type(cli_ctx *ctx, cli_file_t type)
@@ -2823,7 +2961,86 @@ int cl_scandesc(int desc, const char **virname, unsigned long int *scanned, cons
     return cl_scandesc_callback(desc, virname, scanned, engine, scanoptions, NULL);
 }
 
-/* length = 0, till the end */
+/* For map scans that may be forced to disk */
+int cli_map_scan(cl_fmap_t *map, off_t offset, size_t length, cli_ctx *ctx)
+{
+    off_t old_off = map->nested_offset;
+    size_t old_len = map->len;
+    int ret = CL_CLEAN;
+
+    cli_dbgmsg("cli_map_scan: [%ld, +%lu)\n",
+	       (long)offset, (unsigned long)length);
+
+    if (offset < 0 || offset >= old_len) {
+	cli_dbgmsg("Invalid offset: %ld\n", (long)offset);
+	return CL_CLEAN;
+    }
+
+    if (ctx->engine->forcetodisk) {
+        /* if this is forced to disk, then need to write the nested map and scan it */
+        const uint8_t *mapdata = NULL;
+        char *tempfile = NULL;
+        int fd = -1;
+        size_t nread = 0;
+
+        /* Then check length */
+        if (!length) length = old_len - offset;
+        if (length > old_len - offset) {
+            cli_dbgmsg("cli_map_scan: Data truncated: %lu -> %lu\n",
+                       (unsigned long)length, (unsigned long)(old_len - offset));
+            length = old_len - offset;
+        }
+        if (length <= 5) {
+            cli_dbgmsg("cli_map_scan: Small data (%u bytes)\n", (unsigned int) length);
+            return CL_CLEAN;
+        }
+        if (!CLI_ISCONTAINED(old_off, old_len, old_off + offset, length)) {
+            cli_dbgmsg("cli_map_scan: map error occurred [%ld, %lu]\n",
+                       (long)old_off, (unsigned long)old_len);
+            return CL_CLEAN;
+        }
+
+        /* Length checked, now get map */
+        mapdata = fmap_need_off_once_len(map, offset, length, &nread);
+        if (!mapdata || (nread != length)) {
+            cli_errmsg("cli_map_scan: could not map sub-file\n");
+            return CL_EMAP;
+        }
+
+        ret = cli_gentempfd(ctx->engine->tmpdir, &tempfile, &fd);
+        if (ret != CL_SUCCESS) {
+            return ret;
+        }
+
+        cli_dbgmsg("cli_map_scan: writing nested map content to temp file %s\n", tempfile);
+        if (cli_writen(fd, mapdata, length) < 0) {
+            cli_errmsg("cli_map_scan: cli_writen error writing subdoc temporary file.\n");
+            ret = CL_EWRITE;
+        }
+
+        /* scan the temp file */
+        ret = cli_base_scandesc(fd, ctx, CL_TYPE_ANY);
+
+        /* remove the temp file, if needed */
+        if (fd > -1) {
+            close(fd);
+        }
+        if(!ctx->engine->keeptmp) {
+            if (cli_unlink(tempfile)) {
+                cli_errmsg("cli_map_scan: error unlinking tempfile %s\n", tempfile);
+                ret = CL_EUNLINK;
+            }
+        }
+        free(tempfile);
+    }
+    else {
+        /* Not forced to disk, use nested map */
+        ret = cli_map_scandesc(map, offset, length, ctx);
+    }
+    return ret;
+}
+
+/* For map scans that are not forced to disk */
 int cli_map_scandesc(cl_fmap_t *map, off_t offset, size_t length, cli_ctx *ctx)
 {
     off_t old_off = map->nested_offset;
@@ -2881,7 +3098,7 @@ int cli_mem_scandesc(const void *buffer, size_t length, cli_ctx *ctx)
     if (!map) {
 	return CL_EMAP;
     }
-    ret = cli_map_scandesc(map, 0, length, ctx);
+    ret = cli_map_scan(map, 0, length, ctx);
     cl_fmap_close(map);
     return ret;
 }

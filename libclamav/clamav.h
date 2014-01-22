@@ -29,14 +29,14 @@
 #include <unistd.h>
 
 #define STATBUF struct stat64
-#define STAT stat64
+#define CLAMSTAT stat64
 #define LSTAT lstat64
 #define FSTAT fstat64
 #define safe_open(a, b) open(a, b|O_LARGEFILE)
 #else
 
 #define STATBUF struct stat
-#define STAT stat
+#define CLAMSTAT stat
 #define LSTAT lstat
 #define FSTAT fstat
 /* Nothing is safe in windows, not even open, safe_open defined under /win32 */
@@ -170,6 +170,8 @@ extern int cl_init(unsigned int initoptions);
 
 extern struct cl_engine *cl_engine_new(void);
 
+extern void cl_always_gen_section_hash(void);
+
 enum cl_engine_field {
     CL_ENGINE_MAX_SCANSIZE,	    /* uint64_t */
     CL_ENGINE_MAX_FILESIZE,	    /* uint64_t */
@@ -193,7 +195,8 @@ enum cl_engine_field {
     CL_ENGINE_MAX_HTMLNORMALIZE,    /* uint64_t */
     CL_ENGINE_MAX_HTMLNOTAGS,       /* uint64_t */
     CL_ENGINE_MAX_SCRIPTNORMALIZE,  /* uint64_t */
-    CL_ENGINE_MAX_ZIPTYPERCG        /* uint64_t */
+    CL_ENGINE_MAX_ZIPTYPERCG,       /* uint64_t */
+    CL_ENGINE_FORCETODISK           /* uint32_t */
 };
 
 enum bytecode_security {

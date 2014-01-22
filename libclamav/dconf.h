@@ -82,6 +82,10 @@ struct cli_dconf {
 #define ARCH_CONF_ISHIELD   0x8000
 #define ARCH_CONF_7Z        0x10000
 #define ARCH_CONF_ISO9660   0x20000
+#define ARCH_CONF_DMG       0x40000
+#define ARCH_CONF_XAR       0x80000
+#define ARCH_CONF_HFSPLUS   0x100000
+#define ARCH_CONF_XZ        0x200000
 
 /* Document flags */
 #define DOC_CONF_HTML		0x1
@@ -105,6 +109,7 @@ struct cli_dconf {
 #define OTHER_CONF_DLP	    0x20
 #define OTHER_CONF_MYDOOMLOG	0x40
 #define OTHER_CONF_PREFILTERING 0x80
+#define OTHER_CONF_PDFNAMEOBJ	0x100
 
 /* Phishing flags */
 #define PHISHING_CONF_ENGINE   0x1

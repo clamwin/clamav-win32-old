@@ -70,6 +70,7 @@
 #include "scanners.h"
 #include "bytecode.h"
 #include "bytecode_api_impl.h"
+#include "cache.h"
 
 int (*cli_unrar_open)(int fd, const char *dirname, unrar_state_t *state);
 int (*cli_unrar_extract_next_prepare)(unrar_state_t *state, const char *dirname);
@@ -187,6 +188,11 @@ void cl_debug(void)
     cli_debug_flag = 1;
 }
 
+void cl_always_gen_section_hash(void)
+{
+    cli_always_gen_section_hash = 1;
+}
+
 unsigned int cl_retflevel(void)
 {
     return CL_FLEVEL;
@@ -294,6 +300,9 @@ int cl_init(unsigned int initoptions)
     rc = bytecode_init();
     if (rc)
 	return rc;
+#ifdef HAVE_LIBXML2
+    xmlInitParser();
+#endif
     return CL_SUCCESS;
 }
 
@@ -463,6 +472,12 @@ int cl_engine_set_num(struct cl_engine *engine, enum cl_engine_field field, long
 	case CL_ENGINE_KEEPTMP:
 	    engine->keeptmp = num;
 	    break;
+	case CL_ENGINE_FORCETODISK:
+	    if(num)
+	        engine->forcetodisk = 1;
+	    else
+	        engine->forcetodisk = 0;
+	    break;
 	case CL_ENGINE_BYTECODE_SECURITY:
 	    if (engine->dboptions & CL_DB_COMPILED) {
 		cli_errmsg("cl_engine_set_num: CL_ENGINE_BYTECODE_SECURITY cannot be set after engine was compiled\n");
@@ -543,6 +558,8 @@ long long cl_engine_get_num(const struct cl_engine *engine, enum cl_engine_field
 	    return engine->ac_maxdepth;
 	case CL_ENGINE_KEEPTMP:
 	    return engine->keeptmp;
+	case CL_ENGINE_FORCETODISK:
+	    return engine->forcetodisk;
 	case CL_ENGINE_BYTECODE_SECURITY:
 	    return engine->bytecode_security;
 	case CL_ENGINE_BYTECODE_TIMEOUT:
@@ -621,6 +638,7 @@ struct cl_settings *cl_engine_settings_copy(const struct cl_engine *engine)
     settings->ac_maxdepth = engine->ac_maxdepth;
     settings->tmpdir = engine->tmpdir ? strdup(engine->tmpdir) : NULL;
     settings->keeptmp = engine->keeptmp;
+    settings->forcetodisk = engine->forcetodisk;
     settings->maxscansize = engine->maxscansize;
     settings->maxfilesize = engine->maxfilesize;
     settings->maxreclevel = engine->maxreclevel;
@@ -654,6 +672,7 @@ int cl_engine_settings_apply(struct cl_engine *engine, const struct cl_settings 
     engine->ac_mindepth = settings->ac_mindepth;
     engine->ac_maxdepth = settings->ac_maxdepth;
     engine->keeptmp = settings->keeptmp;
+    engine->forcetodisk = settings->forcetodisk;
     engine->maxscansize = settings->maxscansize;
     engine->maxfilesize = settings->maxfilesize;
     engine->maxreclevel = settings->maxreclevel;
@@ -910,7 +929,7 @@ cli_rmdirs(const char *name)
 	char err[128];
 
 
-    if(STAT(name, &statb) < 0) {
+    if(CLAMSTAT(name, &statb) < 0) {
 	cli_warnmsg("cli_rmdirs: Can't locate %s: %s\n", name, cli_strerror(errno, err, sizeof(err)));
 	return -1;
     }
@@ -981,7 +1000,7 @@ int cli_rmdirs(const char *dirname)
 
     chmod(dirname, 0700);
     if((dd = opendir(dirname)) != NULL) {
-	while(STAT(dirname, &maind) != -1) {
+	while(CLAMSTAT(dirname, &maind) != -1) {
 	    if(!rmdir(dirname)) break;
 	    if(errno != ENOTEMPTY && errno != EEXIST && errno != EBADF) {
 		cli_errmsg("cli_rmdirs: Can't remove temporary directory %s: %s\n", dirname, cli_strerror(errno, err, sizeof(err)));

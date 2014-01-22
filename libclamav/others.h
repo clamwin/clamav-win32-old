@@ -55,11 +55,12 @@
  * in re-enabling affected modules.
  */
 
-#define CL_FLEVEL 74
+#define CL_FLEVEL 76
 #define CL_FLEVEL_DCONF	CL_FLEVEL
 #define CL_FLEVEL_SIGTOOL CL_FLEVEL
 
 extern uint8_t cli_debug_flag;
+extern uint8_t cli_always_gen_section_hash;
 
 /*
  * CLI_ISCONTAINED(buf1, size1, buf2, size2) checks if buf2 is contained
@@ -235,6 +236,7 @@ struct cl_engine {
 
     /* Filetype definitions */
     struct cli_ftype *ftypes;
+    struct cli_ftype *ptypes;
 
     /* Ignored signatures */
     struct cli_matcher *ignored;
@@ -261,8 +263,6 @@ struct cl_engine {
     clcb_pre_cache cb_pre_cache;
     clcb_pre_scan cb_pre_scan;
     clcb_post_scan cb_post_scan;
-    clcb_progress cb_progress;
-    void *cb_progress_ctx;
     clcb_sigload cb_sigload;
     void *cb_sigload_ctx;
     clcb_hash cb_hash;
@@ -283,6 +283,8 @@ struct cl_engine {
     uint64_t maxhtmlnotags; /* max size for scanning normalized HTML */
     uint64_t maxscriptnormalize; /* max size to normalize scripts */
     uint64_t maxziptypercg; /* max size to re-do zip filetype */
+
+    uint32_t forcetodisk; /* cause memory or map scans to dump to disk first */
 };
 
 struct cl_settings {
@@ -322,6 +324,8 @@ struct cl_settings {
     uint64_t maxhtmlnotags; /* max size for scanning normalized HTML */
     uint64_t maxscriptnormalize; /* max size to normalize scripts */
     uint64_t maxziptypercg; /* max size to re-do zip filetype */
+
+    uint32_t forcetodisk; /* cause memory or map scans to dump to disk first */
 };
 
 extern int (*cli_unrar_open)(int fd, const char *dirname, unrar_state_t *state);

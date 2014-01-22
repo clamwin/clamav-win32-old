@@ -6,6 +6,12 @@
 
 #include <stddef.h>
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
+#include <zconf.h>
+
 #ifndef EXTERN_C_BEGIN
 #ifdef __cplusplus
 #define EXTERN_C_BEGIN extern "C" {
@@ -51,7 +57,9 @@ typedef int WRes;
 #define RINOK(x) { int __result__ = (x); if (__result__ != 0) return __result__; }
 #endif
 
-#define Byte uint8_t
+/* aCaB -- use Byte defined in zconf.h
+typedef unsigned char Byte;
+*/
 typedef short Int16;
 typedef unsigned short UInt16;
 

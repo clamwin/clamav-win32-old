@@ -300,7 +300,7 @@ int main(int argc, char **argv)
 
 #ifdef C_LINUX
     procdev = 0;
-    if(STAT("/proc", &sb) != -1 && !sb.st_size)
+    if(CLAMSTAT("/proc", &sb) != -1 && !sb.st_size)
 	procdev = sb.st_dev;
 #endif
 
@@ -455,6 +455,9 @@ int main(int argc, char **argv)
 
     if(optget(opts, "LeaveTemporaryFiles")->enabled)
 	cl_engine_set_num(engine, CL_ENGINE_KEEPTMP, 1);
+
+    if(optget(opts, "ForceToDisk")->enabled)
+	cl_engine_set_num(engine, CL_ENGINE_FORCETODISK, 1);
 
     if(optget(opts, "PhishingSignatures")->enabled)
 	dboptions |= CL_DB_PHISHING;

@@ -96,6 +96,10 @@ static struct dconf_module modules[] = {
     { "ARCHIVE",    "ISHIELD",	    ARCH_CONF_ISHIELD,	    1 },
     { "ARCHIVE",    "7zip",	    ARCH_CONF_7Z,	    1 },
     { "ARCHIVE",    "ISO9660",	    ARCH_CONF_ISO9660,	    1 },
+    { "ARCHIVE",    "DMG",	    ARCH_CONF_DMG,	    1 },
+    { "ARCHIVE",    "XAR",	    ARCH_CONF_XAR,	    1 },
+    { "ARCHIVE",    "HFSPLUS",	    ARCH_CONF_HFSPLUS,	    1 },
+    { "ARCHIVE",    "XZ",	    ARCH_CONF_XZ,	    1 },
 
     { "DOCUMENT",   "HTML",	    DOC_CONF_HTML,	    1 },
     { "DOCUMENT",   "RTF",	    DOC_CONF_RTF,	    1 },
@@ -116,6 +120,7 @@ static struct dconf_module modules[] = {
     { "OTHER",	    "DLP",	    OTHER_CONF_DLP,	    1 },
     { "OTHER",	    "MYDOOMLOG",    OTHER_CONF_MYDOOMLOG,   1 },
     { "OTHER",      "PREFILTERING", OTHER_CONF_PREFILTERING,1 },
+    { "OTHER",      "PDFNAMEOBJ",   OTHER_CONF_PDFNAMEOBJ,  1 },
 
     { "PHISHING",   "ENGINE",       PHISHING_CONF_ENGINE,   1 },
     { "PHISHING",   "ENTCONV",      PHISHING_CONF_ENTCONV,  1 },
