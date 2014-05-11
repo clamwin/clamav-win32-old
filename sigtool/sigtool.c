@@ -1,4 +1,5 @@
 /*
+ *  Copyright (C) 2014 Cisco Systems, Inc.
  *  Copyright (C) 2007 - 2013 Sourcefire, Inc.
  *  Copyright (C) 2002 - 2007 Tomasz Kojm <tkojm@clamav.net>
  *  CDIFF code (C) 2006 Sensory Networks, Inc.
@@ -23,8 +24,6 @@
 #if HAVE_CONFIG_H
 #include "clamav-config.h"
 #endif
-
-#define _GNU_SOURCE
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -53,14 +52,16 @@
 #include <termios.h>
 #endif
 
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+#include "libclamav/crypto.h"
+
 #include "vba.h"
 
 #include "shared/output.h"
 #include "shared/optparser.h"
 #include "shared/misc.h"
 #include "shared/cdiff.h"
-#include "libclamav/sha1.h"
-#include "libclamav/sha256.h"
 #include "shared/tar.h"
 
 #include "libclamav/clamav.h"
@@ -400,22 +401,25 @@ static char *sha256file(const char *file, unsigned int *size)
 	unsigned int i, bytes;
 	unsigned char digest[32], buffer[FILEBUFF];
 	char *sha;
-	SHA256_CTX ctx;
+	void *ctx;
 
+    ctx = cl_hash_init("sha256");
+    if (!(ctx))
+        return NULL;
 
-    sha256_init(&ctx);
     if(!(fh = fopen(file, "rb"))) {
 	mprintf("!sha256file: Can't open file %s\n", file);
+    cl_hash_destroy(ctx);
 	return NULL;
     }
     if(size)
 	*size = 0;
     while((bytes = fread(buffer, 1, sizeof(buffer), fh))) {
-	sha256_update(&ctx, buffer, bytes);
+	cl_update_hash(ctx, buffer, bytes);
 	if(size)
 	    *size += bytes;
     }
-    sha256_final(&ctx, digest);
+    cl_finish_hash(ctx, digest);
     sha = (char *) malloc(65);
     if(!sha)
     {
@@ -435,7 +439,7 @@ static int writeinfo(const char *dbname, const char *builder, const char *header
 	unsigned int i, bytes;
 	char file[32], *pt, dbfile[32];
 	unsigned char digest[32], buffer[FILEBUFF];
-	SHA256_CTX ctx;
+	void *ctx;
 
     snprintf(file, sizeof(file), "%s.info", dbname);
     if(!access(file, R_OK)) {
@@ -492,10 +496,15 @@ static int writeinfo(const char *dbname, const char *builder, const char *header
     }
     if(!optget(opts, "unsigned")->enabled) {
 	rewind(fh);
-	sha256_init(&ctx);
+    ctx = cl_hash_init("sha256");
+    if (!(ctx)) {
+        fclose(fh);
+        return -1;
+    }
+
 	while((bytes = fread(buffer, 1, sizeof(buffer), fh)))
-	    sha256_update(&ctx, buffer, bytes);
-	sha256_final(&ctx, digest);
+	    cl_update_hash(ctx, buffer, bytes);
+	cl_finish_hash(ctx, digest);
 	if(!(pt = getdsig(optget(opts, "server")->strarg, builder, digest, 32, 3))) {
 	    mprintf("!writeinfo: Can't get digital signature from remote server\n");
 	    fclose(fh);
@@ -515,7 +524,7 @@ static int script2cdiff(const char *script, const char *builder, const struct op
 {
 	char *cdiff, *pt, buffer[FILEBUFF];
 	unsigned char digest[32];
-	SHA256_CTX ctx;
+	void *ctx;
 	STATBUF sb;
 	FILE *scripth, *cdiffh;
 	gzFile gzh;
@@ -599,13 +608,19 @@ static int script2cdiff(const char *script, const char *builder, const struct op
 	return -1;
     }
 
-    sha256_init(&ctx);
+    ctx = cl_hash_init("sha256");
+    if (!(ctx)) {
+        unlink(cdiff);
+        free(cdiff);
+        fclose(cdiffh);
+        return -1;
+    }
 
     while((bytes = fread(buffer, 1, sizeof(buffer), cdiffh)))
-	sha256_update(&ctx, (unsigned char *) buffer, bytes);
+	cl_update_hash(ctx, (unsigned char *) buffer, bytes);
 
     fclose(cdiffh);
-    sha256_final(&ctx, digest);
+    cl_finish_hash(ctx, digest);
 
     if(!(pt = getdsig(optget(opts, "server")->strarg, builder, digest, 32, 2))) {
 	mprintf("!script2cdiff: Can't get digital signature from remote server\n");
@@ -793,6 +808,8 @@ static int build(const struct optstruct *opts)
 	version = oldcvd->version + 1;
 	oldsigs = oldcvd->sigs;
 	cl_cvdfree(oldcvd);
+    } else if (optget(opts, "cvd-version")->numarg != 0) {
+        version = optget(opts, "cvd-version")->numarg;
     } else {
 	mprintf("Version number: ");
 	if(scanf("%u", &version) == EOF) {
@@ -1509,6 +1526,7 @@ static int vbadump(const struct optstruct *opts)
     }
     if(!(ctx = convenience_ctx(fd))) {
 	close(fd);
+    free(dir);
 	return -1;
     }
     if(cli_ole2_extract(dir, ctx, &vba)) {
@@ -2522,6 +2540,15 @@ static int decodesig(char *sig, int fd)
 	    case 9:
 		mprintf("MACHO\n");
 		break;
+	    case 10:
+		mprintf("PDF\n");
+		break;
+	    case 11:
+		mprintf("FLASH\n");
+		break;
+	    case 12:
+		mprintf("JAVA CLASS\n");
+		break;
 	    default:
 		mprintf("!decodesig: Invalid target type\n");
 		return -1;
@@ -2788,7 +2815,6 @@ static int dumpcerts(const struct optstruct *opts)
     char * filename = NULL;
     STATBUF sb;
     const char * fmptr;
-    SHA1Context sha1;
     struct cl_engine *engine;
     cli_ctx ctx;
     int fd, ret;
@@ -2869,11 +2895,9 @@ static int dumpcerts(const struct optstruct *opts)
     }
 
     /* Generate SHA1 */
-    SHA1Init(&sha1);
-    SHA1Update(&sha1, fmptr, sb.st_size);
-    SHA1Final(&sha1, shash1);
+    cl_sha1(fmptr, sb.st_size, shash1, NULL);
 
-    ret = cli_checkfp_pe(&ctx, shash1);
+    ret = cli_checkfp_pe(&ctx, shash1, NULL, CL_CHECKFP_PE_FLAG_AUTHENTICODE);
     
     switch(ret) {
         case CL_CLEAN:
@@ -2903,9 +2927,9 @@ static int dumpcerts(const struct optstruct *opts)
 static void help(void)
 {
     mprintf("\n");
-    mprintf("             Clam AntiVirus: Signature Tool (sigtool)  %s\n", get_version());
-    printf("           By The ClamAV Team: http://www.clamav.net/team\n");
-    printf("           (C) 2007-2009 Sourcefire, Inc. et al.\n\n");
+    mprintf("Clam AntiVirus: Signature Tool (sigtool)  %s\n", get_version());
+    mprintf("       By The ClamAV Team: http://www.clamav.net/team\n");
+    mprintf("       (C) 2007-2009 Sourcefire, Inc. et al.\n\n");
 
     mprintf("    --help                 -h              show help\n");
     mprintf("    --version              -V              print version number and exit\n");
@@ -2925,23 +2949,36 @@ static void help(void)
     mprintf("    --utf16-decode=FILE                    decode UTF16 encoded files\n");
     mprintf("    --info=FILE            -i FILE         print database information\n");
     mprintf("    --build=NAME [cvd] -b NAME             build a CVD file\n");
-    mprintf("    --max-bad-sigs=NUMBER                  Maximum number of mismatched signatures when building a CVD. Default: 3000\n");
-    mprintf("    --flevel=FLEVEL                        Specify a custom flevel. Default: %u\n", cl_retflevel());
+    mprintf("    --max-bad-sigs=NUMBER                  Maximum number of mismatched signatures\n");
+    mprintf("                                           when building a CVD. Default: 3000\n");
+    mprintf("    --flevel=FLEVEL                        Specify a custom flevel.\n");
+    mprintf("                                           Default: %u\n", cl_retflevel());
+    mprintf("    --cvd-version=NUMBER                   Specify the version number to use for\n");
+    mprintf("                                           the build. Default is to use the value+1\n");
+    mprintf("                                           from the current CVD in --datadir.\n");
+    mprintf("                                           If no datafile is found the default\n");
+    mprintf("                                           behaviour is to prompt for a version\n");
+    mprintf("                                           number, this switch will prevent the\n");
+    mprintf("                                           prompt.  NOTE: If a CVD is found in the\n");
+    mprintf("                                           --datadir its version+1 is used and\n");
+    mprintf("                                           this value is ignored.\n");
     mprintf("    --no-cdiff                             Don't generate .cdiff file\n");
     mprintf("    --unsigned                             Create unsigned database file (.cud)\n");
     mprintf("    --print-certs=FILE                     Print Authenticode details from a PE\n");
     mprintf("    --server=ADDR                          ClamAV Signing Service address\n");
-    mprintf("    --datadir=DIR				Use DIR as default database directory\n");
+    mprintf("    --datadir=DIR                          Use DIR as default database directory\n");
     mprintf("    --unpack=FILE          -u FILE         Unpack a CVD/CLD file\n");
     mprintf("    --unpack-current=SHORTNAME             Unpack local CVD/CLD into cwd\n");
     mprintf("    --list-sigs[=FILE]     -l[FILE]        List signature names\n");
     mprintf("    --find-sigs=REGEX      -fREGEX         Find signatures matching REGEX\n");
     mprintf("    --decode-sigs                          Decode signatures from stdin\n");
-    mprintf("    --test-sigs=DATABASE TARGET_FILE       Test signatures from DATABASE against TARGET_FILE\n");
+    mprintf("    --test-sigs=DATABASE TARGET_FILE       Test signatures from DATABASE against \n");
+    mprintf("                                           TARGET_FILE\n");
     mprintf("    --vba=FILE                             Extract VBA/Word6 macro code\n");
     mprintf("    --vba-hex=FILE                         Extract Word6 macro code with hex values\n");
     mprintf("    --diff=OLD NEW         -d OLD NEW      Create diff for OLD and NEW CVDs\n");
-    mprintf("    --compare=OLD NEW      -c OLD NEW      Show diff between OLD and NEW files in cdiff format\n");
+    mprintf("    --compare=OLD NEW      -c OLD NEW      Show diff between OLD and NEW files in\n");
+    mprintf("                                           cdiff format\n");
     mprintf("    --run-cdiff=FILE       -r FILE         Execute update script FILE in cwd\n");
     mprintf("    --verify-cdiff=DIFF CVD/CLD            Verify DIFF against CVD/CLD\n");
     mprintf("\n");
@@ -2957,6 +2994,8 @@ int main(int argc, char **argv)
 
     if(check_flevel())
 	exit(1);
+
+    cl_initialize_crypto();
 
     if((ret = cl_init(CL_INIT_DEFAULT)) != CL_SUCCESS) {
 	mprintf("!Can't initialize libclamav: %s\n", cl_strerror(ret));

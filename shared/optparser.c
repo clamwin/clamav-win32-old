@@ -38,6 +38,10 @@
 #endif
 #include <ctype.h>
 
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+#include "libclamav/crypto.h"
+
 #include "shared/optparser.h"
 #include "shared/misc.h"
 
@@ -77,7 +81,6 @@ const struct clam_option __clam_options[] = {
     { NULL, "daemon", 'd', TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_FRESHCLAM, "", "" },
     { NULL, "no-dns", 0, TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_FRESHCLAM, "", "" },
     { NULL, "list-mirrors", 0, TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_FRESHCLAM, "", "" },
-    { NULL, "submit-stats", 0, TYPE_STRING, NULL, 0, CONFDIR_CLAMD, 0, OPT_FRESHCLAM, "", "" }, /* Don't merge this one with SubmitDetectionStats */
     { NULL, "update-db", 0, TYPE_STRING, NULL, -1, NULL, FLAG_MULTIPLE, OPT_FRESHCLAM, "", "" },
     { NULL, "reload", 0, TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_CLAMDSCAN, "", "" },
     { NULL, "multiscan", 'm', TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_CLAMDSCAN, "", "" },
@@ -113,6 +116,7 @@ const struct clam_option __clam_options[] = {
     { NULL, "build", 'b', TYPE_STRING, NULL, -1, NULL, 0, OPT_SIGTOOL, "", "" },
     { NULL, "max-bad-sigs", 0, TYPE_NUMBER, MATCH_NUMBER, 3000, NULL, 0, OPT_SIGTOOL, "Maximum number of mismatched signatures when building a CVD. Zero disables this limit.", "3000" },
     { NULL, "flevel", 0, TYPE_NUMBER, MATCH_NUMBER, CL_FLEVEL, NULL, 0, OPT_SIGTOOL, "Feature level to put in the CVD", "" },
+    { NULL, "cvd-version", 0, TYPE_NUMBER, MATCH_NUMBER, 0, NULL, 0, OPT_SIGTOOL, "Version number of the CVD to build", "" },
     { NULL, "unsigned", 0, TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_SIGTOOL, "", "" },
     { NULL, "no-cdiff", 0, TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_SIGTOOL, "", "" },
     { NULL, "server", 0, TYPE_STRING, NULL, -1, NULL, 0, OPT_SIGTOOL, "", "" },
@@ -193,6 +197,14 @@ const struct clam_option __clam_options[] = {
     /* config file/cmdline options */
     { "LogFile", "log", 'l', TYPE_STRING, NULL, -1, NULL, 0, OPT_CLAMD | OPT_MILTER | OPT_CLAMSCAN | OPT_CLAMDSCAN, "Save all reports to a log file.", "/tmp/clamav.log" },
 
+    { "StatsHostID", "stats-host-id", 0, TYPE_STRING, NULL, -1, NULL, 0, OPT_FRESHCLAM | OPT_CLAMD | OPT_CLAMSCAN, "HostID in the form of an UUID to use when submitting statistical information. See the clamscan manpage for more information.", "default" },
+
+    { "StatsEnabled", "enable-stats", 0, TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_CLAMD | OPT_FRESHCLAM | OPT_CLAMSCAN, "Enable submission of statistical data", "yes" },
+
+    { "StatsPEDisabled", "disable-pe-stats", 0, TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_CLAMD | OPT_CLAMSCAN, "Disable submission of PE section statistical data", "no" },
+
+    { "StatsTimeout", "stats-timeout", 0, TYPE_NUMBER, MATCH_NUMBER, -1, NULL, 0, OPT_CLAMD | OPT_CLAMSCAN | OPT_FRESHCLAM, "Timeout in seconds to timeout communication with the stats server.", "10" },
+
     { "LogFileUnlock", NULL, 0, TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_CLAMD | OPT_MILTER, "By default the log file is locked for writing and only a single\ndaemon process can write to it. This option disables the lock.", "yes" },
 
     { "LogFileMaxSize", NULL, 0, TYPE_SIZE, MATCH_SIZE, 1048576, NULL, 0, OPT_CLAMD | OPT_FRESHCLAM | OPT_MILTER, "Maximum size of the log file.\nValue of 0 disables the limit.", "5M" },
@@ -230,7 +242,7 @@ const struct clam_option __clam_options[] = {
     { "TCPSocket", NULL, 0, TYPE_NUMBER, MATCH_NUMBER, -1, NULL, 0, OPT_CLAMD, "A TCP port number the daemon will listen on.", "3310" },
 
     /* FIXME: add a regex for IP addr */
-    { "TCPAddr", NULL, 0, TYPE_STRING, NULL, -1, NULL, 0, OPT_CLAMD, "By default clamd binds to INADDR_ANY.\nThis option allows you to restrict the TCP address and provide\nsome degree of protection from the outside world.", "127.0.0.1" },
+    { "TCPAddr", NULL, 0, TYPE_STRING, NULL, -1, NULL, FLAG_MULTIPLE, OPT_CLAMD, "By default clamd binds to INADDR_ANY.\nThis option allows you to restrict the TCP address and provide\nsome degree of protection from the outside world.", "127.0.0.1" },
 
     { "MaxConnectionQueueLength", NULL, 0, TYPE_NUMBER, MATCH_NUMBER, 200, NULL, 0, OPT_CLAMD, "Maximum length the queue of pending connections may grow to.", "30" },
 
@@ -266,6 +278,8 @@ const struct clam_option __clam_options[] = {
 
     { "SelfCheck", NULL, 0, TYPE_NUMBER, MATCH_NUMBER, 600, NULL, 0, OPT_CLAMD, "This option specifies the time intervals (in seconds) in which clamd\nshould perform a database check.", "600" },
 
+    { "DisableCache", "disable-cache", 0, TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_CLAMD | OPT_CLAMSCAN, "This option allows you to disable clamd's caching feature.", "no" },
+
     { "VirusEvent", NULL, 0, TYPE_STRING, NULL, -1, NULL, 0, OPT_CLAMD, "Execute a command when a virus is found. In the command string %v will be\nreplaced with the virus name. Additionally, two environment variables will\nbe defined: $CLAM_VIRUSEVENT_FILENAME and $CLAM_VIRUSEVENT_VIRUSNAME.", "/usr/bin/mailx -s \"ClamAV VIRUS ALERT: %v\" alert < /dev/null" },
 
     { "ExitOnOOM", NULL, 0, TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_CLAMD, "Stop the daemon when libclamav reports an out of memory condition.", "yes" },
@@ -297,7 +311,7 @@ const struct clam_option __clam_options[] = {
     { "BytecodeMode", "bytecode-mode", 0, TYPE_STRING, "^(Auto|ForceJIT|ForceInterpreter|Test)$", -1, "Auto", FLAG_REQUIRED, OPT_CLAMD | OPT_CLAMSCAN,
 	"Set bytecode execution mode.\nPossible values:\n\tAuto - automatically choose JIT if possible, fallback to interpreter\nForceJIT - always choose JIT, fail if not possible\nForceIntepreter - always choose interpreter\nTest - run with both JIT and interpreter and compare results. Make all failures fatal.","Auto"},
 
-    { "BytecodeStatistics", "bytecode-statistics", 0, TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_CLAMSCAN, "Collect and print bytecode execution statistics.", "no" },
+    { "BytecodeStatistics", "bytecode-statistics", 0, TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_CLAMSCAN | OPT_CLAMBC, "Collect and print bytecode execution statistics.", "no" },
 
    { "DetectPUA", "detect-pua", 0, TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_CLAMD | OPT_CLAMSCAN, "Detect Potentially Unwanted Applications.", "yes" },
 
@@ -324,6 +338,8 @@ const struct clam_option __clam_options[] = {
     { "PhishingAlwaysBlockCloak", "phishing-cloak", 0, TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_CLAMD | OPT_CLAMSCAN, "Always block cloaked URLs, even if they're not in the database.\nThis feature can lead to false positives.", "no" },
 
     { "PhishingAlwaysBlockSSLMismatch", "phishing-ssl", 0, TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_CLAMD | OPT_CLAMSCAN, "Always block SSL mismatches in URLs, even if they're not in the database.\nThis feature can lead to false positives.", "" },
+
+    { "PartitionIntersection", "partition-intersection", 0, TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_CLAMD | OPT_CLAMSCAN, "Detect partition intersections in raw disk images using heuristics.", "yes" },
 
     { "HeuristicScanPrecedence", "heuristic-scan-precedence", 0, TYPE_BOOL, MATCH_BOOL, 0, NULL, 0, OPT_CLAMD | OPT_CLAMSCAN, "Allow heuristic match to take precedence.\nWhen enabled, if a heuristic scan (such as phishingScan) detects\na possible virus/phish it will stop scan immediately. Recommended, saves CPU\nscan-time.\nWhen disabled, virus/phish detected by heuristic scans will be reported only\nat the end of a scan. If an archive contains both a heuristically detected\nvirus/phish, and a real malware, the real malware will be reported.\nKeep this disabled if you intend to handle \"*.Heuristics.*\" viruses\ndifferently from \"real\" malware.\nIf a non-heuristically-detected virus (signature-based) is found first,\nthe scan is interrupted immediately, regardless of this config option.", "yes" },
 
@@ -371,6 +387,10 @@ const struct clam_option __clam_options[] = {
     { "MaxScriptNormalize", "max-scriptnormalize", 0, TYPE_SIZE, MATCH_SIZE, CLI_DEFAULT_MAXSCRIPTNORMALIZE, NULL, 0, OPT_CLAMD | OPT_CLAMSCAN, "This option sets the maximum size of a script file to normalize.\nScript content larger than this value will not be normalized or scanned.\nNegative values are not allowed.\nWARNING: setting this limit too high may result in severe damage or impact performance.", "5M" },
 
     { "MaxZipTypeRcg", "max-ziptypercg", 0, TYPE_SIZE, MATCH_SIZE, CLI_DEFAULT_MAXZIPTYPERCG, NULL, 0, OPT_CLAMD | OPT_CLAMSCAN, "This option sets the maximum size of a ZIP file to reanalyze type recognition.\nZIP files larger than this value will skip the step to potentially reanalyze as PE.\nNegative values are not allowed.\nWARNING: setting this limit too high may result in severe damage or impact performance.", "1M" },
+
+    { "MaxPartitions", "max-partitions", 0, TYPE_NUMBER, MATCH_NUMBER, CLI_DEFAULT_MAXPARTITIONS, NULL, 0, OPT_CLAMD | OPT_CLAMSCAN, "This option sets the maximum number of partitions of a raw disk image to be scanned.\nRaw disk images with more partitions than this value will have up to the value number partitions scanned.\nNegative values are not allowed.\nWARNING: setting this limit too high may result in severe damage or impact performance.", "128" },
+
+    { "MaxIconsPE", "max-iconspe", 0, TYPE_NUMBER, MATCH_NUMBER, CLI_DEFAULT_MAXICONSPE, NULL, 0, OPT_CLAMD | OPT_CLAMSCAN, "This option sets the maximum number of icons within a PE to be scanned.\nPE files with more icons than this value will have up to the value number icons scanned.\nNegative values are not allowed.\nWARNING: setting this limit too high may result in severe damage or impact performance.", "100" },
 
     /* OnAccess settings */
     { "ScanOnAccess", NULL, 0, TYPE_BOOL, MATCH_BOOL, -1, NULL, 0, OPT_CLAMD, "This option enables on-access scanning (Linux only)", "no" },
@@ -1135,5 +1155,177 @@ struct optstruct *optparse(const char *cfgfile, int argc, char **argv, int verbo
 
     /* optprint(opts); */
 
+    return opts;
+}
+
+struct optstruct *optadditem(const char *name, const char *arg, int verbose, int toolmask, int ignore,
+                            struct optstruct *oldopts)
+{
+	int i, err = 0, sc = 0, lc=0, line = 0, ret;
+	struct optstruct *opts = NULL, *opts_last = NULL, *opt;
+	char *buff;
+	regex_t regex;
+	long long numarg, lnumarg;
+	int regflags = REG_EXTENDED | REG_NOSUB;
+    const struct clam_option *optentry = NULL;
+    
+    if(oldopts)
+        opts = oldopts;
+    
+    
+    for(i = 0; ; i++) {
+        optentry = &clam_options[i];
+        if(!optentry->name && !optentry->longopt)
+            break;
+        
+        if(((optentry->owner & toolmask) && ((optentry->owner & toolmask) != OPT_DEPRECATED)) || (ignore && (optentry->owner & ignore))) {
+            if(!oldopts && optadd(&opts, &opts_last, optentry->name, optentry->longopt, optentry->strarg, optentry->numarg, optentry->flags, i) < 0) {
+                fprintf(stderr, "ERROR: optparse: Can't register new option (not enough memory)\n");
+                optfree(opts);
+                return NULL;
+            }
+            
+        }
+    }
+    
+    if(MAX(sc, lc) > MAXCMDOPTS) {
+	    fprintf(stderr, "ERROR: optparse: (short|long)opts[] is too small\n");
+	    optfree(opts);
+	    return NULL;
+	}
+    
+    while(1) {
+        if(!name) {
+            fprintf(stderr, "ERROR: Problem parsing options (name == NULL)\n");
+            err = 1;
+            break;
+        }
+        
+        opt = optget_i(opts, name);
+        if(!opt) {
+            if(verbose)
+                fprintf(stderr, "ERROR: Parse error at line %d: Unknown option %s\n", line, name);
+            err = 1;
+            break;
+        }
+        optentry = &clam_options[opt->idx];
+        
+        if(ignore && (optentry->owner & ignore) && !(optentry->owner & toolmask)) {
+            if(verbose)
+                fprintf(stderr, "WARNING: Ignoring unsupported option %s at line %u\n", opt->name, line);
+            continue;
+        }
+        
+        if(optentry->owner & OPT_DEPRECATED) {
+            if(toolmask & OPT_DEPRECATED) {
+                if(optaddarg(opts, name, "foo", 1) < 0) {
+                    fprintf(stderr, "ERROR: Can't register argument for option %s\n", name);
+                    err = 1;
+                    break;
+                }
+            } else {
+                if(verbose)
+                    fprintf(stderr, "WARNING: Ignoring deprecated option %s at line %u\n", opt->name, line);
+            }
+            continue;
+        }
+        
+        if(optentry->regex) {
+            if(!(optentry->flags & FLAG_REG_CASE))
+                regflags |= REG_ICASE;
+            
+            if(cli_regcomp(&regex, optentry->regex, regflags)) {
+                fprintf(stderr, "ERROR: optparse: Can't compile regular expression %s for option %s\n", optentry->regex, name);
+                err = 1;
+                break;
+            }
+            ret = cli_regexec(&regex, arg, 0, NULL, 0);
+            cli_regfree(&regex);
+            if(ret == REG_NOMATCH) {
+                fprintf(stderr, "ERROR: Incorrect argument format for option %s\n", name);
+                err = 1;
+                break;
+            }
+        }
+        
+        numarg = -1;
+        switch(optentry->argtype) {
+            case TYPE_STRING:
+                if(!arg)
+                    arg = optentry->strarg;
+                
+                break;
+                
+            case TYPE_NUMBER:
+                if (arg)
+                    numarg = atoi(arg);
+                else
+                    numarg = 0;
+                arg = NULL;
+                break;
+                
+            case TYPE_SIZE:
+                errno = 0;
+                if(arg)
+                    lnumarg = strtoul(arg, &buff, 0);
+                else {
+                    numarg = 0;
+                    break;
+                }
+                if(errno != ERANGE) {
+                    switch(*buff) {
+                        case 'M':
+                        case 'm':
+                            if(lnumarg <= UINT_MAX/(1024*1024)) lnumarg *= 1024*1024;
+                            else errno = ERANGE;
+                            break;
+                        case 'K':
+                        case 'k':
+                            if(lnumarg <= UINT_MAX/1024) lnumarg *= 1024;
+                            else errno = ERANGE;
+                            break;
+                        case '\0':
+                            break;
+                        default:
+                            fprintf(stderr, "ERROR: Can't parse numerical argument for option %s\n", name);
+                            err = 1;
+                    }
+                }
+                
+                arg = NULL;
+                if(err) break;
+                if(errno == ERANGE) {
+                    fprintf(stderr, "WARNING: Numerical value for option %s too high, resetting to 4G\n", name);
+                    lnumarg = UINT_MAX;
+                }
+                
+                numarg = lnumarg ? lnumarg : UINT_MAX;
+                break;
+                
+            case TYPE_BOOL:
+                if(!strcasecmp(arg, "yes") || !strcmp(arg, "1") || !strcasecmp(arg, "true"))
+                    numarg = 1;
+                else
+                    numarg = 0;
+                
+                arg = NULL;
+                break;
+        }
+        
+        if(err)
+            break;
+        
+        if(optaddarg(opts, name, arg, numarg) < 0) {
+            fprintf(stderr, "ERROR: Can't register argument for option --%s\n", optentry->longopt);
+            err = 1;
+        }
+        break;
+    }
+    
+    if(err) {
+        optfree(opts);
+        return NULL;
+    }
+      
     return opts;
 }

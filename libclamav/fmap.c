@@ -41,6 +41,10 @@
 #include <pthread.h>
 #endif
 
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+#include "libclamav/crypto.h"
+
 #include "others.h"
 #include "cltypes.h"
 
@@ -251,6 +255,10 @@ extern cl_fmap_t *cl_fmap_open_handle(void *handle, size_t offset, size_t len,
 #endif /* ANONYMOUS_MAP */
     if (!use_aging) {
 	m = (fmap_t *)cli_malloc(mapsz);
+    if (!(m)) {
+        cli_warnmsg("fmap: map allocation failed\n");
+        return NULL;
+    }
 	memset(m, 0, hdrsz);
     }
     if(!m) {

@@ -95,6 +95,60 @@ am__aclocal_m4_deps = $(top_srcdir)/m4/acinclude.m4 \
 	$(top_srcdir)/m4/ltsugar.m4 $(top_srcdir)/m4/ltversion.m4 \
 	$(top_srcdir)/m4/lt~obsolete.m4 \
 	$(top_srcdir)/m4/mmap_private.m4 $(top_srcdir)/m4/resolv.m4 \
+	$(top_srcdir)/m4/reorganization/version.m4 \
+	$(top_srcdir)/m4/reorganization/build_tools.m4 \
+	$(top_srcdir)/m4/reorganization/headers.m4 \
+	$(top_srcdir)/m4/reorganization/c_options.m4 \
+	$(top_srcdir)/m4/reorganization/compiler_checks.m4 \
+	$(top_srcdir)/m4/reorganization/linker_checks.m4 \
+	$(top_srcdir)/m4/reorganization/code_checks/functions.m4 \
+	$(top_srcdir)/m4/reorganization/code_checks/mpool.m4 \
+	$(top_srcdir)/m4/reorganization/code_checks/unit_tests.m4 \
+	$(top_srcdir)/m4/reorganization/code_checks/coverage.m4 \
+	$(top_srcdir)/m4/reorganization/libs/xml.m4 \
+	$(top_srcdir)/m4/reorganization/libs/openssl.m4 \
+	$(top_srcdir)/m4/reorganization/libs/libz.m4 \
+	$(top_srcdir)/m4/reorganization/libs/bzip.m4 \
+	$(top_srcdir)/m4/reorganization/libs/unrar.m4 \
+	$(top_srcdir)/m4/reorganization/code_checks/ipv6.m4 \
+	$(top_srcdir)/m4/reorganization/code_checks/dns.m4 \
+	$(top_srcdir)/m4/reorganization/code_checks/fanotify.m4 \
+	$(top_srcdir)/m4/reorganization/code_checks/setpgrp.m4 \
+	$(top_srcdir)/m4/reorganization/milter/enable.m4 \
+	$(top_srcdir)/m4/reorganization/code_checks/iconv.m4 \
+	$(top_srcdir)/m4/reorganization/code_checks/pthreads.m4 \
+	$(top_srcdir)/m4/reorganization/code_checks/reentrant.m4 \
+	$(top_srcdir)/m4/reorganization/utility_checks/id.m4 \
+	$(top_srcdir)/m4/reorganization/utility_checks/yp.m4 \
+	$(top_srcdir)/m4/reorganization/usergroup.m4 \
+	$(top_srcdir)/m4/reorganization/debug.m4 \
+	$(top_srcdir)/m4/reorganization/customversion.m4 \
+	$(top_srcdir)/m4/reorganization/nocache.m4 \
+	$(top_srcdir)/m4/reorganization/dns.m4 \
+	$(top_srcdir)/m4/reorganization/bigstack.m4 \
+	$(top_srcdir)/m4/reorganization/dbdir.m4 \
+	$(top_srcdir)/m4/reorganization/cfgdir.m4 \
+	$(top_srcdir)/m4/reorganization/code_checks/in_port_t.m4 \
+	$(top_srcdir)/m4/reorganization/code_checks/in_addr_t.m4 \
+	$(top_srcdir)/m4/reorganization/os_checks.m4 \
+	$(top_srcdir)/m4/reorganization/milter/check.m4 \
+	$(top_srcdir)/m4/reorganization/code_checks/pthread_02.m4 \
+	$(top_srcdir)/m4/reorganization/code_checks/readdir.m4 \
+	$(top_srcdir)/m4/reorganization/code_checks/ctime.m4 \
+	$(top_srcdir)/m4/reorganization/code_checks/socklen_t.m4 \
+	$(top_srcdir)/m4/reorganization/clamav_user.m4 \
+	$(top_srcdir)/m4/reorganization/code_checks/compiler_attribs.m4 \
+	$(top_srcdir)/m4/reorganization/code_checks/select.m4 \
+	$(top_srcdir)/m4/reorganization/code_checks/stat64.m4 \
+	$(top_srcdir)/m4/reorganization/code_checks/shift.m4 \
+	$(top_srcdir)/m4/reorganization/code_checks/features.m4 \
+	$(top_srcdir)/m4/reorganization/clamdtop.m4 \
+	$(top_srcdir)/m4/reorganization/distcheck.m4 \
+	$(top_srcdir)/m4/reorganization/llvm.m4 \
+	$(top_srcdir)/m4/reorganization/sha_collect.m4 \
+	$(top_srcdir)/m4/reorganization/bsd.m4 \
+	$(top_srcdir)/m4/reorganization/libs/curl.m4 \
+	$(top_srcdir)/m4/reorganization/substitutions.m4 \
 	$(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
@@ -183,25 +237,28 @@ am_libclamav_la_OBJECTS = libclamav_la-matcher-ac.lo \
 	libclamav_la-uniq.lo libclamav_la-version.lo \
 	libclamav_la-mpool.lo libclamav_la-filtering.lo \
 	libclamav_la-fmap.lo libclamav_la-perflogging.lo \
-	libclamav_la-sha256.lo libclamav_la-sha1.lo \
 	libclamav_la-bytecode.lo libclamav_la-bytecode_vm.lo \
 	libclamav_la-cpio.lo libclamav_la-macho.lo \
 	libclamav_la-ishield.lo libclamav_la-bytecode_api.lo \
 	libclamav_la-bytecode_api_decl.lo libclamav_la-cache.lo \
 	libclamav_la-bytecode_detect.lo libclamav_la-events.lo \
 	libclamav_la-adc.lo libclamav_la-dmg.lo libclamav_la-xar.lo \
-	libclamav_la-xz_iface.lo libclamav_la-sf_base64decode.lo \
-	libclamav_la-hfsplus.lo libclamav_la-swf.lo \
-	libclamav_la-jpeg.lo libclamav_la-png.lo \
+	libclamav_la-mbr.lo libclamav_la-gpt.lo libclamav_la-apm.lo \
+	libclamav_la-prtn_intxn.lo libclamav_la-xz_iface.lo \
+	libclamav_la-sf_base64decode.lo libclamav_la-hfsplus.lo \
+	libclamav_la-swf.lo libclamav_la-jpeg.lo libclamav_la-png.lo \
 	libclamav_la-iso9660.lo libclamav_la-arc4.lo \
 	libclamav_la-rijndael.lo libclamav_la-crtmgr.lo \
-	libclamav_la-asn1.lo libclamav_la-fp_add.lo \
-	libclamav_la-fp_add_d.lo libclamav_la-fp_addmod.lo \
-	libclamav_la-fp_cmp.lo libclamav_la-fp_cmp_d.lo \
-	libclamav_la-fp_cmp_mag.lo libclamav_la-fp_sub.lo \
-	libclamav_la-fp_sub_d.lo libclamav_la-fp_submod.lo \
-	libclamav_la-s_fp_add.lo libclamav_la-s_fp_sub.lo \
-	libclamav_la-fp_radix_size.lo libclamav_la-fp_read_radix.lo \
+	libclamav_la-asn1.lo libclamav_la-fpu.lo libclamav_la-stats.lo \
+	libclamav_la-www.lo libclamav_la-json.lo \
+	libclamav_la-hostid.lo libclamav_la-openioc.lo \
+	libclamav_la-fp_add.lo libclamav_la-fp_add_d.lo \
+	libclamav_la-fp_addmod.lo libclamav_la-fp_cmp.lo \
+	libclamav_la-fp_cmp_d.lo libclamav_la-fp_cmp_mag.lo \
+	libclamav_la-fp_sub.lo libclamav_la-fp_sub_d.lo \
+	libclamav_la-fp_submod.lo libclamav_la-s_fp_add.lo \
+	libclamav_la-s_fp_sub.lo libclamav_la-fp_radix_size.lo \
+	libclamav_la-fp_read_radix.lo \
 	libclamav_la-fp_read_signed_bin.lo \
 	libclamav_la-fp_read_unsigned_bin.lo \
 	libclamav_la-fp_reverse.lo libclamav_la-fp_s_rmap.lo \
@@ -253,11 +310,12 @@ am__v_lt_0 = --silent
 libclamav_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(libclamav_la_CFLAGS) \
 	$(CFLAGS) $(libclamav_la_LDFLAGS) $(LDFLAGS) -o $@
-libclamav_internal_utils_la_LIBADD =
+libclamav_internal_utils_la_DEPENDENCIES =
 am_libclamav_internal_utils_la_OBJECTS =  \
 	libclamav_internal_utils_la-str.lo \
+	libclamav_internal_utils_la-conv.lo \
+	libclamav_internal_utils_la-crypto.lo \
 	libclamav_internal_utils_la-iowrap.lo \
-	libclamav_internal_utils_la-md5.lo \
 	libclamav_internal_utils_la-others_common.lo \
 	libclamav_internal_utils_la-qsort.lo \
 	libclamav_internal_utils_la-strlcpy.lo \
@@ -271,11 +329,12 @@ libclamav_internal_utils_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
 	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
 	$(libclamav_internal_utils_la_CFLAGS) $(CFLAGS) \
 	$(libclamav_internal_utils_la_LDFLAGS) $(LDFLAGS) -o $@
-libclamav_internal_utils_nothreads_la_LIBADD =
+libclamav_internal_utils_nothreads_la_DEPENDENCIES =
 am_libclamav_internal_utils_nothreads_la_OBJECTS =  \
 	libclamav_internal_utils_nothreads_la-str.lo \
+	libclamav_internal_utils_nothreads_la-conv.lo \
+	libclamav_internal_utils_nothreads_la-crypto.lo \
 	libclamav_internal_utils_nothreads_la-iowrap.lo \
-	libclamav_internal_utils_nothreads_la-md5.lo \
 	libclamav_internal_utils_nothreads_la-others_common.lo \
 	libclamav_internal_utils_nothreads_la-qsort.lo \
 	libclamav_internal_utils_nothreads_la-strlcpy.lo \
@@ -291,8 +350,12 @@ libclamav_internal_utils_nothreads_la_LINK = $(LIBTOOL) $(AM_V_lt) \
 	$(CFLAGS) $(libclamav_internal_utils_nothreads_la_LDFLAGS) \
 	$(LDFLAGS) -o $@
 libclamav_nocxx_la_LIBADD =
-am_libclamav_nocxx_la_OBJECTS = bytecode_nojit.lo
+am_libclamav_nocxx_la_OBJECTS = libclamav_nocxx_la-bytecode_nojit.lo
 libclamav_nocxx_la_OBJECTS = $(am_libclamav_nocxx_la_OBJECTS)
+libclamav_nocxx_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
+	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
+	$(libclamav_nocxx_la_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
+	$(LDFLAGS) -o $@
 libclamunrar_la_LIBADD =
 am__libclamunrar_la_SOURCES_DIST = ../libclamunrar/unrar15.c \
 	../libclamunrar/unrar20.h ../libclamunrar/unrar.h \
@@ -426,9 +489,24 @@ CHECK_CPPFLAGS = @CHECK_CPPFLAGS@
 CHECK_LIBS = @CHECK_LIBS@
 CLAMAVGROUP = @CLAMAVGROUP@
 CLAMAVUSER = @CLAMAVUSER@
+CLAMAV_MILTER_CPPFLAGS = @CLAMAV_MILTER_CPPFLAGS@
 CLAMAV_MILTER_LIBS = @CLAMAV_MILTER_LIBS@
+CLAMBC_CPPFLAGS = @CLAMBC_CPPFLAGS@
+CLAMBC_LIBS = @CLAMBC_LIBS@
+CLAMCONF_CPPFLAGS = @CLAMCONF_CPPFLAGS@
+CLAMCONF_LIBS = @CLAMCONF_LIBS@
+CLAMDSCAN_CPPFLAGS = @CLAMDSCAN_CPPFLAGS@
 CLAMDSCAN_LIBS = @CLAMDSCAN_LIBS@
+CLAMDTOP_CPPFLAGS = @CLAMDTOP_CPPFLAGS@
+CLAMDTOP_LIBS = @CLAMDTOP_LIBS@
+CLAMD_CPPFLAGS = @CLAMD_CPPFLAGS@
 CLAMD_LIBS = @CLAMD_LIBS@
+CLAMMEM_CPPFLAGS = @CLAMMEM_CPPFLAGS@
+CLAMMEM_LIBS = @CLAMMEM_LIBS@
+CLAMSCAN_CPPFLAGS = @CLAMSCAN_CPPFLAGS@
+CLAMSCAN_LIBS = @CLAMSCAN_LIBS@
+CLAMSUBMIT_CFLAGS = @CLAMSUBMIT_CFLAGS@
+CLAMSUBMIT_LIBS = @CLAMSUBMIT_LIBS@
 CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
 CURSES_CPPFLAGS = @CURSES_CPPFLAGS@
@@ -446,6 +524,7 @@ ECHO_T = @ECHO_T@
 EGREP = @EGREP@
 EXEEXT = @EXEEXT@
 FGREP = @FGREP@
+FRESHCLAM_CPPFLAGS = @FRESHCLAM_CPPFLAGS@
 FRESHCLAM_LIBS = @FRESHCLAM_LIBS@
 GCOV = @GCOV@
 GENHTML = @GENHTML@
@@ -467,8 +546,10 @@ LIBADD_DLOPEN = @LIBADD_DLOPEN@
 LIBADD_SHL_LOAD = @LIBADD_SHL_LOAD@
 LIBBZ2 = @LIBBZ2@
 LIBBZ2_PREFIX = @LIBBZ2_PREFIX@
+LIBCLAMAV_CPPFLAGS = @LIBCLAMAV_CPPFLAGS@
 LIBCLAMAV_LIBS = @LIBCLAMAV_LIBS@
 LIBCLAMAV_VERSION = @LIBCLAMAV_VERSION@
+LIBCLAMSHARED_CPPFLAGS = @LIBCLAMSHARED_CPPFLAGS@
 LIBLTDL = @LIBLTDL@
 LIBM = @LIBM@
 LIBOBJS = @LIBOBJS@
@@ -506,6 +587,10 @@ RANLIB = @RANLIB@
 SED = @SED@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
+SIGTOOL_CPPFLAGS = @SIGTOOL_CPPFLAGS@
+SSL_CPPFLAGS = @SSL_CPPFLAGS@
+SSL_LDFLAGS = @SSL_LDFLAGS@
+SSL_LIBS = @SSL_LIBS@
 STRIP = @STRIP@
 THREAD_LIBS = @THREAD_LIBS@
 TH_SAFE = @TH_SAFE@
@@ -619,10 +704,13 @@ EXTRA_DIST = c++/Makefile.nollvm.in $(am__append_4) regex/engine.c \
 @ENABLE_UNRAR_TRUE@IFACEDEP = libclamunrar_iface.la
 libclamav_internal_utils_la_SOURCES = str.c\
 				    str.h\
+					conv.c \
+					conv.h \
+					crypto.c \
+					crypto.h \
+					clamav.h \
 				    iowrap.c \
 				    iowrap.h \
-				    md5.c\
-				    md5.h\
 				    others_common.c \
 				    others.h \
 				    qsort.c \
@@ -637,14 +725,18 @@ libclamav_internal_utils_la_SOURCES = str.c\
 				    regex/regex2.h \
 				    regex/utils.h
 
-libclamav_internal_utils_la_LDFLAGS = -static
-libclamav_internal_utils_la_CFLAGS = $(AM_CFLAGS)  -fPIC -DPIC
+libclamav_internal_utils_la_LDFLAGS = -static @SSL_LDFLAGS@
+libclamav_internal_utils_la_CFLAGS = $(AM_CFLAGS)  -fPIC -DPIC @SSL_CPPFLAGS@
+libclamav_internal_utils_la_LIBADD = @SSL_LIBS@
 libclamav_internal_utils_nothreads_la_SOURCES = str.c\
+					conv.c \
+					conv.h \
+					crypto.c \
+					crypto.h \
+					clamav.h \
 				    str.h\
 				    iowrap.c \
 				    iowrap.h \
-				    md5.c\
-				    md5.h\
 				    others_common.c \
 				    others.h \
 				    qsort.c \
@@ -659,21 +751,24 @@ libclamav_internal_utils_nothreads_la_SOURCES = str.c\
 				    regex/regex2.h \
 				    regex/utils.h
 
-libclamav_internal_utils_nothreads_la_LDFLAGS = -static
-libclamav_internal_utils_nothreads_la_CFLAGS = $(AM_CFLAGS) -DCL_NOTHREADS
+libclamav_internal_utils_nothreads_la_LDFLAGS = -static @SSL_LDFLAGS@
+libclamav_internal_utils_nothreads_la_CFLAGS = $(AM_CFLAGS) -DCL_NOTHREADS @SSL_CPPFLAGS@
+libclamav_internal_utils_nothreads_la_LIBADD = @SSL_LIBS@
 @ENABLE_LLVM_FALSE@LLVMLIBADD = libclamav_nocxx.la
 @ENABLE_LLVM_TRUE@LLVMLIBADD = c++/libclamavcxx.la -lstdc++ -lm
 @ENABLE_LLVM_FALSE@LLVMDEP = libclamav_nocxx.la
 @ENABLE_LLVM_TRUE@LLVMDEP = c++/libclamavcxx.la
 @ENABLE_LLVM_TRUE@SUBDIRS = c++
 libclamav_nocxx_la_SOURCES = bytecode_nojit.c
-libclamav_la_LIBADD = @LIBLTDL@ $(IFACELIBADD) $(LLVMLIBADD) libclamav_internal_utils.la @LIBCLAMAV_LIBS@ @THREAD_LIBS@ @LIBM@
+libclamav_nocxx_la_CFLAGS = $(AM_CFLAGS) @SSL_CPPFLAGS@
+libclamav_la_LIBADD = @SSL_LIBS@ @LIBCLAMAV_LIBS@ @LIBLTDL@ $(IFACELIBADD) $(LLVMLIBADD) libclamav_internal_utils.la @THREAD_LIBS@ @LIBM@
 libclamav_la_DEPENDENCIES = @LTDLDEPS@ $(IFACEDEP) $(LLVMDEP) libclamav_internal_utils.la
-libclamav_la_CFLAGS = $(AM_CFLAGS) $(XML_CPPFLAGS) -DSEARCH_LIBDIR=\"$(libdir)\"
-libclamav_la_LDFLAGS = @TH_SAFE@ $(XML_LIBS) -version-info \
-	@LIBCLAMAV_VERSION@ -no-undefined $(am__append_6)
+libclamav_la_CFLAGS = $(AM_CFLAGS) $(XML_CPPFLAGS) -DSEARCH_LIBDIR=\"$(libdir)\" @LIBCLAMAV_CPPFLAGS@
+libclamav_la_LDFLAGS = @SSL_LDFLAGS@ @TH_SAFE@ $(XML_LIBS) \
+	-version-info @LIBCLAMAV_VERSION@ -no-undefined \
+	$(am__append_6)
 include_HEADERS = clamav.h
-libclamav_la_SOURCES = clamav.h matcher-ac.c matcher-ac.h matcher-bm.c \
+libclamav_la_SOURCES = matcher-ac.c matcher-ac.h matcher-bm.c \
 	matcher-bm.h matcher-hash.c matcher-hash.h matcher.c matcher.h \
 	others.c others.h readdb.c readdb.h cvd.c cvd.h dsig.c dsig.h \
 	scanners.c scanners.h textdet.c textdet.h filetypes.c \
@@ -706,27 +801,28 @@ libclamav_la_SOURCES = clamav.h matcher-ac.c matcher-ac.h matcher-bm.c \
 	7z/Bra.c 7z/Bra.h 7z/Bra86.c 7z/CpuArch.h 7z/Lzma2Dec.c \
 	7z/Lzma2Dec.h 7z/LzmaDec.c 7z/LzmaDec.h 7z/Ppmd.h 7z/Ppmd7.c \
 	7z/Ppmd7.h 7z/Ppmd7Dec.c 7z/Types.h 7z/Xz.c 7z/Xz.h \
-	7z/XzCrc64.c 7z/XzCrc64.h 7z/XzDec.c 7z/XzIn.c 7z/Sha256.h \
-	7z/Delta.c 7z/Delta.h 7z/Alloc.h 7z/BraIA64.c 7z/CpuArch.c \
-	7z/CpuArch.h 7z/7zCrcOpt.c 7z/RotateDefs.h explode.c explode.h \
-	textnorm.c textnorm.h dlp.c dlp.h jsparse/js-norm.c \
-	jsparse/js-norm.h jsparse/lexglobal.h jsparse/textbuf.h uniq.c \
-	uniq.h version.c version.h mpool.c mpool.h filtering.h \
-	filtering.c fmap.c fmap.h perflogging.c perflogging.h \
-	default.h sha256.c sha256.h sha1.c sha1.h bytecode.c \
+	7z/XzCrc64.c 7z/XzCrc64.h 7z/XzDec.c 7z/XzIn.c 7z/Delta.c \
+	7z/Delta.h 7z/Alloc.h 7z/BraIA64.c 7z/CpuArch.c 7z/CpuArch.h \
+	7z/7zCrcOpt.c 7z/RotateDefs.h explode.c explode.h textnorm.c \
+	textnorm.h dlp.c dlp.h jsparse/js-norm.c jsparse/js-norm.h \
+	jsparse/lexglobal.h jsparse/textbuf.h uniq.c uniq.h version.c \
+	version.h mpool.c mpool.h filtering.h filtering.c fmap.c \
+	fmap.h perflogging.c perflogging.h default.h bytecode.c \
 	bytecode.h bytecode_vm.c bytecode_priv.h clambc.h cpio.c \
 	cpio.h macho.c macho.h ishield.c ishield.h type_desc.h \
 	bcfeatures.h bytecode_api.c bytecode_api_decl.c bytecode_api.h \
 	bytecode_api_impl.h bytecode_hooks.h cache.c cache.h \
 	bytecode_detect.c bytecode_detect.h builtin_bytecodes.h \
-	events.c events.h adc.c adc.h dmg.c dmg.h xar.c xar.h \
+	events.c events.h adc.c adc.h dmg.c dmg.h xar.c xar.h mbr.c \
+	mbr.h gpt.c gpt.h apm.c apm.h prtn_intxn.c prtn_intxn.h \
 	xz_iface.c xz_iface.h sf_base64decode.c sf_base64decode.h \
 	hfsplus.c hfsplus.h swf.c swf.h jpeg.c jpeg.h png.c png.h \
 	iso9660.c iso9660.h arc4.c arc4.h rijndael.c rijndael.h \
-	crtmgr.c crtmgr.h asn1.c asn1.h bignum.h bignum_fast.h \
-	tomsfastmath/addsub/fp_add.c tomsfastmath/addsub/fp_add_d.c \
-	tomsfastmath/addsub/fp_addmod.c tomsfastmath/addsub/fp_cmp.c \
-	tomsfastmath/addsub/fp_cmp_d.c \
+	crtmgr.c crtmgr.h asn1.c asn1.h fpu.c fpu.h stats.c stats.h \
+	www.c www.h json.c json.h hostid.c hostid.h openioc.c \
+	openioc.h bignum.h bignum_fast.h tomsfastmath/addsub/fp_add.c \
+	tomsfastmath/addsub/fp_add_d.c tomsfastmath/addsub/fp_addmod.c \
+	tomsfastmath/addsub/fp_cmp.c tomsfastmath/addsub/fp_cmp_d.c \
 	tomsfastmath/addsub/fp_cmp_mag.c tomsfastmath/addsub/fp_sub.c \
 	tomsfastmath/addsub/fp_sub_d.c tomsfastmath/addsub/fp_submod.c \
 	tomsfastmath/addsub/s_fp_add.c tomsfastmath/addsub/s_fp_sub.c \
@@ -876,7 +972,7 @@ libclamav_internal_utils.la: $(libclamav_internal_utils_la_OBJECTS) $(libclamav_
 libclamav_internal_utils_nothreads.la: $(libclamav_internal_utils_nothreads_la_OBJECTS) $(libclamav_internal_utils_nothreads_la_DEPENDENCIES) $(EXTRA_libclamav_internal_utils_nothreads_la_DEPENDENCIES) 
 	$(AM_V_CCLD)$(libclamav_internal_utils_nothreads_la_LINK)  $(libclamav_internal_utils_nothreads_la_OBJECTS) $(libclamav_internal_utils_nothreads_la_LIBADD) $(LIBS)
 libclamav_nocxx.la: $(libclamav_nocxx_la_OBJECTS) $(libclamav_nocxx_la_DEPENDENCIES) $(EXTRA_libclamav_nocxx_la_DEPENDENCIES) 
-	$(AM_V_CCLD)$(LINK)  $(libclamav_nocxx_la_OBJECTS) $(libclamav_nocxx_la_LIBADD) $(LIBS)
+	$(AM_V_CCLD)$(libclamav_nocxx_la_LINK)  $(libclamav_nocxx_la_OBJECTS) $(libclamav_nocxx_la_LIBADD) $(LIBS)
 libclamunrar.la: $(libclamunrar_la_OBJECTS) $(libclamunrar_la_DEPENDENCIES) $(EXTRA_libclamunrar_la_DEPENDENCIES) 
 	$(AM_V_CCLD)$(libclamunrar_la_LINK) $(am_libclamunrar_la_rpath) $(libclamunrar_la_OBJECTS) $(libclamunrar_la_LIBADD) $(LIBS)
 libclamunrar_iface.la: $(libclamunrar_iface_la_OBJECTS) $(libclamunrar_iface_la_DEPENDENCIES) $(EXTRA_libclamunrar_iface_la_DEPENDENCIES) 
@@ -888,9 +984,9 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/bytecode_nojit.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_internal_utils_la-conv.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_internal_utils_la-crypto.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_internal_utils_la-iowrap.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_internal_utils_la-md5.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_internal_utils_la-others_common.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_internal_utils_la-qsort.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_internal_utils_la-regcomp.Plo@am__quote@
@@ -899,8 +995,9 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_internal_utils_la-regfree.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_internal_utils_la-str.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_internal_utils_la-strlcpy.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_internal_utils_nothreads_la-conv.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_internal_utils_nothreads_la-crypto.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_internal_utils_nothreads_la-iowrap.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_internal_utils_nothreads_la-md5.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_internal_utils_nothreads_la-others_common.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_internal_utils_nothreads_la-qsort.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_internal_utils_nothreads_la-regcomp.Plo@am__quote@
@@ -934,6 +1031,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_la-XzDec.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_la-XzIn.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_la-adc.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_la-apm.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_la-arc4.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_la-asn1.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_la-aspack.Plo@am__quote@
@@ -1043,9 +1141,12 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_la-fp_toradix.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_la-fp_toradix_n.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_la-fp_unsigned_bin_size.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_la-fpu.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_la-fsg.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_la-gpt.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_la-hashtab.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_la-hfsplus.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_la-hostid.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_la-htmlnorm.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_la-infblock.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_la-inflate64.Plo@am__quote@
@@ -1054,6 +1155,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_la-iso9660.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_la-jpeg.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_la-js-norm.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_la-json.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_la-line.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_la-lzma_iface.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_la-macho.Plo@am__quote@
@@ -1062,6 +1164,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_la-matcher-hash.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_la-matcher.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_la-mbox.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_la-mbr.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_la-message.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_la-mew.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_la-mpool.Plo@am__quote@
@@ -1069,6 +1172,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_la-mspack.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_la-nulsft.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_la-ole2_extract.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_la-openioc.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_la-others.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_la-packlibs.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_la-pdf.Plo@am__quote@
@@ -1080,6 +1184,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_la-phish_whitelist.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_la-phishcheck.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_la-png.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_la-prtn_intxn.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_la-readdb.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_la-rebuildpe.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_la-regex_list.Plo@am__quote@
@@ -1090,11 +1195,10 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_la-s_fp_sub.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_la-scanners.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_la-sf_base64decode.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_la-sha1.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_la-sha256.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_la-sis.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_la-special.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_la-spin.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_la-stats.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_la-swf.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_la-table.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_la-text.Plo@am__quote@
@@ -1112,9 +1216,11 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_la-vba_extract.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_la-version.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_la-wwunpack.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_la-www.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_la-xar.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_la-xz_iface.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_la-yc.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libclamav_nocxx_la-bytecode_nojit.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/unrar.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/unrar15.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/unrar20.Plo@am__quote@
@@ -1839,20 +1945,6 @@ libclamav_la-perflogging.lo: perflogging.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libclamav_la_CFLAGS) $(CFLAGS) -c -o libclamav_la-perflogging.lo `test -f 'perflogging.c' || echo '$(srcdir)/'`perflogging.c
 
-libclamav_la-sha256.lo: sha256.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libclamav_la_CFLAGS) $(CFLAGS) -MT libclamav_la-sha256.lo -MD -MP -MF $(DEPDIR)/libclamav_la-sha256.Tpo -c -o libclamav_la-sha256.lo `test -f 'sha256.c' || echo '$(srcdir)/'`sha256.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libclamav_la-sha256.Tpo $(DEPDIR)/libclamav_la-sha256.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='sha256.c' object='libclamav_la-sha256.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libclamav_la_CFLAGS) $(CFLAGS) -c -o libclamav_la-sha256.lo `test -f 'sha256.c' || echo '$(srcdir)/'`sha256.c
-
-libclamav_la-sha1.lo: sha1.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libclamav_la_CFLAGS) $(CFLAGS) -MT libclamav_la-sha1.lo -MD -MP -MF $(DEPDIR)/libclamav_la-sha1.Tpo -c -o libclamav_la-sha1.lo `test -f 'sha1.c' || echo '$(srcdir)/'`sha1.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libclamav_la-sha1.Tpo $(DEPDIR)/libclamav_la-sha1.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='sha1.c' object='libclamav_la-sha1.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libclamav_la_CFLAGS) $(CFLAGS) -c -o libclamav_la-sha1.lo `test -f 'sha1.c' || echo '$(srcdir)/'`sha1.c
-
 libclamav_la-bytecode.lo: bytecode.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libclamav_la_CFLAGS) $(CFLAGS) -MT libclamav_la-bytecode.lo -MD -MP -MF $(DEPDIR)/libclamav_la-bytecode.Tpo -c -o libclamav_la-bytecode.lo `test -f 'bytecode.c' || echo '$(srcdir)/'`bytecode.c
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libclamav_la-bytecode.Tpo $(DEPDIR)/libclamav_la-bytecode.Plo
@@ -1944,6 +2036,34 @@ libclamav_la-xar.lo: xar.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libclamav_la_CFLAGS) $(CFLAGS) -c -o libclamav_la-xar.lo `test -f 'xar.c' || echo '$(srcdir)/'`xar.c
 
+libclamav_la-mbr.lo: mbr.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libclamav_la_CFLAGS) $(CFLAGS) -MT libclamav_la-mbr.lo -MD -MP -MF $(DEPDIR)/libclamav_la-mbr.Tpo -c -o libclamav_la-mbr.lo `test -f 'mbr.c' || echo '$(srcdir)/'`mbr.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libclamav_la-mbr.Tpo $(DEPDIR)/libclamav_la-mbr.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='mbr.c' object='libclamav_la-mbr.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libclamav_la_CFLAGS) $(CFLAGS) -c -o libclamav_la-mbr.lo `test -f 'mbr.c' || echo '$(srcdir)/'`mbr.c
+
+libclamav_la-gpt.lo: gpt.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libclamav_la_CFLAGS) $(CFLAGS) -MT libclamav_la-gpt.lo -MD -MP -MF $(DEPDIR)/libclamav_la-gpt.Tpo -c -o libclamav_la-gpt.lo `test -f 'gpt.c' || echo '$(srcdir)/'`gpt.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libclamav_la-gpt.Tpo $(DEPDIR)/libclamav_la-gpt.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='gpt.c' object='libclamav_la-gpt.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libclamav_la_CFLAGS) $(CFLAGS) -c -o libclamav_la-gpt.lo `test -f 'gpt.c' || echo '$(srcdir)/'`gpt.c
+
+libclamav_la-apm.lo: apm.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libclamav_la_CFLAGS) $(CFLAGS) -MT libclamav_la-apm.lo -MD -MP -MF $(DEPDIR)/libclamav_la-apm.Tpo -c -o libclamav_la-apm.lo `test -f 'apm.c' || echo '$(srcdir)/'`apm.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libclamav_la-apm.Tpo $(DEPDIR)/libclamav_la-apm.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='apm.c' object='libclamav_la-apm.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libclamav_la_CFLAGS) $(CFLAGS) -c -o libclamav_la-apm.lo `test -f 'apm.c' || echo '$(srcdir)/'`apm.c
+
+libclamav_la-prtn_intxn.lo: prtn_intxn.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libclamav_la_CFLAGS) $(CFLAGS) -MT libclamav_la-prtn_intxn.lo -MD -MP -MF $(DEPDIR)/libclamav_la-prtn_intxn.Tpo -c -o libclamav_la-prtn_intxn.lo `test -f 'prtn_intxn.c' || echo '$(srcdir)/'`prtn_intxn.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libclamav_la-prtn_intxn.Tpo $(DEPDIR)/libclamav_la-prtn_intxn.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prtn_intxn.c' object='libclamav_la-prtn_intxn.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libclamav_la_CFLAGS) $(CFLAGS) -c -o libclamav_la-prtn_intxn.lo `test -f 'prtn_intxn.c' || echo '$(srcdir)/'`prtn_intxn.c
+
 libclamav_la-xz_iface.lo: xz_iface.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libclamav_la_CFLAGS) $(CFLAGS) -MT libclamav_la-xz_iface.lo -MD -MP -MF $(DEPDIR)/libclamav_la-xz_iface.Tpo -c -o libclamav_la-xz_iface.lo `test -f 'xz_iface.c' || echo '$(srcdir)/'`xz_iface.c
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libclamav_la-xz_iface.Tpo $(DEPDIR)/libclamav_la-xz_iface.Plo
@@ -2020,6 +2140,48 @@ libclamav_la-asn1.lo: asn1.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='asn1.c' object='libclamav_la-asn1.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libclamav_la_CFLAGS) $(CFLAGS) -c -o libclamav_la-asn1.lo `test -f 'asn1.c' || echo '$(srcdir)/'`asn1.c
+
+libclamav_la-fpu.lo: fpu.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libclamav_la_CFLAGS) $(CFLAGS) -MT libclamav_la-fpu.lo -MD -MP -MF $(DEPDIR)/libclamav_la-fpu.Tpo -c -o libclamav_la-fpu.lo `test -f 'fpu.c' || echo '$(srcdir)/'`fpu.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libclamav_la-fpu.Tpo $(DEPDIR)/libclamav_la-fpu.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='fpu.c' object='libclamav_la-fpu.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libclamav_la_CFLAGS) $(CFLAGS) -c -o libclamav_la-fpu.lo `test -f 'fpu.c' || echo '$(srcdir)/'`fpu.c
+
+libclamav_la-stats.lo: stats.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libclamav_la_CFLAGS) $(CFLAGS) -MT libclamav_la-stats.lo -MD -MP -MF $(DEPDIR)/libclamav_la-stats.Tpo -c -o libclamav_la-stats.lo `test -f 'stats.c' || echo '$(srcdir)/'`stats.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libclamav_la-stats.Tpo $(DEPDIR)/libclamav_la-stats.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='stats.c' object='libclamav_la-stats.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libclamav_la_CFLAGS) $(CFLAGS) -c -o libclamav_la-stats.lo `test -f 'stats.c' || echo '$(srcdir)/'`stats.c
+
+libclamav_la-www.lo: www.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libclamav_la_CFLAGS) $(CFLAGS) -MT libclamav_la-www.lo -MD -MP -MF $(DEPDIR)/libclamav_la-www.Tpo -c -o libclamav_la-www.lo `test -f 'www.c' || echo '$(srcdir)/'`www.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libclamav_la-www.Tpo $(DEPDIR)/libclamav_la-www.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='www.c' object='libclamav_la-www.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libclamav_la_CFLAGS) $(CFLAGS) -c -o libclamav_la-www.lo `test -f 'www.c' || echo '$(srcdir)/'`www.c
+
+libclamav_la-json.lo: json.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libclamav_la_CFLAGS) $(CFLAGS) -MT libclamav_la-json.lo -MD -MP -MF $(DEPDIR)/libclamav_la-json.Tpo -c -o libclamav_la-json.lo `test -f 'json.c' || echo '$(srcdir)/'`json.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libclamav_la-json.Tpo $(DEPDIR)/libclamav_la-json.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='json.c' object='libclamav_la-json.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libclamav_la_CFLAGS) $(CFLAGS) -c -o libclamav_la-json.lo `test -f 'json.c' || echo '$(srcdir)/'`json.c
+
+libclamav_la-hostid.lo: hostid.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libclamav_la_CFLAGS) $(CFLAGS) -MT libclamav_la-hostid.lo -MD -MP -MF $(DEPDIR)/libclamav_la-hostid.Tpo -c -o libclamav_la-hostid.lo `test -f 'hostid.c' || echo '$(srcdir)/'`hostid.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libclamav_la-hostid.Tpo $(DEPDIR)/libclamav_la-hostid.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='hostid.c' object='libclamav_la-hostid.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libclamav_la_CFLAGS) $(CFLAGS) -c -o libclamav_la-hostid.lo `test -f 'hostid.c' || echo '$(srcdir)/'`hostid.c
+
+libclamav_la-openioc.lo: openioc.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libclamav_la_CFLAGS) $(CFLAGS) -MT libclamav_la-openioc.lo -MD -MP -MF $(DEPDIR)/libclamav_la-openioc.Tpo -c -o libclamav_la-openioc.lo `test -f 'openioc.c' || echo '$(srcdir)/'`openioc.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libclamav_la-openioc.Tpo $(DEPDIR)/libclamav_la-openioc.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='openioc.c' object='libclamav_la-openioc.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libclamav_la_CFLAGS) $(CFLAGS) -c -o libclamav_la-openioc.lo `test -f 'openioc.c' || echo '$(srcdir)/'`openioc.c
 
 libclamav_la-fp_add.lo: tomsfastmath/addsub/fp_add.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libclamav_la_CFLAGS) $(CFLAGS) -MT libclamav_la-fp_add.lo -MD -MP -MF $(DEPDIR)/libclamav_la-fp_add.Tpo -c -o libclamav_la-fp_add.lo `test -f 'tomsfastmath/addsub/fp_add.c' || echo '$(srcdir)/'`tomsfastmath/addsub/fp_add.c
@@ -2595,19 +2757,26 @@ libclamav_internal_utils_la-str.lo: str.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libclamav_internal_utils_la_CFLAGS) $(CFLAGS) -c -o libclamav_internal_utils_la-str.lo `test -f 'str.c' || echo '$(srcdir)/'`str.c
 
+libclamav_internal_utils_la-conv.lo: conv.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libclamav_internal_utils_la_CFLAGS) $(CFLAGS) -MT libclamav_internal_utils_la-conv.lo -MD -MP -MF $(DEPDIR)/libclamav_internal_utils_la-conv.Tpo -c -o libclamav_internal_utils_la-conv.lo `test -f 'conv.c' || echo '$(srcdir)/'`conv.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libclamav_internal_utils_la-conv.Tpo $(DEPDIR)/libclamav_internal_utils_la-conv.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='conv.c' object='libclamav_internal_utils_la-conv.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libclamav_internal_utils_la_CFLAGS) $(CFLAGS) -c -o libclamav_internal_utils_la-conv.lo `test -f 'conv.c' || echo '$(srcdir)/'`conv.c
+
+libclamav_internal_utils_la-crypto.lo: crypto.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libclamav_internal_utils_la_CFLAGS) $(CFLAGS) -MT libclamav_internal_utils_la-crypto.lo -MD -MP -MF $(DEPDIR)/libclamav_internal_utils_la-crypto.Tpo -c -o libclamav_internal_utils_la-crypto.lo `test -f 'crypto.c' || echo '$(srcdir)/'`crypto.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libclamav_internal_utils_la-crypto.Tpo $(DEPDIR)/libclamav_internal_utils_la-crypto.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='crypto.c' object='libclamav_internal_utils_la-crypto.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libclamav_internal_utils_la_CFLAGS) $(CFLAGS) -c -o libclamav_internal_utils_la-crypto.lo `test -f 'crypto.c' || echo '$(srcdir)/'`crypto.c
+
 libclamav_internal_utils_la-iowrap.lo: iowrap.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libclamav_internal_utils_la_CFLAGS) $(CFLAGS) -MT libclamav_internal_utils_la-iowrap.lo -MD -MP -MF $(DEPDIR)/libclamav_internal_utils_la-iowrap.Tpo -c -o libclamav_internal_utils_la-iowrap.lo `test -f 'iowrap.c' || echo '$(srcdir)/'`iowrap.c
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libclamav_internal_utils_la-iowrap.Tpo $(DEPDIR)/libclamav_internal_utils_la-iowrap.Plo
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='iowrap.c' object='libclamav_internal_utils_la-iowrap.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libclamav_internal_utils_la_CFLAGS) $(CFLAGS) -c -o libclamav_internal_utils_la-iowrap.lo `test -f 'iowrap.c' || echo '$(srcdir)/'`iowrap.c
-
-libclamav_internal_utils_la-md5.lo: md5.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libclamav_internal_utils_la_CFLAGS) $(CFLAGS) -MT libclamav_internal_utils_la-md5.lo -MD -MP -MF $(DEPDIR)/libclamav_internal_utils_la-md5.Tpo -c -o libclamav_internal_utils_la-md5.lo `test -f 'md5.c' || echo '$(srcdir)/'`md5.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libclamav_internal_utils_la-md5.Tpo $(DEPDIR)/libclamav_internal_utils_la-md5.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='md5.c' object='libclamav_internal_utils_la-md5.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libclamav_internal_utils_la_CFLAGS) $(CFLAGS) -c -o libclamav_internal_utils_la-md5.lo `test -f 'md5.c' || echo '$(srcdir)/'`md5.c
 
 libclamav_internal_utils_la-others_common.lo: others_common.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libclamav_internal_utils_la_CFLAGS) $(CFLAGS) -MT libclamav_internal_utils_la-others_common.lo -MD -MP -MF $(DEPDIR)/libclamav_internal_utils_la-others_common.Tpo -c -o libclamav_internal_utils_la-others_common.lo `test -f 'others_common.c' || echo '$(srcdir)/'`others_common.c
@@ -2665,19 +2834,26 @@ libclamav_internal_utils_nothreads_la-str.lo: str.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libclamav_internal_utils_nothreads_la_CFLAGS) $(CFLAGS) -c -o libclamav_internal_utils_nothreads_la-str.lo `test -f 'str.c' || echo '$(srcdir)/'`str.c
 
+libclamav_internal_utils_nothreads_la-conv.lo: conv.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libclamav_internal_utils_nothreads_la_CFLAGS) $(CFLAGS) -MT libclamav_internal_utils_nothreads_la-conv.lo -MD -MP -MF $(DEPDIR)/libclamav_internal_utils_nothreads_la-conv.Tpo -c -o libclamav_internal_utils_nothreads_la-conv.lo `test -f 'conv.c' || echo '$(srcdir)/'`conv.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libclamav_internal_utils_nothreads_la-conv.Tpo $(DEPDIR)/libclamav_internal_utils_nothreads_la-conv.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='conv.c' object='libclamav_internal_utils_nothreads_la-conv.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libclamav_internal_utils_nothreads_la_CFLAGS) $(CFLAGS) -c -o libclamav_internal_utils_nothreads_la-conv.lo `test -f 'conv.c' || echo '$(srcdir)/'`conv.c
+
+libclamav_internal_utils_nothreads_la-crypto.lo: crypto.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libclamav_internal_utils_nothreads_la_CFLAGS) $(CFLAGS) -MT libclamav_internal_utils_nothreads_la-crypto.lo -MD -MP -MF $(DEPDIR)/libclamav_internal_utils_nothreads_la-crypto.Tpo -c -o libclamav_internal_utils_nothreads_la-crypto.lo `test -f 'crypto.c' || echo '$(srcdir)/'`crypto.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libclamav_internal_utils_nothreads_la-crypto.Tpo $(DEPDIR)/libclamav_internal_utils_nothreads_la-crypto.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='crypto.c' object='libclamav_internal_utils_nothreads_la-crypto.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libclamav_internal_utils_nothreads_la_CFLAGS) $(CFLAGS) -c -o libclamav_internal_utils_nothreads_la-crypto.lo `test -f 'crypto.c' || echo '$(srcdir)/'`crypto.c
+
 libclamav_internal_utils_nothreads_la-iowrap.lo: iowrap.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libclamav_internal_utils_nothreads_la_CFLAGS) $(CFLAGS) -MT libclamav_internal_utils_nothreads_la-iowrap.lo -MD -MP -MF $(DEPDIR)/libclamav_internal_utils_nothreads_la-iowrap.Tpo -c -o libclamav_internal_utils_nothreads_la-iowrap.lo `test -f 'iowrap.c' || echo '$(srcdir)/'`iowrap.c
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libclamav_internal_utils_nothreads_la-iowrap.Tpo $(DEPDIR)/libclamav_internal_utils_nothreads_la-iowrap.Plo
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='iowrap.c' object='libclamav_internal_utils_nothreads_la-iowrap.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libclamav_internal_utils_nothreads_la_CFLAGS) $(CFLAGS) -c -o libclamav_internal_utils_nothreads_la-iowrap.lo `test -f 'iowrap.c' || echo '$(srcdir)/'`iowrap.c
-
-libclamav_internal_utils_nothreads_la-md5.lo: md5.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libclamav_internal_utils_nothreads_la_CFLAGS) $(CFLAGS) -MT libclamav_internal_utils_nothreads_la-md5.lo -MD -MP -MF $(DEPDIR)/libclamav_internal_utils_nothreads_la-md5.Tpo -c -o libclamav_internal_utils_nothreads_la-md5.lo `test -f 'md5.c' || echo '$(srcdir)/'`md5.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libclamav_internal_utils_nothreads_la-md5.Tpo $(DEPDIR)/libclamav_internal_utils_nothreads_la-md5.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='md5.c' object='libclamav_internal_utils_nothreads_la-md5.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libclamav_internal_utils_nothreads_la_CFLAGS) $(CFLAGS) -c -o libclamav_internal_utils_nothreads_la-md5.lo `test -f 'md5.c' || echo '$(srcdir)/'`md5.c
 
 libclamav_internal_utils_nothreads_la-others_common.lo: others_common.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libclamav_internal_utils_nothreads_la_CFLAGS) $(CFLAGS) -MT libclamav_internal_utils_nothreads_la-others_common.lo -MD -MP -MF $(DEPDIR)/libclamav_internal_utils_nothreads_la-others_common.Tpo -c -o libclamav_internal_utils_nothreads_la-others_common.lo `test -f 'others_common.c' || echo '$(srcdir)/'`others_common.c
@@ -2727,6 +2903,13 @@ libclamav_internal_utils_nothreads_la-regfree.lo: regex/regfree.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='regex/regfree.c' object='libclamav_internal_utils_nothreads_la-regfree.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libclamav_internal_utils_nothreads_la_CFLAGS) $(CFLAGS) -c -o libclamav_internal_utils_nothreads_la-regfree.lo `test -f 'regex/regfree.c' || echo '$(srcdir)/'`regex/regfree.c
+
+libclamav_nocxx_la-bytecode_nojit.lo: bytecode_nojit.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libclamav_nocxx_la_CFLAGS) $(CFLAGS) -MT libclamav_nocxx_la-bytecode_nojit.lo -MD -MP -MF $(DEPDIR)/libclamav_nocxx_la-bytecode_nojit.Tpo -c -o libclamav_nocxx_la-bytecode_nojit.lo `test -f 'bytecode_nojit.c' || echo '$(srcdir)/'`bytecode_nojit.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libclamav_nocxx_la-bytecode_nojit.Tpo $(DEPDIR)/libclamav_nocxx_la-bytecode_nojit.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='bytecode_nojit.c' object='libclamav_nocxx_la-bytecode_nojit.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libclamav_nocxx_la_CFLAGS) $(CFLAGS) -c -o libclamav_nocxx_la-bytecode_nojit.lo `test -f 'bytecode_nojit.c' || echo '$(srcdir)/'`bytecode_nojit.c
 
 unrar15.lo: ../libclamunrar/unrar15.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT unrar15.lo -MD -MP -MF $(DEPDIR)/unrar15.Tpo -c -o unrar15.lo `test -f '../libclamunrar/unrar15.c' || echo '$(srcdir)/'`../libclamunrar/unrar15.c

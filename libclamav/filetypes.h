@@ -80,12 +80,16 @@ typedef enum {
     CL_TYPE_JAVA,
     CL_TYPE_XAR,
     CL_TYPE_XZ,
+    CL_TYPE_OOXML_WORD,
+    CL_TYPE_OOXML_PPT,
+    CL_TYPE_OOXML_XL,
 
     /* Section for partition types */
     CL_TYPE_PART_ANY, /* unknown partition type */
     CL_TYPE_PART_HFSPLUS,
 
     /* bigger numbers have higher priority (in o-t-f detection) */
+    CL_TYPE_MBR,
     CL_TYPE_HTML, /* on the fly */
     CL_TYPE_MAIL,  /* magic + on the fly */
     CL_TYPE_SFX, /* foo SFX marker */
@@ -99,6 +103,8 @@ typedef enum {
     CL_TYPE_ISHIELD_MSI,
     CL_TYPE_ISO9660,
     CL_TYPE_DMG,
+    CL_TYPE_GPT,
+    CL_TYPE_APM,
     CL_TYPE_IGNORED /* please don't add anything below */
 } cli_file_t;
 

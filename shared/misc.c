@@ -39,6 +39,10 @@
 #include <ctype.h>
 #include <errno.h>
 
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+#include "libclamav/crypto.h"
+
 #include "shared/optparser.h"
 #include "shared/output.h"
 
@@ -317,30 +321,6 @@ int match_regex(const char *filename, const char *pattern)
 	match = (cli_regexec(&reg, fname, 0, NULL, 0) == REG_NOMATCH) ? 0 : 1;
 	cli_regfree(&reg);
 	return match;
-}
-
-int cfg_tcpsock(const struct optstruct *opts, struct sockaddr_in *tcpsock, in_addr_t defaultbind)
-{
-    struct hostent *he;
-    const struct optstruct *opt = optget(opts, "TCPSocket");
-
-    if(opt->numarg > 65535)
-	return -1;
-
-    memset(tcpsock, 0, sizeof(*tcpsock));
-    tcpsock->sin_family = AF_INET;
-    tcpsock->sin_port = htons(opt->numarg);
-
-    if(!(opt = optget(opts, "TCPAddr"))->enabled) {
-	tcpsock->sin_addr.s_addr = htonl(defaultbind);
-	return 0;
-    }
-    he = gethostbyname(opt->strarg);
-    if(!he)
-	return -1;
-
-    tcpsock->sin_addr = *(struct in_addr *) he->h_addr_list[0];
-    return 0;
 }
 
 int cli_is_abspath(const char *path) {

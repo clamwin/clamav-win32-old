@@ -52,16 +52,25 @@
 #include <malloc.h>
 #endif
 
+#ifdef CL_THREAD_SAFE
+#include <pthread.h>
+#endif
+
 #if defined(HAVE_READDIR_R_3) || defined(HAVE_READDIR_R_2)
 #include <limits.h>
 #include <stddef.h>
 #endif
 
+#ifdef HAVE_LIBXML2
+#include <libxml/parser.h>
+#endif
+
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+#include "libclamav/crypto.h"
+
 #include "clamav.h"
 #include "others.h"
-#include "md5.h"
-#include "sha1.h"
-#include "sha256.h"
 #include "cltypes.h"
 #include "regex/regex.h"
 #include "ltdl.h"
@@ -71,6 +80,7 @@
 #include "bytecode.h"
 #include "bytecode_api_impl.h"
 #include "cache.h"
+#include "stats.h"
 
 int (*cli_unrar_open)(int fd, const char *dirname, unrar_state_t *state);
 int (*cli_unrar_extract_next_prepare)(unrar_state_t *state, const char *dirname);
@@ -309,7 +319,7 @@ int cl_init(unsigned int initoptions)
 struct cl_engine *cl_engine_new(void)
 {
 	struct cl_engine *new;
-
+    cli_intel_t *intel;
 
     new = (struct cl_engine *) cli_calloc(1, sizeof(struct cl_engine));
     if(!new) {
@@ -384,6 +394,41 @@ struct cl_engine *cl_engine_new(void)
 	free(new);
 	return NULL;
     }
+
+    /* Set up default stats/intel gathering callbacks */
+    intel = cli_calloc(1, sizeof(cli_intel_t));
+#ifdef CL_THREAD_SAFE
+    if (pthread_mutex_init(&(intel->mutex), NULL)) {
+        cli_errmsg("cli_engine_new: Cannot initialize stats gathering mutex\n");
+        mpool_free(new->mempool, new->dconf);
+        mpool_free(new->mempool, new->root);
+#ifdef USE_MPOOL
+        mpool_destroy(new->mempool);
+#endif
+        free(new);
+        free(intel);
+        return NULL;
+    }
+#endif
+    intel->engine = new;
+    intel->maxsamples = STATS_MAX_SAMPLES;
+    intel->maxmem = STATS_MAX_MEM;
+    intel->timeout = 10;
+    new->stats_data = intel;
+    new->cb_stats_add_sample = NULL;
+    new->cb_stats_submit = NULL;
+    new->cb_stats_flush = clamav_stats_flush;
+    new->cb_stats_remove_sample = clamav_stats_remove_sample;
+    new->cb_stats_decrement_count = clamav_stats_decrement_count;
+    new->cb_stats_get_num = clamav_stats_get_num;
+    new->cb_stats_get_size = clamav_stats_get_size;
+    new->cb_stats_get_hostid = clamav_stats_get_hostid;
+
+    /* Setup raw disk image max settings */
+    new->maxpartitions = CLI_DEFAULT_MAXPARTITIONS;
+
+    /* Engine max settings */
+    new->maxiconspe = CLI_DEFAULT_MAXICONSPE;
 
     cli_dbgmsg("Initialized %s engine\n", cl_retver());
     return new;
@@ -474,9 +519,9 @@ int cl_engine_set_num(struct cl_engine *engine, enum cl_engine_field field, long
 	    break;
 	case CL_ENGINE_FORCETODISK:
 	    if(num)
-	        engine->forcetodisk = 1;
+	        engine->engine_options |= ENGINE_OPTIONS_FORCE_TO_DISK;
 	    else
-	        engine->forcetodisk = 0;
+	        engine->engine_options &= ~(ENGINE_OPTIONS_FORCE_TO_DISK);
 	    break;
 	case CL_ENGINE_BYTECODE_SECURITY:
 	    if (engine->dboptions & CL_DB_COMPILED) {
@@ -501,6 +546,35 @@ int cl_engine_set_num(struct cl_engine *engine, enum cl_engine_field field, long
 	    if (num == CL_BYTECODE_MODE_TEST)
 		cli_infomsg(NULL, "bytecode engine in test mode\n");
 	    break;
+	case CL_ENGINE_DISABLE_CACHE:
+	    if (num) {
+		engine->engine_options |= ENGINE_OPTIONS_DISABLE_CACHE;
+	    } else {
+		engine->engine_options &= ~(ENGINE_OPTIONS_DISABLE_CACHE);
+		if (!(engine->cache))
+		    cli_cache_init(engine);
+	    }
+	    break;
+	case CL_ENGINE_DISABLE_PE_STATS:
+	    if (num) {
+		engine->engine_options |= ENGINE_OPTIONS_DISABLE_PE_STATS;
+	    } else {
+		engine->engine_options &= ~(ENGINE_OPTIONS_DISABLE_PE_STATS);
+	    }
+	    break;
+	case CL_ENGINE_STATS_TIMEOUT:
+	    if ((engine->stats_data)) {
+		cli_intel_t *intel = (cli_intel_t *)(engine->stats_data);
+
+		intel->timeout = (uint32_t)num;
+	    }
+	    break;
+	case CL_ENGINE_MAX_PARTITIONS:
+	    engine->maxpartitions = (uint32_t)num;
+	    break;
+	case CL_ENGINE_MAX_ICONSPE:
+	   engine->maxiconspe = (uint32_t)num;
+	   break;
 	default:
 	    cli_errmsg("cl_engine_set_num: Incorrect field number\n");
 	    return CL_EARG;
@@ -559,13 +633,21 @@ long long cl_engine_get_num(const struct cl_engine *engine, enum cl_engine_field
 	case CL_ENGINE_KEEPTMP:
 	    return engine->keeptmp;
 	case CL_ENGINE_FORCETODISK:
-	    return engine->forcetodisk;
+	    return engine->engine_options & ENGINE_OPTIONS_FORCE_TO_DISK;
 	case CL_ENGINE_BYTECODE_SECURITY:
 	    return engine->bytecode_security;
 	case CL_ENGINE_BYTECODE_TIMEOUT:
 	    return engine->bytecode_timeout;
 	case CL_ENGINE_BYTECODE_MODE:
 	    return engine->bytecode_mode;
+	case CL_ENGINE_DISABLE_CACHE:
+	    return engine->engine_options & ENGINE_OPTIONS_DISABLE_CACHE;
+	case CL_ENGINE_STATS_TIMEOUT:
+	    return ((cli_intel_t *)(engine->stats_data))->timeout;
+	case CL_ENGINE_MAX_PARTITIONS:
+	    return engine->maxpartitions;
+	case CL_ENGINE_MAX_ICONSPE:
+	    return engine->maxiconspe;
 	default:
 	    cli_errmsg("cl_engine_get: Incorrect field number\n");
 	    if(err)
@@ -638,7 +720,6 @@ struct cl_settings *cl_engine_settings_copy(const struct cl_engine *engine)
     settings->ac_maxdepth = engine->ac_maxdepth;
     settings->tmpdir = engine->tmpdir ? strdup(engine->tmpdir) : NULL;
     settings->keeptmp = engine->keeptmp;
-    settings->forcetodisk = engine->forcetodisk;
     settings->maxscansize = engine->maxscansize;
     settings->maxfilesize = engine->maxfilesize;
     settings->maxreclevel = engine->maxreclevel;
@@ -662,17 +743,32 @@ struct cl_settings *cl_engine_settings_copy(const struct cl_engine *engine)
     settings->cb_sigload_ctx = engine->cb_sigload_ctx;
     settings->cb_hash = engine->cb_hash;
     settings->cb_meta = engine->cb_meta;
+    settings->engine_options = engine->engine_options;
+
+    settings->cb_stats_add_sample = engine->cb_stats_add_sample;
+    settings->cb_stats_remove_sample = engine->cb_stats_remove_sample;
+    settings->cb_stats_decrement_count = engine->cb_stats_decrement_count;
+    settings->cb_stats_submit = engine->cb_stats_submit;
+    settings->cb_stats_flush = engine->cb_stats_flush;
+    settings->cb_stats_get_num = engine->cb_stats_get_num;
+    settings->cb_stats_get_size = engine->cb_stats_get_size;
+    settings->cb_stats_get_hostid = engine->cb_stats_get_hostid;
+
+    settings->maxpartitions = engine->maxpartitions;
+
+    settings->maxiconspe = engine->maxiconspe;
 
     return settings;
 }
 
 int cl_engine_settings_apply(struct cl_engine *engine, const struct cl_settings *settings)
 {
+    cli_intel_t *intel;
+
     engine->ac_only = settings->ac_only;
     engine->ac_mindepth = settings->ac_mindepth;
     engine->ac_maxdepth = settings->ac_maxdepth;
     engine->keeptmp = settings->keeptmp;
-    engine->forcetodisk = settings->forcetodisk;
     engine->maxscansize = settings->maxscansize;
     engine->maxfilesize = settings->maxfilesize;
     engine->maxreclevel = settings->maxreclevel;
@@ -687,6 +783,7 @@ int cl_engine_settings_apply(struct cl_engine *engine, const struct cl_settings 
     engine->bytecode_security = settings->bytecode_security;
     engine->bytecode_timeout = settings->bytecode_timeout;
     engine->bytecode_mode = settings->bytecode_mode;
+    engine->engine_options = settings->engine_options;
 
     if(engine->tmpdir)
 	mpool_free(engine->mempool, engine->tmpdir);
@@ -715,6 +812,25 @@ int cl_engine_settings_apply(struct cl_engine *engine, const struct cl_settings 
     engine->cb_sigload_ctx = settings->cb_sigload_ctx;
     engine->cb_hash = settings->cb_hash;
     engine->cb_meta = settings->cb_meta;
+
+    intel = (cli_intel_t *)cli_calloc(1, sizeof(cli_intel_t));
+    intel->engine = engine;
+    intel->maxsamples = STATS_MAX_SAMPLES;
+    intel->maxmem = STATS_MAX_MEM;
+
+    engine->stats_data = (void *)intel;
+    engine->cb_stats_add_sample = settings->cb_stats_add_sample;
+    engine->cb_stats_remove_sample = settings->cb_stats_remove_sample;
+    engine->cb_stats_decrement_count = settings->cb_stats_decrement_count;
+    engine->cb_stats_submit = settings->cb_stats_submit;
+    engine->cb_stats_flush = settings->cb_stats_flush;
+    engine->cb_stats_get_num = settings->cb_stats_get_num;
+    engine->cb_stats_get_size = settings->cb_stats_get_size;
+    engine->cb_stats_get_hostid = settings->cb_stats_get_hostid;
+
+    engine->maxpartitions = settings->maxpartitions;
+
+    engine->maxiconspe = settings->maxiconspe;
 
     return CL_SUCCESS;
 }
@@ -780,53 +896,48 @@ int cli_updatelimits(cli_ctx *ctx, unsigned long needed) {
  */
 char *cli_hashstream(FILE *fs, unsigned char *digcpy, int type)
 {
-	unsigned char digest[32];
-	char buff[FILEBUFF];
-	cli_md5_ctx md5;
-	SHA1Context sha1;
-	SHA256_CTX sha256;
-	char *hashstr, *pt;
-	int i, bytes, size;
+    unsigned char digest[32];
+    char buff[FILEBUFF];
+    char *hashstr, *pt;
+    const char *alg=NULL;
+    int i, bytes, size;
+    void *ctx;
 
-
-    if(type == 1)
-	cli_md5_init(&md5);
-    else if(type == 2)
-	SHA1Init(&sha1);
-    else
-	sha256_init(&sha256);
-
-    while((bytes = fread(buff, 1, FILEBUFF, fs))) {
-	if(type == 1)
-	    cli_md5_update(&md5, buff, bytes);
-	else if(type == 2)
-	    SHA1Update(&sha1, buff, bytes);
-	else
-	    sha256_update(&sha256, buff, bytes);
+    switch (type) {
+        case 1:
+            alg = "md5";
+            size = 16;
+            break;
+        case 2:
+            alg = "sha1";
+            size = 20;
+            break;
+        default:
+            alg = "sha256";
+            size = 32;
+            break;
     }
 
-    if(type == 1) {
-	cli_md5_final(digest, &md5);
-	size = 16;
-    } else if(type == 2) {
-	SHA1Final(&sha1, digest);
-	size = 20;
-    } else {
-	sha256_final(&sha256, digest);
-	size = 32;
-    }
+    ctx = cl_hash_init(alg);
+    if (!(ctx))
+        return NULL;
+
+    while((bytes = fread(buff, 1, FILEBUFF, fs)))
+        cl_update_hash(ctx, buff, bytes);
+
+    cl_finish_hash(ctx, digest);
 
     if(!(hashstr = (char *) cli_calloc(size*2 + 1, sizeof(char))))
-	return NULL;
+        return NULL;
 
     pt = hashstr;
     for(i = 0; i < size; i++) {
-	sprintf(pt, "%02x", digest[i]);
-	pt += 2;
+        sprintf(pt, "%02x", digest[i]);
+        pt += 2;
     }
 
     if(digcpy)
-	memcpy(digcpy, digest, size);
+        memcpy(digcpy, digest, size);
 
     return hashstr;
 }

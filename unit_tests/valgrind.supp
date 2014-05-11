@@ -24,6 +24,14 @@
     fun:*
 }
 {
+    llvm-03
+    Memcheck:Leak
+    fun:_Znwm
+    ...
+    fun:_ZN4llvm12PassRegistry12registerPassERKNS_8PassInfoE
+    ...
+}
+{
     dl_catch_error-leak-1
     Memcheck:Leak
     ...
@@ -39,4 +47,42 @@
     fun:_dl_close
     fun:_dl_catch_error
     ...
+}
+{
+    mbox-leak-01
+    Memcheck:Leak
+    ...
+    fun:tableInsert
+    fun:messageSetMimeType
+    fun:parseEmailHeader
+    ...
+}
+{
+    mbox-leak-02
+    Memcheck:Leak
+    ...
+    fun:tableInsert
+    fun:cli_parse_mbox
+    fun:cli_scanmail
+    ...
+}
+{
+    ubuntu-libc-getaddrinfo-01
+    Memcheck:Param
+    sendmsg(mmsg[0].msg_hdr)
+    fun:sendmmsg
+    ...
+}
+{
+    openssl-globals-01
+    Memcheck:Leak
+    ...
+    fun:cl_initialize_crypto
+    ...
+}
+{
+    openssl-globals-02
+    Memcheck:Leak
+    ...
+    fun:SSL_library_init
 }

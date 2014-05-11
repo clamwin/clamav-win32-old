@@ -48,6 +48,10 @@
 #include <errno.h>
 #include <target.h>
 
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+#include "libclamav/crypto.h"
+
 #include "manager.h"
 #include "global.h"
 
@@ -117,6 +121,10 @@ cl_error_t scancallback(int desc, int bytes, void *context)
 #ifdef C_LINUX
 dev_t procdev;
 #endif
+
+char hostid[37];
+
+char *get_hostid(void *cbdata);
 
 #ifdef _WIN32
 /* FIXME: If possible, handle users correctly */
@@ -650,6 +658,44 @@ int scanmanager(const struct optstruct *opts)
 	return 2;
     }
 
+    if (optget(opts, "disable-cache")->enabled)
+        cl_engine_set_num(engine, CL_ENGINE_DISABLE_CACHE, 1);
+
+    if (optget(opts, "disable-pe-stats")->enabled) {
+        cl_engine_set_num(engine, CL_ENGINE_DISABLE_PE_STATS, 1);
+    }
+
+    if (optget(opts, "enable-stats")->enabled) {
+        cl_engine_stats_enable(engine);
+    }
+
+    if (optget(opts, "stats-timeout")->enabled) {
+        cl_engine_set_num(engine, CL_ENGINE_STATS_TIMEOUT, optget(opts, "StatsTimeout")->numarg);
+    }
+
+    if (optget(opts, "stats-host-id")->enabled) {
+        char *p = optget(opts, "stats-host-id")->strarg;
+
+        if (strcmp(p, "default")) {
+            if (!strcmp(p, "none")) {
+                cl_engine_set_clcb_stats_get_hostid(engine, NULL);
+            } else if (!strcmp(p, "anonymous")) {
+                strcpy(hostid, STATS_ANON_UUID);
+            } else {
+                if (strlen(p) > 36) {
+                    logg("!Invalid HostID\n");
+                    cl_engine_set_clcb_stats_submit(engine, NULL);
+                    cl_engine_free(engine);
+                    return 2;
+                }
+
+                strcpy(hostid, p);
+            }
+
+            cl_engine_set_clcb_stats_get_hostid(engine, get_hostid);
+        }
+    }
+
     if(optget(opts, "detect-pua")->enabled) {
 	dboptions |= CL_DB_PUA;
 	if((opt = optget(opts, "exclude-pua"))->enabled) {
@@ -886,6 +932,22 @@ int scanmanager(const struct optstruct *opts)
 	}
     }
 
+    if((opt = optget(opts, "max-partitions"))->active) {
+	if((ret = cl_engine_set_num(engine, CL_ENGINE_MAX_PARTITIONS, opt->numarg))) {
+	    logg("!cli_engine_set_num(CL_ENGINE_MAX_PARTITIONS) failed: %s\n", cl_strerror(ret));
+	    cl_engine_free(engine);
+	    return 2;
+	}
+    }
+
+    if((opt = optget(opts, "max-iconspe"))->active) {
+	if((ret = cl_engine_set_num(engine, CL_ENGINE_MAX_ICONSPE, opt->numarg))) {
+	    logg("!cli_engine_set_num(CL_ENGINE_MAX_ICONSPE) failed: %s\n", cl_strerror(ret));
+	    cl_engine_free(engine);
+	    return 2;
+	}
+    }
+
     /* set scan options */
     if(optget(opts, "allmatch")->enabled)
 	options |= CL_SCAN_ALLMATCHES;
@@ -895,6 +957,9 @@ int scanmanager(const struct optstruct *opts)
 
     if(optget(opts,"phishing-cloak")->enabled)
 	options |= CL_SCAN_PHISHING_BLOCKCLOAK;
+
+    if(optget(opts,"partition-intersection")->enabled)
+	options |= CL_SCAN_PARTITION_INTXN;
 
     if(optget(opts,"heuristic-scan-precedence")->enabled)
 	options |= CL_SCAN_HEURISTIC_PRECEDENCE;
@@ -1075,4 +1140,38 @@ int scanmanager(const struct optstruct *opts)
 	ret = 2;
 
     return ret;
+}
+
+int is_valid_hostid(void)
+{
+    int count, i;
+
+    if (strlen(hostid) != 36)
+        return 0;
+
+    count=0;
+    for (i=0; i < 36; i++)
+        if (hostid[i] == '-')
+            count++;
+
+    if (count != 4)
+        return 0;
+
+    if (hostid[8] != '-' || hostid[13] != '-' || hostid[18] != '-' || hostid[23] != '-')
+        return 0;
+
+    return 1;
+}
+
+char *get_hostid(void *cbdata)
+{
+    if (!strcmp(hostid, "none"))
+        return NULL;
+
+    if (!is_valid_hostid())
+        return strdup(STATS_ANON_UUID);
+
+    logg("HostID is valid: %s\n", hostid);
+
+    return strdup(hostid);
 }

@@ -40,6 +40,10 @@
 #include <stdio.h>
 #include <ctype.h>
 
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+#include "libclamav/crypto.h"
+
 #include "fmap.h"
 #include "others.h"
 #include "htmlnorm.h"
@@ -1813,7 +1817,8 @@ abort:
 	}
 	if(file_tmp_o1) {
 		html_output_flush(file_tmp_o1);
-		close(file_tmp_o1->fd);
+		if(file_buff_text->fd != -1)
+			close(file_tmp_o1->fd);
 		free(file_tmp_o1);
 	}
 	return retval;

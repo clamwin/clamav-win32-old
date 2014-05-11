@@ -27,6 +27,11 @@
 #include <sys/time.h>
 #endif
 #include <stdlib.h>
+
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+#include "libclamav/crypto.h"
+
 #include "bytecode.h"
 #include "bytecode_priv.h"
 #include "clamav.h"
@@ -240,6 +245,8 @@ int main(int argc, char *argv[])
     struct cli_all_bc bcs;
     int fd = -1;
     unsigned tracelevel;
+
+    cl_initialize_crypto();
 
     if(check_flevel())
 	exit(1);

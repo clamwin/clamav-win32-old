@@ -53,7 +53,7 @@ host_triplet = @host@
 target_triplet = @target@
 @ENABLE_UNRAR_FALSE@am__append_1 = export unrar_disabled=1;
 TESTS = $(am__EXEEXT_1) $(scripts)
-check_PROGRAMS = $(am__EXEEXT_1) check_clamd$(EXEEXT)
+check_PROGRAMS = $(am__EXEEXT_1) check_clamd$(EXEEXT) $(am__EXEEXT_2)
 subdir = unit_tests
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -67,6 +67,60 @@ am__aclocal_m4_deps = $(top_srcdir)/m4/acinclude.m4 \
 	$(top_srcdir)/m4/ltsugar.m4 $(top_srcdir)/m4/ltversion.m4 \
 	$(top_srcdir)/m4/lt~obsolete.m4 \
 	$(top_srcdir)/m4/mmap_private.m4 $(top_srcdir)/m4/resolv.m4 \
+	$(top_srcdir)/m4/reorganization/version.m4 \
+	$(top_srcdir)/m4/reorganization/build_tools.m4 \
+	$(top_srcdir)/m4/reorganization/headers.m4 \
+	$(top_srcdir)/m4/reorganization/c_options.m4 \
+	$(top_srcdir)/m4/reorganization/compiler_checks.m4 \
+	$(top_srcdir)/m4/reorganization/linker_checks.m4 \
+	$(top_srcdir)/m4/reorganization/code_checks/functions.m4 \
+	$(top_srcdir)/m4/reorganization/code_checks/mpool.m4 \
+	$(top_srcdir)/m4/reorganization/code_checks/unit_tests.m4 \
+	$(top_srcdir)/m4/reorganization/code_checks/coverage.m4 \
+	$(top_srcdir)/m4/reorganization/libs/xml.m4 \
+	$(top_srcdir)/m4/reorganization/libs/openssl.m4 \
+	$(top_srcdir)/m4/reorganization/libs/libz.m4 \
+	$(top_srcdir)/m4/reorganization/libs/bzip.m4 \
+	$(top_srcdir)/m4/reorganization/libs/unrar.m4 \
+	$(top_srcdir)/m4/reorganization/code_checks/ipv6.m4 \
+	$(top_srcdir)/m4/reorganization/code_checks/dns.m4 \
+	$(top_srcdir)/m4/reorganization/code_checks/fanotify.m4 \
+	$(top_srcdir)/m4/reorganization/code_checks/setpgrp.m4 \
+	$(top_srcdir)/m4/reorganization/milter/enable.m4 \
+	$(top_srcdir)/m4/reorganization/code_checks/iconv.m4 \
+	$(top_srcdir)/m4/reorganization/code_checks/pthreads.m4 \
+	$(top_srcdir)/m4/reorganization/code_checks/reentrant.m4 \
+	$(top_srcdir)/m4/reorganization/utility_checks/id.m4 \
+	$(top_srcdir)/m4/reorganization/utility_checks/yp.m4 \
+	$(top_srcdir)/m4/reorganization/usergroup.m4 \
+	$(top_srcdir)/m4/reorganization/debug.m4 \
+	$(top_srcdir)/m4/reorganization/customversion.m4 \
+	$(top_srcdir)/m4/reorganization/nocache.m4 \
+	$(top_srcdir)/m4/reorganization/dns.m4 \
+	$(top_srcdir)/m4/reorganization/bigstack.m4 \
+	$(top_srcdir)/m4/reorganization/dbdir.m4 \
+	$(top_srcdir)/m4/reorganization/cfgdir.m4 \
+	$(top_srcdir)/m4/reorganization/code_checks/in_port_t.m4 \
+	$(top_srcdir)/m4/reorganization/code_checks/in_addr_t.m4 \
+	$(top_srcdir)/m4/reorganization/os_checks.m4 \
+	$(top_srcdir)/m4/reorganization/milter/check.m4 \
+	$(top_srcdir)/m4/reorganization/code_checks/pthread_02.m4 \
+	$(top_srcdir)/m4/reorganization/code_checks/readdir.m4 \
+	$(top_srcdir)/m4/reorganization/code_checks/ctime.m4 \
+	$(top_srcdir)/m4/reorganization/code_checks/socklen_t.m4 \
+	$(top_srcdir)/m4/reorganization/clamav_user.m4 \
+	$(top_srcdir)/m4/reorganization/code_checks/compiler_attribs.m4 \
+	$(top_srcdir)/m4/reorganization/code_checks/select.m4 \
+	$(top_srcdir)/m4/reorganization/code_checks/stat64.m4 \
+	$(top_srcdir)/m4/reorganization/code_checks/shift.m4 \
+	$(top_srcdir)/m4/reorganization/code_checks/features.m4 \
+	$(top_srcdir)/m4/reorganization/clamdtop.m4 \
+	$(top_srcdir)/m4/reorganization/distcheck.m4 \
+	$(top_srcdir)/m4/reorganization/llvm.m4 \
+	$(top_srcdir)/m4/reorganization/sha_collect.m4 \
+	$(top_srcdir)/m4/reorganization/bsd.m4 \
+	$(top_srcdir)/m4/reorganization/libs/curl.m4 \
+	$(top_srcdir)/m4/reorganization/substitutions.m4 \
 	$(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
@@ -75,6 +129,7 @@ CONFIG_HEADER = $(top_builddir)/clamav-config.h
 CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 am__EXEEXT_1 = check_clamav$(EXEEXT)
+am__EXEEXT_2 = check_fpu_endian$(EXEEXT)
 am__check_clamav_SOURCES_DIST = check_clamav_skip.c check_clamav.c \
 	checks.h checks_common.h $(top_builddir)/libclamav/clamav.h \
 	check_jsnorm.c check_str.c check_regex.c check_disasm.c \
@@ -106,6 +161,11 @@ am__check_clamd_SOURCES_DIST = check_clamav_skip.c check_clamd.c \
 @HAVE_LIBCHECK_TRUE@	check_clamd-check_clamd.$(OBJEXT)
 check_clamd_OBJECTS = $(am_check_clamd_OBJECTS)
 check_clamd_DEPENDENCIES =
+am_check_fpu_endian_OBJECTS =  \
+	check_fpu_endian-check_fpu_endian.$(OBJEXT)
+check_fpu_endian_OBJECTS = $(am_check_fpu_endian_OBJECTS)
+check_fpu_endian_DEPENDENCIES =  \
+	$(top_builddir)/libclamav/libclamav.la
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/config/depcomp
 am__depfiles_maybe = depfiles
@@ -132,9 +192,10 @@ am__v_CCLD_0 = @echo "  CCLD  " $@;
 AM_V_GEN = $(am__v_GEN_@AM_V@)
 am__v_GEN_ = $(am__v_GEN_@AM_DEFAULT_V@)
 am__v_GEN_0 = @echo "  GEN   " $@;
-SOURCES = $(check_clamav_SOURCES) $(check_clamd_SOURCES)
+SOURCES = $(check_clamav_SOURCES) $(check_clamd_SOURCES) \
+	$(check_fpu_endian_SOURCES)
 DIST_SOURCES = $(am__check_clamav_SOURCES_DIST) \
-	$(am__check_clamd_SOURCES_DIST)
+	$(am__check_clamd_SOURCES_DIST) $(check_fpu_endian_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -288,9 +349,24 @@ CHECK_CPPFLAGS = @CHECK_CPPFLAGS@
 CHECK_LIBS = @CHECK_LIBS@
 CLAMAVGROUP = @CLAMAVGROUP@
 CLAMAVUSER = @CLAMAVUSER@
+CLAMAV_MILTER_CPPFLAGS = @CLAMAV_MILTER_CPPFLAGS@
 CLAMAV_MILTER_LIBS = @CLAMAV_MILTER_LIBS@
+CLAMBC_CPPFLAGS = @CLAMBC_CPPFLAGS@
+CLAMBC_LIBS = @CLAMBC_LIBS@
+CLAMCONF_CPPFLAGS = @CLAMCONF_CPPFLAGS@
+CLAMCONF_LIBS = @CLAMCONF_LIBS@
+CLAMDSCAN_CPPFLAGS = @CLAMDSCAN_CPPFLAGS@
 CLAMDSCAN_LIBS = @CLAMDSCAN_LIBS@
+CLAMDTOP_CPPFLAGS = @CLAMDTOP_CPPFLAGS@
+CLAMDTOP_LIBS = @CLAMDTOP_LIBS@
+CLAMD_CPPFLAGS = @CLAMD_CPPFLAGS@
 CLAMD_LIBS = @CLAMD_LIBS@
+CLAMMEM_CPPFLAGS = @CLAMMEM_CPPFLAGS@
+CLAMMEM_LIBS = @CLAMMEM_LIBS@
+CLAMSCAN_CPPFLAGS = @CLAMSCAN_CPPFLAGS@
+CLAMSCAN_LIBS = @CLAMSCAN_LIBS@
+CLAMSUBMIT_CFLAGS = @CLAMSUBMIT_CFLAGS@
+CLAMSUBMIT_LIBS = @CLAMSUBMIT_LIBS@
 CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
 CURSES_CPPFLAGS = @CURSES_CPPFLAGS@
@@ -308,6 +384,7 @@ ECHO_T = @ECHO_T@
 EGREP = @EGREP@
 EXEEXT = @EXEEXT@
 FGREP = @FGREP@
+FRESHCLAM_CPPFLAGS = @FRESHCLAM_CPPFLAGS@
 FRESHCLAM_LIBS = @FRESHCLAM_LIBS@
 GCOV = @GCOV@
 GENHTML = @GENHTML@
@@ -329,8 +406,10 @@ LIBADD_DLOPEN = @LIBADD_DLOPEN@
 LIBADD_SHL_LOAD = @LIBADD_SHL_LOAD@
 LIBBZ2 = @LIBBZ2@
 LIBBZ2_PREFIX = @LIBBZ2_PREFIX@
+LIBCLAMAV_CPPFLAGS = @LIBCLAMAV_CPPFLAGS@
 LIBCLAMAV_LIBS = @LIBCLAMAV_LIBS@
 LIBCLAMAV_VERSION = @LIBCLAMAV_VERSION@
+LIBCLAMSHARED_CPPFLAGS = @LIBCLAMSHARED_CPPFLAGS@
 LIBLTDL = @LIBLTDL@
 LIBM = @LIBM@
 LIBOBJS = @LIBOBJS@
@@ -368,6 +447,10 @@ RANLIB = @RANLIB@
 SED = @SED@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
+SIGTOOL_CPPFLAGS = @SIGTOOL_CPPFLAGS@
+SSL_CPPFLAGS = @SSL_CPPFLAGS@
+SSL_LDFLAGS = @SSL_LDFLAGS@
+SSL_LIBS = @SSL_LIBS@
 STRIP = @STRIP@
 THREAD_LIBS = @THREAD_LIBS@
 TH_SAFE = @TH_SAFE@
@@ -443,6 +526,7 @@ programs = check_clamav
 scripts = check_freshclam.sh check_sigtool.sh check_unit_vg.sh check1_clamscan.sh check2_clamd.sh check3_clamd.sh check4_clamd.sh\
 	  check5_clamd_vg.sh check6_clamd_vg.sh check7_clamd_hg.sh check8_clamd_hg.sh check9_clamscan_vg.sh
 
+utils = check_fpu_endian
 TESTS_ENVIRONMENT = export abs_srcdir=$(abs_srcdir) AWK=$(AWK); \
 	$(am__append_1)
 check_SCRIPTS = $(scripts)
@@ -459,7 +543,10 @@ AM_CFLAGS = @WERR_CFLAGS@
 @HAVE_LIBCHECK_TRUE@check_clamd_SOURCES = check_clamd.c checks_common.h
 @HAVE_LIBCHECK_TRUE@check_clamd_CPPFLAGS = -I$(top_srcdir) @CHECK_CPPFLAGS@ -DSRCDIR=\"$(abs_srcdir)\" -DBUILDDIR=\"$(abs_builddir)\"
 @HAVE_LIBCHECK_TRUE@check_clamd_LDADD = @CHECK_LIBS@ @CLAMD_LIBS@
-CLEANFILES = lcov.out *.gcno *.gcda *.log $(FILES) test-stderr.log clamscan.log accdenied clamav.hdb
+check_fpu_endian_SOURCES = check_fpu_endian.c
+check_fpu_endian_CPPFLAGS = -I$(top_srcdir) @CHECK_CPPFLAGS@ -DSRCDIR=\"$(abs_srcdir)\" -DOBJDIR=\"$(abs_builddir)\"
+check_fpu_endian_LDADD = $(top_builddir)/libclamav/libclamav.la
+CLEANFILES = lcov.out *.gcno *.gcda *.log $(FILES) test-stderr.log clamscan.log accdenied clamav.hdb $(utils)
 EXTRA_DIST = .split $(srcdir)/*.ref input test-freshclam.conf valgrind.supp virusaction-test.sh $(scripts) preload_run.sh check_common.sh
 @ENABLE_COVERAGE_TRUE@LCOV_OUTPUT = lcov.out
 @ENABLE_COVERAGE_TRUE@LCOV_HTML = lcov_html
@@ -516,6 +603,9 @@ check_clamav$(EXEEXT): $(check_clamav_OBJECTS) $(check_clamav_DEPENDENCIES) $(EX
 check_clamd$(EXEEXT): $(check_clamd_OBJECTS) $(check_clamd_DEPENDENCIES) $(EXTRA_check_clamd_DEPENDENCIES) 
 	@rm -f check_clamd$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(check_clamd_OBJECTS) $(check_clamd_LDADD) $(LIBS)
+check_fpu_endian$(EXEEXT): $(check_fpu_endian_OBJECTS) $(check_fpu_endian_DEPENDENCIES) $(EXTRA_check_fpu_endian_DEPENDENCIES) 
+	@rm -f check_fpu_endian$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(check_fpu_endian_OBJECTS) $(check_fpu_endian_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -535,6 +625,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_clamav-check_uniq.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_clamd-check_clamav_skip.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_clamd-check_clamd.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_fpu_endian-check_fpu_endian.Po@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
@@ -724,6 +815,20 @@ check_clamd-check_clamd.obj: check_clamd.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='check_clamd.c' object='check_clamd-check_clamd.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(check_clamd_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o check_clamd-check_clamd.obj `if test -f 'check_clamd.c'; then $(CYGPATH_W) 'check_clamd.c'; else $(CYGPATH_W) '$(srcdir)/check_clamd.c'; fi`
+
+check_fpu_endian-check_fpu_endian.o: check_fpu_endian.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(check_fpu_endian_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT check_fpu_endian-check_fpu_endian.o -MD -MP -MF $(DEPDIR)/check_fpu_endian-check_fpu_endian.Tpo -c -o check_fpu_endian-check_fpu_endian.o `test -f 'check_fpu_endian.c' || echo '$(srcdir)/'`check_fpu_endian.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/check_fpu_endian-check_fpu_endian.Tpo $(DEPDIR)/check_fpu_endian-check_fpu_endian.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='check_fpu_endian.c' object='check_fpu_endian-check_fpu_endian.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(check_fpu_endian_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o check_fpu_endian-check_fpu_endian.o `test -f 'check_fpu_endian.c' || echo '$(srcdir)/'`check_fpu_endian.c
+
+check_fpu_endian-check_fpu_endian.obj: check_fpu_endian.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(check_fpu_endian_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT check_fpu_endian-check_fpu_endian.obj -MD -MP -MF $(DEPDIR)/check_fpu_endian-check_fpu_endian.Tpo -c -o check_fpu_endian-check_fpu_endian.obj `if test -f 'check_fpu_endian.c'; then $(CYGPATH_W) 'check_fpu_endian.c'; else $(CYGPATH_W) '$(srcdir)/check_fpu_endian.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/check_fpu_endian-check_fpu_endian.Tpo $(DEPDIR)/check_fpu_endian-check_fpu_endian.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='check_fpu_endian.c' object='check_fpu_endian-check_fpu_endian.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(check_fpu_endian_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o check_fpu_endian-check_fpu_endian.obj `if test -f 'check_fpu_endian.c'; then $(CYGPATH_W) 'check_fpu_endian.c'; else $(CYGPATH_W) '$(srcdir)/check_fpu_endian.c'; fi`
 
 mostlyclean-libtool:
 	-rm -f *.lo

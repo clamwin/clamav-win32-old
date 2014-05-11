@@ -40,6 +40,10 @@
 #include <unistd.h>
 #endif
 
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+#include "libclamav/crypto.h"
+
 #include <fcntl.h>
 #ifdef C_SOLARIS
 #include <stdio_ext.h>
@@ -853,6 +857,26 @@ int recvloop_th(int *socketds, unsigned nsockets, struct cl_engine *engine, unsi
     val = cl_engine_get_num(engine, CL_ENGINE_MAX_ZIPTYPERCG, NULL);
     logg("Limits: MaxZipTypeRcg limit set to %llu bytes.\n", val);
 
+    if((opt = optget(opts, "MaxPartitions"))->active) {
+        if((ret = cl_engine_set_num(engine, CL_ENGINE_MAX_PARTITIONS, opt->numarg))) {
+            logg("!cli_engine_set_num(MaxPartitions) failed: %s\n", cl_strerror(ret));
+            cl_engine_free(engine);
+            return 1;
+        }
+    }
+    val = cl_engine_get_num(engine, CL_ENGINE_MAX_PARTITIONS, NULL);
+    logg("Limits: MaxPartitions limit set to %llu.\n", val);
+
+    if((opt = optget(opts, "MaxIconsPE"))->active) {
+        if((ret = cl_engine_set_num(engine, CL_ENGINE_MAX_ICONSPE, opt->numarg))) {
+            logg("!cli_engine_set_num(MaxIconsPE) failed: %s\n", cl_strerror(ret));
+            cl_engine_free(engine);
+            return 1;
+        }
+    }
+    val = cl_engine_get_num(engine, CL_ENGINE_MAX_ICONSPE, NULL);
+    logg("Limits: MaxIconsPE limit set to %llu.\n", val);
+
     if(optget(opts, "ScanArchive")->enabled) {
 	logg("Archive support enabled.\n");
 	options |= CL_SCAN_ARCHIVE;
@@ -950,6 +974,11 @@ int recvloop_th(int *socketds, unsigned nsockets, struct cl_engine *engine, unsi
 	    options |= CL_SCAN_PHISHING_BLOCKSSL;
 	    logg("Phishing: Always checking for ssl mismatches\n");
 	}
+    }
+
+    if(optget(opts,"PartitionIntersection")->enabled) {
+        options |= CL_SCAN_PARTITION_INTXN;
+        logg("Raw DMG: Always checking for partitons intersections\n");
     }
 
     if(optget(opts,"HeuristicScanPrecedence")->enabled) {

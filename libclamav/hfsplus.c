@@ -22,6 +22,10 @@
 #include "clamav-config.h"
 #endif
 
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+#include "libclamav/crypto.h"
+
 #include "cltypes.h"
 #include "others.h"
 #include "hfsplus.h"
@@ -670,7 +674,7 @@ static int hfsplus_walk_catalog(cli_ctx *ctx, hfsPlusVolumeHeader *volHeader, hf
                     }
                 }
                 if (ret != CL_CLEAN) {
-                    cli_dbgmsg("hfsplus_walk_catalog: data fork retcode %d", ret);
+                    cli_dbgmsg("hfsplus_walk_catalog: data fork retcode %d\n", ret);
                     break;
                 }
                 /* Scan resource fork */

@@ -35,6 +35,10 @@
 #include <sys/stat.h>
 #include <dirent.h>
 
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+#include "libclamav/crypto.h"
+
 #include "shared/optparser.h"
 #include "shared/misc.h"
 
@@ -45,6 +49,7 @@
 #include "libclamav/bytecode.h"
 #include "libclamav/bytecode_detect.h"
 #include "target.h"
+#include "fpu.h"
 
 #ifndef _WIN32
 extern const struct clam_option *clam_options;
@@ -371,6 +376,8 @@ int main(int argc, char **argv)
 	unsigned int i, j;
 	struct cli_environment env;
 
+    cl_initialize_crypto();
+
     opts = optparse(NULL, argc, argv, 1, OPT_CLAMCONF, 0, NULL);
     if(!opts) {
 	printf("ERROR: Can't parse command line options\n");
@@ -448,9 +455,10 @@ int main(int argc, char **argv)
 #ifdef FRESHCLAM_DNS_FIX
 	printf("FRESHCLAM_DNS_FIX ");
 #endif
-#ifdef FPU_WORDS_BIGENDIAN
-	printf("AUTOIT_EA06 ");
+#ifndef _WIN32
+        if (get_fpu_endian() != FPU_ENDIAN_UNKNOWN)
 #endif
+			printf("AUTOIT_EA06 ");
 #ifdef HAVE_BZLIB_H
 	printf("BZIP2 ");
 #endif

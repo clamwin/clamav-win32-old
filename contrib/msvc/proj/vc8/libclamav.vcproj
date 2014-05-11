@@ -1930,6 +1930,18 @@
 					RelativePath="..\..\include\zlib.h"
 					>
 				</File>
+				<Filter
+					Name="openssl"
+					>
+					<File
+						RelativePath="..\..\include\openssl\err.h"
+						>
+					</File>
+					<File
+						RelativePath="..\..\include\openssl\ssl.h"
+						>
+					</File>
+				</Filter>
 			</Filter>
 			<Filter
 				Name="Source Files"

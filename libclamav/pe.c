@@ -35,6 +35,10 @@
 #include <time.h>
 #include <stdarg.h>
 
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+#include "libclamav/crypto.h"
+
 #include "cltypes.h"
 #include "clamav.h"
 #include "others.h"
@@ -50,7 +54,6 @@
 #include "scanners.h"
 #include "str.h"
 #include "execs.h"
-#include "md5.h"
 #include "mew.h"
 #include "upack.h"
 #include "matcher.h"
@@ -59,7 +62,6 @@
 #include "special.h"
 #include "ishield.h"
 #include "asn1.h"
-#include "sha1.h"
 
 #define DCONF ctx->dconf->pe
 
@@ -486,9 +488,6 @@ static void cli_parseres_special(uint32_t base, uint32_t rva, fmap_t *map, struc
 static unsigned int cli_hashsect(fmap_t *map, struct cli_exe_section *s, unsigned char **digest, int * foundhash, int * foundwild)
 {
     const void *hashme;
-    cli_md5_ctx md5;
-    SHA1Context sha1ctx;
-    SHA256_CTX sha256ctx;
 
     if (s->rsz > CLI_MAX_ALLOCATION) {
         cli_dbgmsg("cli_hashsect: skipping hash calculation for too big section\n");
@@ -501,21 +500,12 @@ static unsigned int cli_hashsect(fmap_t *map, struct cli_exe_section *s, unsigne
         return 0;
     }
 
-    if(foundhash[CLI_HASH_MD5] || foundwild[CLI_HASH_MD5]) {
-        cli_md5_init(&md5);
-        cli_md5_update(&md5, hashme, s->rsz);
-        cli_md5_final(digest[CLI_HASH_MD5], &md5);
-    }
-    if(foundhash[CLI_HASH_SHA1] || foundwild[CLI_HASH_SHA1]) {
-        SHA1Init(&sha1ctx);
-        SHA1Update(&sha1ctx, hashme, s->rsz);
-        SHA1Final(&sha1ctx, digest[CLI_HASH_SHA1]);
-    }
-    if(foundhash[CLI_HASH_SHA256] || foundwild[CLI_HASH_SHA256]) {
-        sha256_init(&sha256ctx);
-        sha256_update(&sha256ctx, hashme, s->rsz);
-        sha256_final(&sha256ctx, digest[CLI_HASH_SHA256]);
-    }
+    if(foundhash[CLI_HASH_MD5] || foundwild[CLI_HASH_MD5])
+        cl_hash_data("md5", hashme, s->rsz, digest[CLI_HASH_MD5], NULL);
+    if(foundhash[CLI_HASH_SHA1] || foundwild[CLI_HASH_SHA1])
+        cl_sha1(hashme, s->rsz, digest[CLI_HASH_SHA1], NULL);
+    if(foundhash[CLI_HASH_SHA256] || foundwild[CLI_HASH_SHA256])
+        cl_sha256(hashme, s->rsz, digest[CLI_HASH_SHA256], NULL);
 
     return 1;
 }
@@ -562,7 +552,6 @@ static int scan_pe_mdb (cli_ctx * ctx, struct cli_exe_section *exe_section)
                 md5[8], md5[9], md5[10], md5[11], md5[12], md5[13], md5[14], md5[15]);
         } else if (cli_always_gen_section_hash) {
             const void *hashme = fmap_need_off_once(*ctx->fmap, exe_section->raw, exe_section->rsz);
-            cli_md5_ctx md5ctx;
             if (!(hashme)) {
                 cli_errmsg("scan_pe_mdb: unable to read section data\n");
                 ret = CL_EREAD;
@@ -576,9 +565,7 @@ static int scan_pe_mdb (cli_ctx * ctx, struct cli_exe_section *exe_section)
                 goto end;
             }
 
-            cli_md5_init(&md5ctx);
-            cli_md5_update(&md5ctx, hashme, exe_section->rsz);
-            cli_md5_final(md5, &md5ctx);
+            cl_hash_data("md5", hashme, exe_section->rsz, md5, NULL);
 
             cli_dbgmsg("MDB: %u:%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x\n",
                 exe_section->rsz, md5[0], md5[1], md5[2], md5[3], md5[4], md5[5], md5[6], md5[7],
@@ -2796,14 +2783,14 @@ static int sort_sects(const void *first, const void *second) {
     return (a->raw - b->raw);
 }
 
-int cli_checkfp_pe(cli_ctx *ctx, uint8_t *authsha1) {
+int cli_checkfp_pe(cli_ctx *ctx, uint8_t *authsha1, stats_section_t *hashes, uint32_t flags) {
     uint16_t e_magic; /* DOS signature ("MZ") */
     uint16_t nsections;
     uint32_t e_lfanew; /* address of new exe header */
     struct pe_image_file_hdr file_hdr;
     union {
-	struct pe_image_optional_hdr64 opt64;
-	struct pe_image_optional_hdr32 opt32;
+        struct pe_image_optional_hdr64 opt64;
+        struct pe_image_optional_hdr32 opt32;
     } pe_opt;
     const struct pe_image_section_hdr *section_hdr;
     ssize_t at;
@@ -2813,68 +2800,76 @@ int cli_checkfp_pe(cli_ctx *ctx, uint8_t *authsha1) {
     struct cli_exe_section *exe_sections;
     struct pe_image_data_dir *dirs;
     fmap_t *map = *ctx->fmap;
-    SHA1Context sha1;
+    void *hashctx=NULL;
+
+    if (flags & CL_CHECKFP_PE_FLAG_STATS)
+        if (!(hashes))
+            return CL_EFORMAT;
+
+    if (flags == CL_CHECKFP_PE_FLAG_NONE)
+        return CL_VIRUS;
 
     if(!(DCONF & PE_CONF_CATALOG))
-	return CL_EFORMAT;
+        return CL_EFORMAT;
 
     if(fmap_readn(map, &e_magic, 0, sizeof(e_magic)) != sizeof(e_magic))
-	return CL_EFORMAT;
+        return CL_EFORMAT;
 
     if(EC16(e_magic) != PE_IMAGE_DOS_SIGNATURE && EC16(e_magic) != PE_IMAGE_DOS_SIGNATURE_OLD)
-	return CL_EFORMAT;
+        return CL_EFORMAT;
 
     if(fmap_readn(map, &e_lfanew, 58 + sizeof(e_magic), sizeof(e_lfanew)) != sizeof(e_lfanew))
-	return CL_EFORMAT;
+        return CL_EFORMAT;
 
     e_lfanew = EC32(e_lfanew);
     if(!e_lfanew)
-	return CL_EFORMAT;
+        return CL_EFORMAT;
 
     if(fmap_readn(map, &file_hdr, e_lfanew, sizeof(struct pe_image_file_hdr)) != sizeof(struct pe_image_file_hdr))
-	return CL_EFORMAT;
+        return CL_EFORMAT;
 
     if(EC32(file_hdr.Magic) != PE_IMAGE_NT_SIGNATURE)
-	return CL_EFORMAT;
+        return CL_EFORMAT;
 
     nsections = EC16(file_hdr.NumberOfSections);
     if(nsections < 1 || nsections > 96)
-	return CL_EFORMAT;
+        return CL_EFORMAT;
 
     if(EC16(file_hdr.SizeOfOptionalHeader) < sizeof(struct pe_image_optional_hdr32))
-	return CL_EFORMAT;
+        return CL_EFORMAT;
 
     at = e_lfanew + sizeof(struct pe_image_file_hdr);
     if(fmap_readn(map, &optional_hdr32, at, sizeof(struct pe_image_optional_hdr32)) != sizeof(struct pe_image_optional_hdr32))
-	return CL_EFORMAT;
+        return CL_EFORMAT;
+
     at += sizeof(struct pe_image_optional_hdr32);
 
     /* This will be a chicken and egg problem until we drop 9x */
     if(EC16(optional_hdr64.Magic)==PE32P_SIGNATURE) {
         if(EC16(file_hdr.SizeOfOptionalHeader)!=sizeof(struct pe_image_optional_hdr64))
-	    return CL_EFORMAT;
-	pe_plus = 1;
+            return CL_EFORMAT;
+
+        pe_plus = 1;
     }
 
     if(!pe_plus) { /* PE */
-	if (EC16(file_hdr.SizeOfOptionalHeader)!=sizeof(struct pe_image_optional_hdr32)) {
-	    /* Seek to the end of the long header */
-	    at += EC16(file_hdr.SizeOfOptionalHeader)-sizeof(struct pe_image_optional_hdr32);
-	}
+        if (EC16(file_hdr.SizeOfOptionalHeader)!=sizeof(struct pe_image_optional_hdr32)) {
+            /* Seek to the end of the long header */
+            at += EC16(file_hdr.SizeOfOptionalHeader)-sizeof(struct pe_image_optional_hdr32);
+        }
 
-	hdr_size = EC32(optional_hdr32.SizeOfHeaders);
-	dirs = optional_hdr32.DataDirectory;
+        hdr_size = EC32(optional_hdr32.SizeOfHeaders);
+        dirs = optional_hdr32.DataDirectory;
     } else { /* PE+ */
+        size_t readlen = sizeof(struct pe_image_optional_hdr64) - sizeof(struct pe_image_optional_hdr32);
         /* read the remaining part of the header */
-        if(fmap_readn(map, &optional_hdr32 + 1, at, sizeof(struct pe_image_optional_hdr64) - sizeof(struct pe_image_optional_hdr32)) != sizeof(struct pe_image_optional_hdr64) - sizeof(struct pe_image_optional_hdr32))
-	    return CL_EFORMAT;
-	at += sizeof(struct pe_image_optional_hdr64) - sizeof(struct pe_image_optional_hdr32);
-	hdr_size = EC32(optional_hdr64.SizeOfHeaders);
-	dirs = optional_hdr64.DataDirectory;
-    }
+        if(fmap_readn(map, &optional_hdr32 + 1, at, readlen) != readlen)
+            return CL_EFORMAT;
 
-    if(!cli_hm_have_size(ctx->engine->hm_fp, CLI_HASH_SHA1, 2) && dirs[4].Size < 8)
-	return CL_BREAK;
+        at += sizeof(struct pe_image_optional_hdr64) - sizeof(struct pe_image_optional_hdr32);
+        hdr_size = EC32(optional_hdr64.SizeOfHeaders);
+        dirs = optional_hdr64.DataDirectory;
+    }
 
     fsize = map->len;
 
@@ -2883,115 +2878,187 @@ int cli_checkfp_pe(cli_ctx *ctx, uint8_t *authsha1) {
 
     section_hdr = fmap_need_off_once(map, at, sizeof(*section_hdr) * nsections);
     if(!section_hdr)
-	return CL_EFORMAT;
+        return CL_EFORMAT;
+
     at += sizeof(*section_hdr) * nsections;
 
     exe_sections = (struct cli_exe_section *) cli_calloc(nsections, sizeof(struct cli_exe_section));
     if(!exe_sections)
-	return CL_EMEM;
+        return CL_EMEM;
 
     for(i = 0; falign!=0x200 && i<nsections; i++) {
-	/* file alignment fallback mode - blah */
-	if (falign && section_hdr[i].SizeOfRawData && EC32(section_hdr[i].PointerToRawData)%falign && !(EC32(section_hdr[i].PointerToRawData)%0x200))
-	    falign = 0x200;
+        /* file alignment fallback mode - blah */
+        if (falign && section_hdr[i].SizeOfRawData && EC32(section_hdr[i].PointerToRawData)%falign && !(EC32(section_hdr[i].PointerToRawData)%0x200))
+            falign = 0x200;
     }
 
     hdr_size = PESALIGN(hdr_size, falign); /* Aligned headers virtual size */
 
+    if (flags & CL_CHECKFP_PE_FLAG_STATS) {
+        hashes->nsections = nsections;
+        hashes->sections = cli_calloc(nsections, sizeof(struct cli_section_hash));
+        if (!(hashes->sections)) {
+            free(exe_sections);
+            return CL_EMEM;
+        }
+    }
+
     for(i = 0; i < nsections; i++) {
-	exe_sections[i].rva = PEALIGN(EC32(section_hdr[i].VirtualAddress), valign);
-	exe_sections[i].vsz = PESALIGN(EC32(section_hdr[i].VirtualSize), valign);
-	exe_sections[i].raw = PEALIGN(EC32(section_hdr[i].PointerToRawData), falign);
-	exe_sections[i].rsz = PESALIGN(EC32(section_hdr[i].SizeOfRawData), falign);
+        exe_sections[i].rva = PEALIGN(EC32(section_hdr[i].VirtualAddress), valign);
+        exe_sections[i].vsz = PESALIGN(EC32(section_hdr[i].VirtualSize), valign);
+        exe_sections[i].raw = PEALIGN(EC32(section_hdr[i].PointerToRawData), falign);
+        exe_sections[i].rsz = PESALIGN(EC32(section_hdr[i].SizeOfRawData), falign);
 
-	if (!exe_sections[i].vsz && exe_sections[i].rsz)
-	    exe_sections[i].vsz=PESALIGN(exe_sections[i].ursz, valign);
+        if (!exe_sections[i].vsz && exe_sections[i].rsz)
+            exe_sections[i].vsz=PESALIGN(exe_sections[i].ursz, valign);
 
-	if (exe_sections[i].rsz && fsize>exe_sections[i].raw && !CLI_ISCONTAINED(0, (uint32_t) fsize, exe_sections[i].raw, exe_sections[i].rsz))
-	    exe_sections[i].rsz = fsize - exe_sections[i].raw;
+        if (exe_sections[i].rsz && fsize>exe_sections[i].raw && !CLI_ISCONTAINED(0, (uint32_t) fsize, exe_sections[i].raw, exe_sections[i].rsz))
+            exe_sections[i].rsz = fsize - exe_sections[i].raw;
 
-	if (exe_sections[i].rsz && exe_sections[i].raw >= fsize) {
-		free(exe_sections);
-		return CL_EFORMAT;
-	}
+        if (exe_sections[i].rsz && exe_sections[i].raw >= fsize) {
+            free(exe_sections);
+            return CL_EFORMAT;
+        }
 
-	if (exe_sections[i].urva>>31 || exe_sections[i].uvsz>>31 || (exe_sections[i].rsz && exe_sections[i].uraw>>31) || exe_sections[i].ursz>>31) {
-	    free(exe_sections);
-	    return CL_EFORMAT;
-	}
+        if (exe_sections[i].urva>>31 || exe_sections[i].uvsz>>31 || (exe_sections[i].rsz && exe_sections[i].uraw>>31) || exe_sections[i].ursz>>31) {
+            free(exe_sections);
+            return CL_EFORMAT;
+        }
     }
 
     cli_qsort(exe_sections, nsections, sizeof(*exe_sections), sort_sects);
+    hashctx = cl_hash_init("sha1");
+    if (!(hashctx)) {
+        if (flags & CL_CHECKFP_PE_FLAG_AUTHENTICODE)
+            flags ^= CL_CHECKFP_PE_FLAG_AUTHENTICODE;
+    }
 
-    SHA1Init(&sha1);
+    if (flags & CL_CHECKFP_PE_FLAG_AUTHENTICODE) {
+        /* Check to see if we have a security section. */
+        if(!cli_hm_have_size(ctx->engine->hm_fp, CLI_HASH_SHA1, 2) && dirs[4].Size < 8) {
+            if (flags & CL_CHECKFP_PE_FLAG_STATS) {
+                /* If stats is enabled, continue parsing the sample */
+                flags ^= CL_CHECKFP_PE_FLAG_AUTHENTICODE;
+            } else {
+                if (hashctx)
+                    cl_hash_destroy(hashctx);
+                return CL_BREAK;
+            }
+        }
+    }
 
-#define hash_chunk(where, size)					\
-    do {							\
-	const uint8_t *hptr;					\
-	if(!(size)) break;					\
-	if(!(hptr = fmap_need_off_once(map, where, size))){	\
-	    free(exe_sections);					\
-	    return CL_EFORMAT;					\
-	}							\
-	SHA1Update(&sha1, hptr, size);				\
+#define hash_chunk(where, size, isStatAble, section) \
+    do { \
+        const uint8_t *hptr; \
+        if(!(size)) break; \
+        if(!(hptr = fmap_need_off_once(map, where, size))){ \
+            free(exe_sections); \
+            if (hashctx) \
+                cl_hash_destroy(hashctx); \
+            return CL_EFORMAT; \
+        } \
+        if (flags & CL_CHECKFP_PE_FLAG_AUTHENTICODE && hashctx) \
+            cl_update_hash(hashctx, hptr, size); \
+        if (isStatAble && flags & CL_CHECKFP_PE_FLAG_STATS) { \
+            void *md5ctx; \
+            md5ctx = cl_hash_init("md5"); \
+            if (md5ctx) { \
+                cl_update_hash(md5ctx, hptr, size); \
+                cl_finish_hash(md5ctx, hashes->sections[section].md5); \
+            } \
+        } \
     } while(0)
 
-    /* MZ to checksum */
-    at = 0;
-    hlen = e_lfanew + sizeof(struct pe_image_file_hdr) + (pe_plus ? offsetof(struct pe_image_optional_hdr64, CheckSum) : offsetof(struct pe_image_optional_hdr32, CheckSum));
-    hash_chunk(0, hlen);
-    at = hlen + 4;
+    while (flags & CL_CHECKFP_PE_FLAG_AUTHENTICODE) {
+        /* MZ to checksum */
+        at = 0;
+        hlen = e_lfanew + sizeof(struct pe_image_file_hdr) + (pe_plus ? offsetof(struct pe_image_optional_hdr64, CheckSum) : offsetof(struct pe_image_optional_hdr32, CheckSum));
+        hash_chunk(0, hlen, 0, 0);
+        at = hlen + 4;
 
-    /* Checksum to security */
-    if(pe_plus)
-	hlen = offsetof(struct pe_image_optional_hdr64, DataDirectory[4]) - offsetof(struct pe_image_optional_hdr64, CheckSum) - 4;
-    else
-	hlen = offsetof(struct pe_image_optional_hdr32, DataDirectory[4]) - offsetof(struct pe_image_optional_hdr32, CheckSum) - 4;
-    hash_chunk(at, hlen);
-    at += hlen + 8;
+        /* Checksum to security */
+        if(pe_plus)
+            hlen = offsetof(struct pe_image_optional_hdr64, DataDirectory[4]) - offsetof(struct pe_image_optional_hdr64, CheckSum) - 4;
+        else
+            hlen = offsetof(struct pe_image_optional_hdr32, DataDirectory[4]) - offsetof(struct pe_image_optional_hdr32, CheckSum) - 4;
+        hash_chunk(at, hlen, 0, 0);
+        at += hlen + 8;
 
-    if(at > hdr_size) {
-	free(exe_sections);
-	return CL_EFORMAT;
+        if(at > hdr_size) {
+            if (flags & CL_CHECKFP_PE_FLAG_STATS) {
+                flags ^= CL_CHECKFP_PE_FLAG_AUTHENTICODE;
+                break;
+            } else {
+                free(exe_sections);
+                if (hashctx)
+                    cl_hash_destroy(hashctx);
+                return CL_EFORMAT;
+            }
+        }
+
+        /* Security to End of header */
+        hlen = hdr_size - at;
+        hash_chunk(at, hlen, 0, 0);
+
+        at = hdr_size;
+        break;
     }
 
-    /* Security to End of header */
-    hlen = hdr_size - at;
-    hash_chunk(at, hlen);
-
-    /* Sections */
-    at = hdr_size;
+    /* Hash the sections */
     for(i = 0; i < nsections; i++) {
-	if(!exe_sections[i].rsz)
-	    continue;
-	hash_chunk(exe_sections[i].raw, exe_sections[i].rsz);
-	at += exe_sections[i].rsz;
+        if(!exe_sections[i].rsz)
+            continue;
+
+        hash_chunk(exe_sections[i].raw, exe_sections[i].rsz, 1, i);
+        if (flags & CL_CHECKFP_PE_FLAG_AUTHENTICODE)
+            at += exe_sections[i].rsz;
     }
 
-    if(at < fsize) {
-	hlen = fsize - at;
-	if(dirs[4].Size > hlen) {
-	    free(exe_sections);
-	    return CL_EFORMAT;
-	}
-	hlen -= dirs[4].Size;
-	hash_chunk(at, hlen);
-	at += hlen;
-    }
+    while (flags & CL_CHECKFP_PE_FLAG_AUTHENTICODE) {
+        if(at < fsize) {
+            hlen = fsize - at;
+            if(dirs[4].Size > hlen) {
+                if (flags & CL_CHECKFP_PE_FLAG_STATS) {
+                    flags ^= CL_CHECKFP_PE_FLAG_AUTHENTICODE;
+                    break;
+                } else {
+                    free(exe_sections);
+                    if (hashctx)
+                        cl_hash_destroy(hashctx);
+                    return CL_EFORMAT;
+                }
+            }
+
+            hlen -= dirs[4].Size;
+            hash_chunk(at, hlen, 0, 0);
+            at += hlen;
+        }
+
+        break;
+    } while (0);
+
     free(exe_sections);
 
-    SHA1Final(&sha1, authsha1);
+    if (flags & CL_CHECKFP_PE_FLAG_AUTHENTICODE && hashctx) {
+        cl_finish_hash(hashctx, authsha1);
 
-    if(cli_debug_flag) {
-	char shatxt[SHA1_HASH_SIZE*2+1];
-	for(i=0; i<SHA1_HASH_SIZE; i++)
-	    sprintf(&shatxt[i*2], "%02x", authsha1[i]);
-	cli_dbgmsg("Authenticode: %s\n", shatxt);
+        if(cli_debug_flag) {
+            char shatxt[SHA1_HASH_SIZE*2+1];
+            for(i=0; i<SHA1_HASH_SIZE; i++)
+                sprintf(&shatxt[i*2], "%02x", authsha1[i]);
+            cli_dbgmsg("Authenticode: %s\n", shatxt);
+        }
+
+        hlen = dirs[4].Size;
+        if(hlen < 8)
+            return CL_VIRUS;
+
+        hlen -= 8;
+
+        return asn1_check_mscat((struct cl_engine *)(ctx->engine), map, at + 8, hlen, authsha1);
+    } else {
+        if (hashctx)
+            cl_hash_destroy(hashctx);
+        return CL_VIRUS;
     }
-
-    hlen = dirs[4].Size;
-    if(hlen < 8)
-	return CL_VIRUS;
-    hlen -= 8;
-    return asn1_check_mscat((struct cl_engine *)(ctx->engine), map, at + 8, hlen, authsha1);
 }

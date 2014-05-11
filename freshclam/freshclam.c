@@ -46,6 +46,10 @@
 #include <syslog.h>
 #endif
 
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+#include "libclamav/crypto.h"
+
 #include "target.h"
 #include "clamav.h"
 #include "freshclamcodes.h"
@@ -68,6 +72,10 @@ static short foreground = 1;
 char updtmpdir[512], dbdir[512];
 int sigchld_wait = 1;
 const char *pidfile = NULL;
+char hostid[37];
+
+void submit_host_info(struct optstruct *opts);
+char *get_hostid(void *cbdata);
 
 static void
 sighandler (int sig)
@@ -190,7 +198,9 @@ help (void)
     mprintf
         ("    --list-mirrors                       print mirrors from mirrors.dat\n");
     mprintf
-        ("    --submit-stats[=/path/clamd.conf]    only submit detection statistics\n");
+        ("    --enable-stats                       enable statistical information reporting\n");
+    mprintf
+        ("    --stats-host-id=UUID                 HostID in the form of an UUID to use when submitting statistical information\n");
     mprintf
         ("    --update-db=DBNAME                   only update database DBNAME\n");
 
@@ -299,6 +309,10 @@ main (int argc, char **argv)
     if (check_flevel ())
         exit (FCE_INIT);
 
+#if defined(_WIN32)
+    cl_initialize_crypto();
+#endif
+
     if ((retcl = cl_init (CL_INIT_DEFAULT)))
     {
         mprintf ("!Can't initialize libclamav: %s\n", cl_strerror (retcl));
@@ -354,6 +368,28 @@ main (int argc, char **argv)
         optfree (opts);
         return 0;
     }
+
+    /* Stats/intelligence gathering  */
+    if (optget(opts, "stats-host-id")->enabled) {
+        char *p = optget(opts, "stats-host-id")->strarg;
+
+        if (strcmp(p, "default")) {
+            if (!strcmp(p, "anonymous")) {
+                strcpy(hostid, STATS_ANON_UUID);
+            } else {
+                if (strlen(p) > 36) {
+                    logg("!Invalid HostID\n");
+                    optfree(opts);
+                    return FCE_INIT;
+                }
+
+                strcpy(hostid, p);
+            }
+        } else {
+            strcpy(hostid, "default");
+        }
+    }
+    submit_host_info(opts);
 
     if (optget (opts, "HTTPProxyPassword")->enabled)
     {
@@ -662,12 +698,7 @@ main (int argc, char **argv)
         {
             ret = download (opts, cfgfile);
 
-            if (ret <= 1)
-            {
-                if ((opt = optget (opts, "SubmitDetectionStats"))->enabled)
-                    submitstats (opt->strarg, opts);
-            }
-            else
+            if (ret > 1)
             {
                 if ((opt = optget (opts, "OnErrorExecute"))->enabled)
                     arg = opt->strarg;
@@ -723,19 +754,7 @@ main (int argc, char **argv)
     }
     else
     {
-        if ((opt = optget (opts, "submit-stats"))->active)
-        {
-            if (!optget (opts, "no-warnings")->enabled)
-                logg (" *** Virus databases are not updated in this mode ***\n");
-            ret = submitstats (opt->strarg, opts);
-        }
-        else
-        {
-            ret = download (opts, cfgfile);
-
-            if ((opt = optget (opts, "SubmitDetectionStats"))->enabled)
-                submitstats (opt->strarg, opts);
-        }
+        ret = download (opts, cfgfile);
     }
 
     if (ret > 1)
@@ -754,6 +773,82 @@ main (int argc, char **argv)
     return (ret);
 }
 
+void submit_host_info(struct optstruct *opts)
+{
+    struct optstruct *opt;
+    struct cl_engine *engine;
+    cli_intel_t *intel;
+
+    if (!optget(opts, "enable-stats")->enabled)
+        return;
+
+    engine = cl_engine_new();
+    if (!(engine))
+        return;
+
+    cl_engine_stats_enable(engine);
+
+    intel = engine->stats_data;
+    if (!(intel)) {
+        engine->cb_stats_submit = NULL;
+        cl_engine_free(engine);
+        return;
+    }
+
+    intel->host_info = calloc(1, strlen(TARGET_OS_TYPE) + strlen(TARGET_ARCH_TYPE) + 2);
+    if (!(intel->host_info)) {
+        engine->cb_stats_submit = NULL;
+        cl_engine_free(engine);
+        return;
+    }
+
+    sprintf(intel->host_info, "%s %s", TARGET_OS_TYPE, TARGET_ARCH_TYPE);
+
+    if (!strcmp(hostid, "none"))
+        cl_engine_set_clcb_stats_get_hostid(engine, NULL);
+    else if (strcmp(hostid, "default"))
+        cl_engine_set_clcb_stats_get_hostid(engine, get_hostid);
+
+    if (optget(opts, "stats-timeout")->enabled) {
+        cl_engine_set_num(engine, CL_ENGINE_STATS_TIMEOUT, optget(opts, "StatsTimeout")->numarg);
+    }
+
+    cl_engine_free(engine);
+}
+
+int is_valid_hostid(void)
+{
+    int count, i;
+
+    if (strlen(hostid) != 36)
+        return 0;
+
+    count=0;
+    for (i=0; i < 36; i++)
+        if (hostid[i] == '-')
+            count++;
+
+    if (count != 4)
+        return 0;
+
+    if (hostid[8] != '-' || hostid[13] != '-' || hostid[18] != '-' || hostid[23] != '-')
+        return 0;
+
+    return 1;
+}
+
+char *get_hostid(void *cbdata)
+{
+    if (!strcmp(hostid, "none"))
+        return NULL;
+
+    if (!is_valid_hostid())
+        return strdup(STATS_ANON_UUID);
+
+    logg("HostID is valid: %s\n", hostid);
+
+    return strdup(hostid);
+}
 #ifdef _WIN32
 BOOL WINAPI cw_stop_ctrl_handler(DWORD CtrlType)
 {

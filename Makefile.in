@@ -71,6 +71,7 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 target_triplet = @target@
+@ENABLE_CLAMSUBMIT_TRUE@am__append_1 = clamsubmit
 subdir = .
 DIST_COMMON = README $(am__configure_deps) $(srcdir)/Makefile.am \
 	$(srcdir)/Makefile.in $(srcdir)/clamav-config.h.in \
@@ -85,12 +86,13 @@ DIST_COMMON = README $(am__configure_deps) $(srcdir)/Makefile.am \
 	$(top_srcdir)/docs/man/clamdscan.1.in \
 	$(top_srcdir)/docs/man/clamdtop.1.in \
 	$(top_srcdir)/docs/man/clamscan.1.in \
+	$(top_srcdir)/docs/man/clamsubmit.1.in \
 	$(top_srcdir)/docs/man/freshclam.1.in \
 	$(top_srcdir)/docs/man/freshclam.conf.5.in \
 	$(top_srcdir)/docs/man/sigtool.1.in AUTHORS COPYING ChangeLog \
-	INSTALL NEWS config/config.guess config/config.rpath \
-	config/config.sub config/depcomp config/install-sh \
-	config/ltmain.sh config/missing
+	INSTALL NEWS config/compile config/config.guess \
+	config/config.rpath config/config.sub config/depcomp \
+	config/install-sh config/ltmain.sh config/missing
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/acinclude.m4 \
 	$(top_srcdir)/m4/argz.m4 \
@@ -102,6 +104,60 @@ am__aclocal_m4_deps = $(top_srcdir)/m4/acinclude.m4 \
 	$(top_srcdir)/m4/ltsugar.m4 $(top_srcdir)/m4/ltversion.m4 \
 	$(top_srcdir)/m4/lt~obsolete.m4 \
 	$(top_srcdir)/m4/mmap_private.m4 $(top_srcdir)/m4/resolv.m4 \
+	$(top_srcdir)/m4/reorganization/version.m4 \
+	$(top_srcdir)/m4/reorganization/build_tools.m4 \
+	$(top_srcdir)/m4/reorganization/headers.m4 \
+	$(top_srcdir)/m4/reorganization/c_options.m4 \
+	$(top_srcdir)/m4/reorganization/compiler_checks.m4 \
+	$(top_srcdir)/m4/reorganization/linker_checks.m4 \
+	$(top_srcdir)/m4/reorganization/code_checks/functions.m4 \
+	$(top_srcdir)/m4/reorganization/code_checks/mpool.m4 \
+	$(top_srcdir)/m4/reorganization/code_checks/unit_tests.m4 \
+	$(top_srcdir)/m4/reorganization/code_checks/coverage.m4 \
+	$(top_srcdir)/m4/reorganization/libs/xml.m4 \
+	$(top_srcdir)/m4/reorganization/libs/openssl.m4 \
+	$(top_srcdir)/m4/reorganization/libs/libz.m4 \
+	$(top_srcdir)/m4/reorganization/libs/bzip.m4 \
+	$(top_srcdir)/m4/reorganization/libs/unrar.m4 \
+	$(top_srcdir)/m4/reorganization/code_checks/ipv6.m4 \
+	$(top_srcdir)/m4/reorganization/code_checks/dns.m4 \
+	$(top_srcdir)/m4/reorganization/code_checks/fanotify.m4 \
+	$(top_srcdir)/m4/reorganization/code_checks/setpgrp.m4 \
+	$(top_srcdir)/m4/reorganization/milter/enable.m4 \
+	$(top_srcdir)/m4/reorganization/code_checks/iconv.m4 \
+	$(top_srcdir)/m4/reorganization/code_checks/pthreads.m4 \
+	$(top_srcdir)/m4/reorganization/code_checks/reentrant.m4 \
+	$(top_srcdir)/m4/reorganization/utility_checks/id.m4 \
+	$(top_srcdir)/m4/reorganization/utility_checks/yp.m4 \
+	$(top_srcdir)/m4/reorganization/usergroup.m4 \
+	$(top_srcdir)/m4/reorganization/debug.m4 \
+	$(top_srcdir)/m4/reorganization/customversion.m4 \
+	$(top_srcdir)/m4/reorganization/nocache.m4 \
+	$(top_srcdir)/m4/reorganization/dns.m4 \
+	$(top_srcdir)/m4/reorganization/bigstack.m4 \
+	$(top_srcdir)/m4/reorganization/dbdir.m4 \
+	$(top_srcdir)/m4/reorganization/cfgdir.m4 \
+	$(top_srcdir)/m4/reorganization/code_checks/in_port_t.m4 \
+	$(top_srcdir)/m4/reorganization/code_checks/in_addr_t.m4 \
+	$(top_srcdir)/m4/reorganization/os_checks.m4 \
+	$(top_srcdir)/m4/reorganization/milter/check.m4 \
+	$(top_srcdir)/m4/reorganization/code_checks/pthread_02.m4 \
+	$(top_srcdir)/m4/reorganization/code_checks/readdir.m4 \
+	$(top_srcdir)/m4/reorganization/code_checks/ctime.m4 \
+	$(top_srcdir)/m4/reorganization/code_checks/socklen_t.m4 \
+	$(top_srcdir)/m4/reorganization/clamav_user.m4 \
+	$(top_srcdir)/m4/reorganization/code_checks/compiler_attribs.m4 \
+	$(top_srcdir)/m4/reorganization/code_checks/select.m4 \
+	$(top_srcdir)/m4/reorganization/code_checks/stat64.m4 \
+	$(top_srcdir)/m4/reorganization/code_checks/shift.m4 \
+	$(top_srcdir)/m4/reorganization/code_checks/features.m4 \
+	$(top_srcdir)/m4/reorganization/clamdtop.m4 \
+	$(top_srcdir)/m4/reorganization/distcheck.m4 \
+	$(top_srcdir)/m4/reorganization/llvm.m4 \
+	$(top_srcdir)/m4/reorganization/sha_collect.m4 \
+	$(top_srcdir)/m4/reorganization/bsd.m4 \
+	$(top_srcdir)/m4/reorganization/libs/curl.m4 \
+	$(top_srcdir)/m4/reorganization/substitutions.m4 \
 	$(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
@@ -114,7 +170,7 @@ CONFIG_CLEAN_FILES = clamav-config libclamav.pc platform.h \
 	docs/man/clambc.1 docs/man/clamconf.1 docs/man/clamd.8 \
 	docs/man/clamd.conf.5 docs/man/clamdscan.1 docs/man/clamscan.1 \
 	docs/man/freshclam.1 docs/man/freshclam.conf.5 \
-	docs/man/sigtool.1 docs/man/clamdtop.1
+	docs/man/sigtool.1 docs/man/clamdtop.1 docs/man/clamsubmit.1
 CONFIG_CLEAN_VPATH_FILES =
 am__vpath_adj_setup = srcdirstrip=`echo "$(srcdir)" | sed 's|.|.|g'`;
 am__vpath_adj = case $$p in \
@@ -173,7 +229,9 @@ AM_RECURSIVE_TARGETS = $(RECURSIVE_TARGETS:-recursive=) \
 	distdir dist dist-all distcheck
 ETAGS = etags
 CTAGS = ctags
-DIST_SUBDIRS = $(SUBDIRS)
+DIST_SUBDIRS = libltdl libclamav clamscan clamd clamdscan freshclam \
+	sigtool clamconf database docs etc clamav-milter test clamdtop \
+	clambc unit_tests clamsubmit
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 distdir = $(PACKAGE)-$(VERSION)
 top_distdir = $(distdir)
@@ -231,9 +289,24 @@ CHECK_CPPFLAGS = @CHECK_CPPFLAGS@
 CHECK_LIBS = @CHECK_LIBS@
 CLAMAVGROUP = @CLAMAVGROUP@
 CLAMAVUSER = @CLAMAVUSER@
+CLAMAV_MILTER_CPPFLAGS = @CLAMAV_MILTER_CPPFLAGS@
 CLAMAV_MILTER_LIBS = @CLAMAV_MILTER_LIBS@
+CLAMBC_CPPFLAGS = @CLAMBC_CPPFLAGS@
+CLAMBC_LIBS = @CLAMBC_LIBS@
+CLAMCONF_CPPFLAGS = @CLAMCONF_CPPFLAGS@
+CLAMCONF_LIBS = @CLAMCONF_LIBS@
+CLAMDSCAN_CPPFLAGS = @CLAMDSCAN_CPPFLAGS@
 CLAMDSCAN_LIBS = @CLAMDSCAN_LIBS@
+CLAMDTOP_CPPFLAGS = @CLAMDTOP_CPPFLAGS@
+CLAMDTOP_LIBS = @CLAMDTOP_LIBS@
+CLAMD_CPPFLAGS = @CLAMD_CPPFLAGS@
 CLAMD_LIBS = @CLAMD_LIBS@
+CLAMMEM_CPPFLAGS = @CLAMMEM_CPPFLAGS@
+CLAMMEM_LIBS = @CLAMMEM_LIBS@
+CLAMSCAN_CPPFLAGS = @CLAMSCAN_CPPFLAGS@
+CLAMSCAN_LIBS = @CLAMSCAN_LIBS@
+CLAMSUBMIT_CFLAGS = @CLAMSUBMIT_CFLAGS@
+CLAMSUBMIT_LIBS = @CLAMSUBMIT_LIBS@
 CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
 CURSES_CPPFLAGS = @CURSES_CPPFLAGS@
@@ -251,6 +324,7 @@ ECHO_T = @ECHO_T@
 EGREP = @EGREP@
 EXEEXT = @EXEEXT@
 FGREP = @FGREP@
+FRESHCLAM_CPPFLAGS = @FRESHCLAM_CPPFLAGS@
 FRESHCLAM_LIBS = @FRESHCLAM_LIBS@
 GCOV = @GCOV@
 GENHTML = @GENHTML@
@@ -272,8 +346,10 @@ LIBADD_DLOPEN = @LIBADD_DLOPEN@
 LIBADD_SHL_LOAD = @LIBADD_SHL_LOAD@
 LIBBZ2 = @LIBBZ2@
 LIBBZ2_PREFIX = @LIBBZ2_PREFIX@
+LIBCLAMAV_CPPFLAGS = @LIBCLAMAV_CPPFLAGS@
 LIBCLAMAV_LIBS = @LIBCLAMAV_LIBS@
 LIBCLAMAV_VERSION = @LIBCLAMAV_VERSION@
+LIBCLAMSHARED_CPPFLAGS = @LIBCLAMSHARED_CPPFLAGS@
 LIBLTDL = @LIBLTDL@
 LIBM = @LIBM@
 LIBOBJS = @LIBOBJS@
@@ -311,6 +387,10 @@ RANLIB = @RANLIB@
 SED = @SED@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
+SIGTOOL_CPPFLAGS = @SIGTOOL_CPPFLAGS@
+SSL_CPPFLAGS = @SSL_CPPFLAGS@
+SSL_LDFLAGS = @SSL_LDFLAGS@
+SSL_LIBS = @SSL_LIBS@
 STRIP = @STRIP@
 THREAD_LIBS = @THREAD_LIBS@
 TH_SAFE = @TH_SAFE@
@@ -381,7 +461,9 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 ACLOCAL_AMFLAGS = -I m4
-SUBDIRS = libltdl libclamav clamscan clamd clamdscan freshclam sigtool clamconf database docs etc clamav-milter test clamdtop clambc unit_tests
+SUBDIRS = libltdl libclamav clamscan clamd clamdscan freshclam sigtool \
+	clamconf database docs etc clamav-milter test clamdtop clambc \
+	unit_tests $(am__append_1)
 EXTRA_DIST = FAQ examples BUGS shared libclamav.pc.in libclamunrar_iface/Makefile.am libclamunrar_iface/Makefile.in UPGRADE COPYING.bzip2 COPYING.lzma COPYING.unrar COPYING.LGPL COPYING.llvm COPYING.file COPYING.zlib COPYING.getopt COPYING.regex COPYING.sha256 platform.h.in clamdscan/clamdscan.map win32
 bin_SCRIPTS = clamav-config
 pkgconfigdir = $(libdir)/pkgconfig
@@ -473,6 +555,8 @@ docs/man/freshclam.conf.5: $(top_builddir)/config.status $(top_srcdir)/docs/man/
 docs/man/sigtool.1: $(top_builddir)/config.status $(top_srcdir)/docs/man/sigtool.1.in
 	cd $(top_builddir) && $(SHELL) ./config.status $@
 docs/man/clamdtop.1: $(top_builddir)/config.status $(top_srcdir)/docs/man/clamdtop.1.in
+	cd $(top_builddir) && $(SHELL) ./config.status $@
+docs/man/clamsubmit.1: $(top_builddir)/config.status $(top_srcdir)/docs/man/clamsubmit.1.in
 	cd $(top_builddir) && $(SHELL) ./config.status $@
 install-binSCRIPTS: $(bin_SCRIPTS)
 	@$(NORMAL_INSTALL)

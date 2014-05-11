@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2007-2012 Sourcefire, Inc.
+ *  Copyright (C) 2007-2014 Cisco Systems, Inc.
  *
  *  Authors: Tomasz Kojm
  *
@@ -39,6 +39,10 @@
 #include <zlib.h>
 #include <errno.h>
 
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+#include "libclamav/crypto.h"
+
 #include "clamav.h"
 #include "cvd.h"
 #ifdef	HAVE_STRINGS_H
@@ -56,8 +60,6 @@
 #include "readdb.h"
 #include "cltypes.h"
 #include "default.h"
-#include "md5.h"
-#include "sha256.h"
 #include "dsig.h"
 #include "asn1.h"
 
@@ -77,6 +79,7 @@
 #include "bytecode_api.h"
 #include "bytecode_priv.h"
 #include "cache.h"
+#include "openioc.h"
 #ifdef CL_THREAD_SAFE
 #  include <pthread.h>
 static pthread_mutex_t cli_ref_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -418,7 +421,8 @@ char *cli_dbgets(char *buff, unsigned int size, FILE *fs, struct cli_dbio *dbio)
 		dbio->bufpt = dbio->buf;
 		dbio->size -= bread;
 		dbio->bread += bread;
-		sha256_update(&dbio->sha256ctx, dbio->readpt, bread);
+        if (dbio->hashctx)
+            cl_update_hash(dbio->hashctx, dbio->readpt, bread);
 	    }
 	    if(dbio->chkonly && dbio->bufpt) {
 		dbio->bufpt = NULL;
@@ -475,30 +479,29 @@ char *cli_dbgets(char *buff, unsigned int size, FILE *fs, struct cli_dbio *dbio)
 	bs = strlen(buff);
 	dbio->size -= bs;
 	dbio->bread += bs;
-	sha256_update(&dbio->sha256ctx, buff, bs);
+    if (dbio->hashctx)
+        cl_update_hash(dbio->hashctx, buff, bs);
 	return pt;
     }
 }
 
 static int cli_chkign(const struct cli_matcher *ignored, const char *signame, const char *entry)
 {
-	const char *md5_expected = NULL;
-        cli_md5_ctx md5ctx;
-        unsigned char digest[16];
+    const char *md5_expected = NULL;
+    unsigned char digest[16];
 
     if(!ignored || !signame || !entry)
-	return 0;
+        return 0;
 
     if(cli_bm_scanbuff((const unsigned char *) signame, strlen(signame), &md5_expected, NULL, ignored, 0, NULL, NULL,NULL) == CL_VIRUS) {
-	if(md5_expected) {
-	    cli_md5_init(&md5ctx);
-            cli_md5_update(&md5ctx, entry, strlen(entry));
-	    cli_md5_final(digest, &md5ctx);
-	    if(memcmp(digest, (const unsigned char *) md5_expected, 16))
-		return 0;
-	}
-	cli_dbgmsg("Ignoring signature %s\n", signame);
-	return 1;
+        if(md5_expected) {
+            cl_hash_data("md5", entry, strlen(entry), digest, NULL);
+            if(memcmp(digest, (const unsigned char *) md5_expected, 16))
+                return 0;
+        }
+
+        cli_dbgmsg("Ignoring signature %s\n", signame);
+        return 1;
     }
 
     return 0;
@@ -1227,6 +1230,10 @@ static int lsigattribs(char *attribs, struct cli_lsig_tdb *tdb)
     mpool_free(x.mempool, x.macro_ptids);\
   } while(0);
 
+/*     0         1        2      3        4        5    ... (max 66)
+ * VirusName:Attributes:Logic:SubSig1[:SubSig2[:SubSig3 ... ]]
+ * NOTE: Maximum of 64 subsignatures (last would be token 66)
+ */
 #define LDB_TOKENS 67
 static int load_oneldb(char *buffer, int chkpua, struct cl_engine *engine, unsigned int options, const char *dbname, unsigned int line, unsigned int *sigs, unsigned bc_idx, const char *buffer_cpy, int *skip)
 {
@@ -1580,6 +1587,9 @@ static int cli_loadcbc(FILE *fs, struct cl_engine *engine, unsigned int *signo, 
     return CL_SUCCESS;
 }
 
+/*     0       1      2     3        4            5          6      7
+ * MagicType:Offset:HexSig:Name:RequiredType:DetectedType[:MinFL[:MaxFL]]
+ */
 #define FTM_TOKENS 8
 static int cli_loadftm(FILE *fs, struct cl_engine *engine, unsigned int options, unsigned int internal, struct cli_dbio *dbio)
 {
@@ -1724,19 +1734,23 @@ static int cli_loadinfo(FILE *fs, struct cl_engine *engine, unsigned int options
 	unsigned char hash[32];
         struct cli_dbinfo *last = NULL, *new;
 	int ret = CL_SUCCESS, dsig = 0;
-	SHA256_CTX ctx;
+    void *ctx;
 
 
     if(!dbio) {
 	cli_errmsg("cli_loadinfo: .info files can only be loaded from within database container files\n");
 	return CL_EMALFDB;
     }
-    sha256_init(&ctx);
+
+    ctx = cl_hash_init("sha256");
+    if (!(ctx))
+        return CL_EMALFDB;
+
     while(cli_dbgets(buffer, FILEBUFF, fs, dbio)) {
 	line++;
 	if(!(options & CL_DB_UNSIGNED) && !strncmp(buffer, "DSIG:", 5)) {
 	    dsig = 1;
-	    sha256_final(&ctx, hash);
+	    cl_finish_hash(ctx, hash);
 	    if(cli_versig2(hash, buffer + 5, INFO_NSTR, INFO_ESTR) != CL_SUCCESS) {
 		cli_errmsg("cli_loadinfo: Incorrect digital signature\n");
 		ret = CL_EMALFDB;
@@ -1754,7 +1768,7 @@ static int cli_loadinfo(FILE *fs, struct cl_engine *engine, unsigned int options
             buffer[len + 1] = 0;
         }
     }
-	sha256_update(&ctx, buffer, strlen(buffer));
+	cl_update_hash(ctx, buffer, strlen(buffer));
 	cli_chomp(buffer);
 	if(!strncmp("ClamAV-VDB:", buffer, 11)) {
 	    if(engine->dbinfo) { /* shouldn't be initialized at this point */
@@ -2588,6 +2602,15 @@ static int cli_loadmscat(FILE *fs, const char *dbname, struct cl_engine *engine,
     return 0;
 }
 
+static int cli_loadopenioc(FILE *fs, const char *dbname, struct cl_engine *engine, unsigned int options)
+{
+    int rc;
+    rc = openioc_parse(dbname, fileno(fs), engine, options);
+    if (rc != CL_SUCCESS)
+        return CL_EMALFDB;
+    return rc;
+}
+
 static int cli_loaddbdir(const char *dirname, struct cl_engine *engine, unsigned int *signo, unsigned int options);
 
 int cli_load(const char *filename, struct cl_engine *engine, unsigned int *signo, unsigned int options, struct cli_dbio *dbio)
@@ -2716,6 +2739,8 @@ int cli_load(const char *filename, struct cl_engine *engine, unsigned int *signo
     	ret = cli_loadcdb(fs, engine, signo, options, dbio);
     } else if(cli_strbcasestr(dbname, ".cat")) {
 	ret = cli_loadmscat(fs, dbname, engine, options, dbio);
+    } else if(cli_strbcasestr(dbname, ".ioc")) {
+	ret = cli_loadopenioc(fs, dbname, engine, options);
     } else {
 	cli_dbgmsg("cli_load: unknown extension - assuming old database format\n");
 	ret = cli_loaddb(fs, engine, signo, options, dbio, dbname);
@@ -2922,7 +2947,7 @@ static int cli_loaddbdir(const char *dirname, struct cl_engine *engine, unsigned
     }
     closedir(dd);
     if(ret == CL_EOPEN)
-	cli_errmsg("cli_loaddb(): No supported database files found in %s\n", dirname);
+	cli_errmsg("cli_loaddbdir(): No supported database files found in %s\n", dirname);
 
     return ret;
 }
@@ -3237,9 +3262,21 @@ int cl_engine_free(struct cl_engine *engine)
 	return CL_SUCCESS;
     }
 
+    if (engine->cb_stats_submit)
+        engine->cb_stats_submit(engine, engine->stats_data);
+
 #ifdef CL_THREAD_SAFE
+    if (engine->stats_data) {
+        cli_intel_t *intel = (cli_intel_t *)(engine->stats_data);
+
+        pthread_mutex_destroy(&(intel->mutex));
+    }
+
     pthread_mutex_unlock(&cli_ref_mutex);
 #endif
+    if (engine->stats_data)
+        free(engine->stats_data);
+
     if(engine->root) {
 	for(i = 0; i < CLI_MTARGETS; i++) {
 	    if((root = engine->root[i])) {
@@ -3297,20 +3334,23 @@ int cl_engine_free(struct cl_engine *engine)
 	mpool_free(engine->mempool, pt);
     }
 
-    if(engine->dconf->bytecode & BYTECODE_ENGINE_MASK) {
-	if (engine->bcs.all_bcs)
-	    for(i=0;i<engine->bcs.count;i++)
-		cli_bytecode_destroy(&engine->bcs.all_bcs[i]);
-	cli_bytecode_done(&engine->bcs);
-	free(engine->bcs.all_bcs);
-	for (i=0;i<_BC_LAST_HOOK - _BC_START_HOOKS;i++) {
-	    free (engine->hooks[i]);
-	}
+    if(engine->dconf) {
+        if(engine->dconf->bytecode & BYTECODE_ENGINE_MASK) {
+            if (engine->bcs.all_bcs)
+                for(i=0;i<engine->bcs.count;i++)
+                    cli_bytecode_destroy(&engine->bcs.all_bcs[i]);
+            cli_bytecode_done(&engine->bcs);
+            free(engine->bcs.all_bcs);
+            for (i=0;i<_BC_LAST_HOOK - _BC_START_HOOKS;i++) {
+                free (engine->hooks[i]);
+            }
+        }
+
+        if(engine->dconf->phishing & PHISHING_CONF_ENGINE)
+            phishing_done(engine);
+
+        mpool_free(engine->mempool, engine->dconf);
     }
-    if(engine->dconf->phishing & PHISHING_CONF_ENGINE)
-	phishing_done(engine);
-    if(engine->dconf)
-	mpool_free(engine->mempool, engine->dconf);
 
     if(engine->pua_cats)
 	mpool_free(engine->mempool, engine->pua_cats);

@@ -49,6 +49,10 @@
 #include <libxml/xmlreader.h>
 #endif
 
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+#include "libclamav/crypto.h"
+
 #include "cltypes.h"
 #include "others.h"
 #include "dmg.h"
@@ -168,7 +172,7 @@ int cli_scandmg(cli_ctx *ctx)
     cli_dbgmsg("cli_scandmg: Extracting into %s\n", dirname);
 
     /* Dump XML to tempfile, if needed */
-    if (ctx->engine->keeptmp && !ctx->engine->forcetodisk) {
+    if (ctx->engine->keeptmp && !(ctx->engine->engine_options & ENGINE_OPTIONS_FORCE_TO_DISK)) {
         int xret;
         xret = dmg_extract_xml(ctx, dirname, &hdr);
 
@@ -180,7 +184,7 @@ int cli_scandmg(cli_ctx *ctx)
     }
 
     /* scan XML with cli_map_scandesc */
-    ret = cli_map_scan(*ctx->fmap, (off_t)hdr.xmlOffset, (size_t)hdr.xmlLength, ctx);
+    ret = cli_map_scan(*ctx->fmap, (off_t)hdr.xmlOffset, (size_t)hdr.xmlLength, ctx, CL_TYPE_ANY);
     if (ret != CL_CLEAN) {
         cli_dbgmsg("cli_scandmg: retcode from scanning TOC xml: %s\n", cl_strerror(ret));
         if (!ctx->engine->keeptmp)
@@ -293,11 +297,13 @@ int cli_scandmg(cli_ctx *ctx)
                 if (ret == CL_EFORMAT) {
                     /* Didn't decode, or not a mish block */
                     ret = CL_CLEAN;
+                    free(mish_set);
                     xmlFree(nodeName);
                     continue;
                 }
                 else if (ret != CL_CLEAN) {
                     xmlFree(nodeName);
+                    free(mish_set);
                     continue;
                 }
                 /* Add mish block to list */
@@ -898,7 +904,7 @@ static int dmg_stripe_bzip(cli_ctx *ctx, int fd, uint32_t index, struct dmg_mish
 #endif
 
     cli_dbgmsg("dmg_stripe_bzip: stripe " STDu32 " initial len " STDu64 " expected len " STDu64 "\n",
-            index, len, expected_len);
+            index, (uint64_t)len, (uint64_t)expected_len);
 
 #if HAVE_BZLIB_H
     memset(&strm, 0, sizeof(strm));

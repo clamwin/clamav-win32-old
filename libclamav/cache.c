@@ -27,7 +27,10 @@
 #include <pthread.h>
 #include <assert.h>
 
-#include "md5.h"
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+#include "libclamav/crypto.h"
+
 #include "mpool.h"
 #include "clamav.h"
 #include "cache.h"
@@ -748,6 +751,11 @@ int cli_cache_init(struct cl_engine *engine) {
 	return 1;
     }
 
+    if (engine->engine_options & ENGINE_OPTIONS_DISABLE_CACHE) {
+        cli_dbgmsg("cli_cache_init: Caching disabled.\n");
+        return 0;
+    }
+
     if(!(cache = mpool_malloc(engine->mempool, sizeof(struct CACHE) * TREES))) {
 	cli_errmsg("cli_cache_init: mpool malloc fail\n");
 	return 1;
@@ -779,6 +787,10 @@ void cli_cache_destroy(struct cl_engine *engine) {
 
     if(!engine || !(cache = engine->cache))
 	return;
+
+    if (engine->engine_options & ENGINE_OPTIONS_DISABLE_CACHE) {
+        return;
+    }
 
     for(i=0; i<TREES; i++) {
 	cacheset_destroy(&cache[i].cacheset, engine->mempool);
@@ -815,6 +827,11 @@ void cache_add(unsigned char *md5, size_t size, cli_ctx *ctx) {
 
     if(!ctx || !ctx->engine || !ctx->engine->cache)
        return;
+
+    if (ctx->engine->engine_options & ENGINE_OPTIONS_DISABLE_CACHE) {
+        cli_dbgmsg("cache_add: Caching disabled. Not adding sample to cache.\n");
+        return;
+    }
 
     level =  (*ctx->fmap && (*ctx->fmap)->dont_cache_flag) ? ctx->recursion : 0;
     if (ctx->found_possibly_unwanted && (level || !ctx->recursion))
@@ -854,6 +871,11 @@ void cache_remove(unsigned char *md5, size_t size, const struct cl_engine *engin
     if(!engine || !engine->cache)
        return;
 
+    if (engine->engine_options & ENGINE_OPTIONS_DISABLE_CACHE) {
+        cli_dbgmsg("cache_remove: Caching disabled.\n");
+        return;
+    }
+
     /* cli_warnmsg("cache_remove: key is %u\n", key); */
 
     c = &engine->cache[key];
@@ -883,29 +905,46 @@ void cache_remove(unsigned char *md5, size_t size, const struct cl_engine *engin
 int cache_check(unsigned char *hash, cli_ctx *ctx) {
     fmap_t *map;
     size_t todo, at = 0;
-    cli_md5_ctx md5;
+    void *hashctx;
     int ret;
 
     if(!ctx || !ctx->engine || !ctx->engine->cache)
        return CL_VIRUS;
 
+    if (ctx->engine->engine_options & ENGINE_OPTIONS_DISABLE_CACHE) {
+        cli_dbgmsg("cache_check: Caching disabled. Returning CL_VIRUS.\n");
+        return CL_VIRUS;
+    }
+
     map = *ctx->fmap;
     todo = map->len;
 
-    cli_md5_init(&md5);
+    hashctx = cl_hash_init("md5");
+    if (!(hashctx))
+        return CL_VIRUS;
+
+
     while(todo) {
-	const void *buf;
-	size_t readme = todo < FILEBUFF ? todo : FILEBUFF;
-	if(!(buf = fmap_need_off_once(map, at, readme)))
-	    return CL_EREAD;
-	todo -= readme;
-	at += readme;
-	if (cli_md5_update(&md5, buf, readme)) {
-	    cli_errmsg("cache_check: error reading while generating hash!\n");
-	    return CL_EREAD;
-	}
+        const void *buf;
+        size_t readme = todo < FILEBUFF ? todo : FILEBUFF;
+
+        if(!(buf = fmap_need_off_once(map, at, readme))) {
+            cl_hash_destroy(hashctx);
+            return CL_EREAD;
+        }
+
+        todo -= readme;
+        at += readme;
+
+        if (cl_update_hash(hashctx, buf, readme)) {
+            cl_hash_destroy(hashctx);
+            cli_errmsg("cache_check: error reading while generating hash!\n");
+            return CL_EREAD;
+        }
     }
-    cli_md5_final(hash, &md5);
+
+    cl_finish_hash(hashctx, hash);
+
     ret = cache_lookup_hash(hash, map->len, ctx->engine->cache, ctx->recursion);
     cli_dbgmsg("cache_check: %02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x is %s\n", hash[0], hash[1], hash[2], hash[3], hash[4], hash[5], hash[6], hash[7], hash[8], hash[9], hash[10], hash[11], hash[12], hash[13], hash[14], hash[15], (ret == CL_VIRUS) ? "negative" : "positive");
     return ret;

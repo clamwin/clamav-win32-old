@@ -33,6 +33,10 @@
 #include <unistd.h>
 #endif
 
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+#include "libclamav/crypto.h"
+
 #include "clamav.h"
 #include "others.h"
 #include "matcher.h"
@@ -311,9 +315,10 @@ static int ac_maketrans(struct cli_matcher *root)
     while((node = bfs_dequeue(&bfs, &bfs_last))) {
 	if(IS_LEAF(node)) {
 	    struct cli_ac_node *failtarget = node->fail;
-	    while(IS_LEAF(failtarget))
+	    while (NULL != failtarget && (IS_LEAF(failtarget) || !IS_FINAL(failtarget)))
 		failtarget = failtarget->fail;
-	    node->fail = failtarget;
+            if (NULL != failtarget)
+                node->fail = failtarget;
 	    continue;
 	}
 
@@ -915,6 +920,7 @@ int cli_ac_initdata(struct cli_ac_data *data, uint32_t partsigs, uint32_t lsigs,
 	cli_errmsg("cli_ac_init: data == NULL\n");
 	return CL_ENULLARG;
     }
+    memset((void *)data, 0, sizeof(struct cli_ac_data));
 
     data->reloffsigs = reloffsigs;
     if(reloffsigs) {
@@ -1395,7 +1401,7 @@ int cli_ac_scanbuff(const unsigned char *buffer, uint32_t length, const char **v
 
 				    cli_dbgmsg("Matched signature for file type %s at %u\n", pt->virname, realoff);
 				    type = pt->type;
-				    if(ftoffset && (!*ftoffset || (*ftoffset)->cnt < MAX_EMBEDDED_OBJ || type == CL_TYPE_ZIPSFX) && (type >= CL_TYPE_SFX || ((ftype == CL_TYPE_MSEXE || ftype == CL_TYPE_ZIP || ftype == CL_TYPE_MSOLE2) && type == CL_TYPE_MSEXE)))  {
+				    if(ftoffset && (!*ftoffset || (*ftoffset)->cnt < MAX_EMBEDDED_OBJ || type == CL_TYPE_ZIPSFX) && (type == CL_TYPE_MBR || type >= CL_TYPE_SFX || ((ftype == CL_TYPE_MSEXE || ftype == CL_TYPE_ZIP || ftype == CL_TYPE_MSOLE2) && type == CL_TYPE_MSEXE)))  {
 
 					if(ac_addtype(ftoffset, type, realoff, ctx))
 					    return CL_EMEM;
