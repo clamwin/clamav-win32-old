@@ -98,9 +98,6 @@
 /* file i/o buffer size */
 #define FILEBUFF 8192
 
-/* FPU byte ordering matches CPU */
-#define FPU_WORDS_BIGENDIAN 0
-
 /* enable workaround for broken DNS servers */
 #undef FRESHCLAM_DNS_FIX
 
@@ -296,6 +293,9 @@
 /* Define if libtool can extract symbol lists from object files. */
 #undef HAVE_PRELOADED_SYMBOLS
 
+/* Define to 1 if you have the <pthread.h> header file */
+#define HAVE_PTHREAD_H 1
+
 /* Define to 1 if you have the `pthread_yield' function. */
 #define HAVE_PTHREAD_YIELD 1
 
@@ -371,6 +371,9 @@
 /* Define to 1 if sysconf(_SC_PAGESIZE) is available */
 #undef HAVE_SYSCONF_SC_PAGESIZE
 
+/* Define to 1 if you have the `sysctlbyname' function. */
+#undef HAVE_SYSCTLBYNAME
+
 /* Define to 1 if you have the <sys/dl.h> header file. */
 #undef HAVE_SYS_DL_H
 
@@ -406,6 +409,9 @@
 
 /* Define to 1 if you have the <termios.h> header file. */
 #define HAVE_TERMIOS_H 1
+
+/* Define to 1 if you have the `timegm' function. */
+#undef HAVE_TIMEGM
 
 /* Define this if uname(2) is POSIX */
 #undef HAVE_UNAME_SYSCALL
@@ -529,7 +535,7 @@
 #undef USE_SYSLOG
 
 /* Stable releases tag */
-#define CLAMWIN_RELEASE "0.98.1"
+#define CLAMWIN_RELEASE "0.98.3"
 
 /* Version number of package */
 #ifdef CLAMWIN_RELEASE
@@ -590,7 +596,7 @@
 /* Define to the equivalent of the C99 'restrict' keyword, or to
    nothing if this is not supported.  Do not define if restrict is
    supported directly.  */
-#undef restrict
+#define restrict
 /* Work around a bug in Sun C++: it does not support _Restrict or
    __restrict__, even though the corresponding Sun C compiler ends up with
    "#define restrict _Restrict" or "#define restrict __restrict__" in the
