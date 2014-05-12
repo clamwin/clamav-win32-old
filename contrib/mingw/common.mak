@@ -4,9 +4,11 @@ msvc=$(top)/contrib/msvc
 CFLAGS=-I$(msvc) -I$(msvc)/include -I$(msvc)/gnulib
 CFLAGS+=-I$(top) -I$(top)/shared -I$(top)/libclamav -I$(top)/libclamav/nsis
 CFLAGS+=-I$(top)/win32/3rdparty/bzip2 -I$(top)/win32/3rdparty/pthreads -I$(top)/win32/3rdparty/zlib
-CFLAGS+=-DHAVE_CONFIG_H -DNDEBUG
-CFLAGS+=-Wall -Wextra -Wno-unused -Wno-sign-compare -Wno-switch -Wno-format -pipe
-CFLAGS+=-fno-strict-aliasing
+CFLAGS+=-DHAVE_CONFIG_H -DNDEBUG -DWIN32_LEAN_AND_MEAN
+CFLAGS+=-Wall
+CFLAGS+=-Wno-unused -Wno-format -Wno-uninitialized -Wno-attributes
+CFLAGS+=-Wno-switch
+CFLAGS+=-pipe -fno-strict-aliasing
 CFLAGS+=-O3 -mtune=generic -fomit-frame-pointer
 
 LDFLAGS=-Wl,--enable-stdcall-fixup
