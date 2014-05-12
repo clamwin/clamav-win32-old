@@ -1,31 +1,43 @@
 EXPORTS
 
 ; Engine management
-cl_always_gen_section_hash
+cl_engine_addref
+cl_engine_compile
+cl_engine_free
+cl_engine_get_num
+cl_engine_get_str
+cl_engine_new
+cl_engine_set_clcb_hash
+cl_engine_set_clcb_meta
+cl_engine_set_clcb_post_scan
+cl_engine_set_clcb_pre_cache
+cl_engine_set_clcb_pre_scan
+cl_engine_set_clcb_progress
+cl_engine_set_clcb_sigload
+cl_engine_set_clcb_stats_get_hostid
+cl_engine_set_clcb_stats_submit
+cl_engine_set_num
+cl_engine_set_str
+cl_engine_settings_apply
+cl_engine_settings_copy
+cl_engine_settings_free
+cl_engine_stats_enable
 cl_init
 cl_load
 cl_retdbdir
-cl_engine_addref
-cl_engine_compile
-cl_engine_new
-cl_engine_set_num
-cl_engine_get_num
-cl_engine_set_str
-cl_engine_get_str
-cl_engine_set_clcb_hash
-cl_engine_set_clcb_meta
-cl_engine_set_clcb_pre_cache
-cl_engine_set_clcb_pre_scan
-cl_engine_set_clcb_post_scan
-cl_engine_set_clcb_progress
-cl_engine_set_clcb_sigload
-cl_engine_free
-cl_engine_settings_copy
-cl_engine_settings_apply
-cl_engine_settings_free
 cl_scandesc_callback
 cl_scanfile_callback
 cl_set_clcb_msg
+
+; hash
+cl_always_gen_section_hash
+cl_finish_hash
+cl_hash_data
+cl_hash_destroy
+cl_hash_init
+cl_initialize_crypto
+cl_sha1
+cl_update_hash
 
 ; Scanning
 cl_scandesc
@@ -119,7 +131,7 @@ ftruncate                           @93 NONAME
 ; Internals @ 100
 cli_ac_chklsig                      @100 NONAME
 cli_calloc                          @101 NONAME
-cli_checkfp_pe			            @102 NONAME
+cli_checkfp_pe                      @102 NONAME
 cli_chomp                           @103 NONAME
 cli_ctime                           @104 NONAME
 cli_cvdunpack                       @105 NONAME
@@ -168,12 +180,6 @@ cli_wm_readdir                      @147 NONAME
 cli_writen                          @148 NONAME
 
 html_normalise_map                  @150 NONAME
-SHA1Final			    @151 NONAME
-SHA1Init                            @152 NONAME
-SHA1Update                          @153 NONAME
-sha256_final                        @154 NONAME
-sha256_init                         @155 NONAME
-sha256_update                       @156 NONAME
 uniq_get                            @157 NONAME
 fmap                                @158 NONAME
 
@@ -220,14 +226,19 @@ gzgets                              @252 NONAME
 gzopen                              @253 NONAME
 gzwrite                             @254 NONAME
 
+; openssl @260
+EVP_DigestFinal_ex                  @260 NONAME
+EVP_DigestInit_ex                   @261 NONAME
+EVP_DigestUpdate                    @262 NONAME
+EVP_MD_CTX_create                   @263 NONAME
+EVP_MD_CTX_destroy                  @264 NONAME
+EVP_sha256                          @265 NONAME
+
 ; LLVM
 cli_debug_flag                      @300 NONAME DATA
 cli_errmsg                          @301 NONAME
 cli_warnmsg                         @302 NONAME
 cli_dbgmsg_internal                 @303 NONAME
-cli_md5_final                       @304 NONAME
-cli_md5_init                        @305 NONAME
-cli_md5_update                      @306 NONAME
 
 cli_apicall_maxapi                  @310 NONAME DATA
 cli_apicall_maxglobal               @311 NONAME DATA

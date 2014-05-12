@@ -26,7 +26,9 @@
 #define _CRT_SECURE_NO_DEPRECATE
 #define _CRT_NON_CONFORMING_SWPRINTFS
 #include <stdio.h>
+#include <stdlib.h>
 #include <windows.h>
+#include <mmsystem.h>
 #include <io.h>
 #include <fcntl.h>
 #include <clamav.h>

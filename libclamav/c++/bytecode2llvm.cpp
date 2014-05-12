@@ -128,11 +128,16 @@ void LLVMInitializePowerPCAsmPrinter();
 #include "clamav-config.h"
 #endif
 
+#ifdef _WIN32
+#include <winsock2.h>
+#include <cw_inline.h>
+#endif
+
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 
 extern "C" {
-#include "libclamav/crypto.h"
+#include "crypto.h"
 }
 
 #include "dconf.h"
@@ -141,11 +146,6 @@ extern "C" {
 #include "bytecode.h"
 #include "bytecode_priv.h"
 #include "type_desc.h"
-
-#ifdef _WIN32
-#include <winsock2.h>
-#include <cw_inline.h>
-#endif
 
 #define MODULE "libclamav JIT: "
 
