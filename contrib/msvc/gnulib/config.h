@@ -612,7 +612,7 @@
 /* #undef MAP_ANONYMOUS */
 
 /* Name of package */
-#define PACKAGE "dummy"
+//#define PACKAGE "dummy"
 
 /* Define to the address where bug reports for this package should be sent. */
 #define PACKAGE_BUGREPORT ""
@@ -673,7 +673,7 @@
 #define STDC_HEADERS 1
 
 /* Version number of package */
-#define VERSION "0"
+//#define VERSION "0"
 
 /* Define to l, ll, u, ul, ull, etc., as suitable for constants of type
    'wchar_t'. */
