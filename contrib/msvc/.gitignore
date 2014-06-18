@@ -4,10 +4,8 @@
 *.ncb
 *.suo
 *.vcproj.*.user
-config.*
-Debug
-Release
-x64
+/Debug
+/Release
 *.idc
-pingme.txt
 *.gz
+pingme.txt
