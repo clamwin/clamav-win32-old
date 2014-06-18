@@ -36,6 +36,7 @@ cl_hash_data
 cl_hash_destroy
 cl_hash_init
 cl_initialize_crypto
+cl_cleanup_crypto
 cl_sha1
 cl_update_hash
 
