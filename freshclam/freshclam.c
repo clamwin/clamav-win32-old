@@ -309,9 +309,7 @@ main (int argc, char **argv)
     if (check_flevel ())
         exit (FCE_INIT);
 
-#if defined(_WIN32)
     cl_initialize_crypto();
-#endif
 
     if ((retcl = cl_init (CL_INIT_DEFAULT)))
     {
@@ -770,6 +768,8 @@ main (int argc, char **argv)
 
     optfree (opts);
 
+    cl_cleanup_crypto();
+
     return (ret);
 }
 
@@ -785,6 +785,12 @@ void submit_host_info(struct optstruct *opts)
     engine = cl_engine_new();
     if (!(engine))
         return;
+
+    if (optget (opts, "Debug")->enabled || optget (opts, "debug")->enabled)
+        cl_debug ();
+
+    if (optget (opts, "verbose")->enabled)
+        mprintf_verbose = 1;
 
     cl_engine_stats_enable(engine);
 

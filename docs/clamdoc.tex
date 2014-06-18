@@ -72,7 +72,7 @@
     \vspace{3cm}
     \begin{flushright}
 	\rule[-1ex]{8cm}{3pt}\\
-	\huge Clam AntiVirus 0.98.2\\
+	\huge Clam AntiVirus 0.98.4\\
 	\huge \emph{User Manual}\\
     \end{flushright}
 
@@ -248,7 +248,7 @@
     main source code directory.}
     \begin{itemize}
 	\item zlib and zlib-devel packages
-    \item openssl and libssl-devel packages
+    \item openssl version 0.9.8 or higher and libssl-devel packages
 	\item gcc compiler suite (tested with 2.9x, 3.x and 4.x series)\\
 	      \textbf{If you are compiling with higher optimization levels
 	      than the default one (\hbox{-O2} for gcc), be aware that there
@@ -256,6 +256,7 @@
 	      only checks for bugs affecting the default settings, it is your
 	      responsibility to check that your compiler version doesn't
 	      have any bugs.}
+    \item GNU make (gmake)
     \end{itemize}
     The following packages are optional but \textbf{highly recommended}:
     \begin{itemize}
@@ -815,7 +816,7 @@ clamav-milter.conf not found
 
 Software settings
 -----------------
-Version: 0.98.2
+Version: 0.98.4
 Optional features supported: MEMPOOL IPv6 AUTOIT_EA06 BZIP2 RAR JIT
 
 Database information

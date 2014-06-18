@@ -1,1 +1,11 @@
-http://bugs.clamav.net/
+Known issues:
+
+1. OpenSSL version must not be lower than 0.9.8.
+
+2. Some unit test failures on big endian machines. 
+
+If you experience problems, contact us on the ClamAV
+users list, OR:
+
+Submit bugs here:
+https://bugzilla.clamav.net/
