@@ -276,7 +276,7 @@ static int sigcheck(int fd, const char *virname, int warnfp)
             DWORD err = GetLastError();
             if (err != ERROR_NOT_FOUND)
             {
-                cli_errmsg("sigcheck: CryptCATAdminEnumCatalogFromHash() failed: 0x%08x\n", GetLastError());
+                cli_dbgmsg("sigcheck: CryptCATAdminEnumCatalogFromHash() failed: 0x%08x\n", GetLastError());
                 break;
             }
 
