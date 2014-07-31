@@ -29,7 +29,10 @@
 #endif
 
 /* winsock specific */
+#ifndef ELOOP
 #define ELOOP               44
+#endif
+
 #define EPROCLIM            45
 #define EUSERS              46
 #define EREMOTE             47
@@ -72,45 +75,151 @@
 #define INVALID_PARAMETER   87
 
 /* linux */
+#ifndef ENOTSOCK
 #define ENOTSOCK            88  /* Socket operation on non-socket */
+#endif
+
+#ifndef EDESTADDRREQ
 #define EDESTADDRREQ        89  /* Destination address required */
+#endif
+
+#ifndef EMSGSIZE
 #define EMSGSIZE            90  /* Message too long */
+#endif
+
+#ifndef EPROTOTYPE
 #define EPROTOTYPE          91  /* Protocol wrong type for socket */
+#endif
+
+#ifndef ENOPROTOOPT
 #define ENOPROTOOPT         92  /* Protocol not available */
+#endif
+
+#ifndef EPROTONOSUPPORT
 #define EPROTONOSUPPORT     93  /* Protocol not supported */
+#endif
+
+#ifndef ESOCKTNOSUPPORT
 #define ESOCKTNOSUPPORT     94  /* Socket type not supported */
+#endif
+
+#ifndef EOPNOTSUPP
 #define EOPNOTSUPP          95  /* Operation not supported on transport endpoint */
+#endif
+
+#ifndef EPFNOSUPPORT
 #define EPFNOSUPPORT        96  /* Protocol family not supported */
+#endif
+
+#ifndef EAFNOSUPPORT
 #define EAFNOSUPPORT        97  /* Address family not supported by protocol */
+#endif
+
+#ifndef EADDRINUSE
 #define EADDRINUSE          98  /* Address already in use */
+#endif
+
+#ifndef EADDRNOTAVAIL
 #define EADDRNOTAVAIL       99  /* Cannot assign requested address */
+#endif
+
+#ifndef ENETDOWN
 #define ENETDOWN            100 /* Network is down */
+#endif
+
+#ifndef ENETUNREACH
 #define ENETUNREACH         101 /* Network is unreachable */
+#endif
+
+#ifndef ENETRESET
 #define ENETRESET           102 /* Network dropped connection because of reset */
+#endif
+
+#ifndef ECONNABORTED
 #define ECONNABORTED        103 /* Software caused connection abort */
+#endif
+
+#ifndef ECONNRESET
 #define ECONNRESET          104 /* Connection reset by peer */
+#endif
+
+#ifndef ENOBUFS
 #define ENOBUFS             105 /* No buffer space available */
+#endif
+
+#ifndef EISCONN
 #define EISCONN             106 /* Transport endpoint is already connected */
+#endif
+
+#ifndef ENOTCONN
 #define ENOTCONN            107 /* Transport endpoint is not connected */
+#endif
+
+#ifndef ESHUTDOWN
 #define ESHUTDOWN           108 /* Cannot send after transport endpoint shutdown */
+#endif
+
+#ifndef ETOOMANYREFS
 #define ETOOMANYREFS        109 /* Too many references: cannot splice */
+#endif
+
 #define _ETIMEDOUT          110 /* Connection timed out */
+
+#ifndef ECONNREFUSED
 #define ECONNREFUSED        111 /* Connection refused */
+#endif
+
+#ifndef EHOSTDOWN
 #define EHOSTDOWN           112 /* Host is down */
+#endif
+
+#ifndef EHOSTUNREACH
 #define EHOSTUNREACH        113 /* No route to host */
+#endif
+
+#ifndef EALREADY
 #define EALREADY            114 /* Operation already in progress */
+#endif
+
+#ifndef EINPROGRESS
 #define EINPROGRESS         115 /* Operation now in progress */
+#endif
+
+#ifndef ESTALE
 #define ESTALE              116 /* Stale NFS file handle */
+#endif
+
+#ifndef EUCLEAN
 #define EUCLEAN             117 /* Structure needs cleaning */
+#endif
+
+#ifndef ENOTNAM
 #define ENOTNAM             118 /* Not a XENIX named type file */
+#endif
+
+#ifndef ENAVAIL
 #define ENAVAIL             119 /* No XENIX semaphores available */
+#endif
+
+#ifndef EISNAM
 #define EISNAM              120 /* Is a named type file */
+#endif
+
+#ifndef EREMOTEIO
 #define EREMOTEIO           121 /* Remote I/O error */
+#endif
+
+#ifndef EDQUOT
 #define EDQUOT              122 /* Quota exceeded */
+#endif
 
+#ifndef EWOULDBLOCK
 #define EWOULDBLOCK         EALREADY  /* Operation would block - should be EAGAIN */
+#endif
 
+#ifndef ETIMEDOUT
 #define ETIMEDOUT           WSAETIMEDOUT /* needed by pthreads win32, it will use winsock value */
+#endif
 
 #if _MSC_VER >= 1600
 #pragma warning(pop)
