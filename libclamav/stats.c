@@ -43,7 +43,7 @@
 #endif
 #include <dlfcn.h>
 #else
-#include <Windows.h>
+#include <windows.h>
 #include <tchar.h>
 #endif
 
