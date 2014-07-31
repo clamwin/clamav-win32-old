@@ -69,6 +69,42 @@
 
 #ifdef _WIN32 /* scan memory */
 extern int scanmem(struct cl_engine *trie, const struct optstruct *opts, int options);
+static HANDLE console;
+/* workaround to garbled line output when doing CR */
+static inline void clear_console_line()
+{
+    DWORD w;
+    COORD coord;
+    CONSOLE_SCREEN_BUFFER_INFO info;
+
+    if (GetConsoleScreenBufferInfo(console, &info))
+    {
+        coord.X = info.dwCursorPosition.X;
+        coord.Y = info.dwCursorPosition.Y;
+        FillConsoleOutputCharacter(console, ' ', info.dwSize.X - coord.X, coord, &w);
+        coord.X = 0;
+        SetConsoleCursorPosition(console, coord);
+    }
+}
+
+#define do_line(fmt, ...) do {              \
+    if (console) {                          \
+        mprintf(fmt, __VA_ARGS__);          \
+        clear_console_line();               \
+    }                                       \
+    else mprintf(fmt "\r", __VA_ARGS__);    \
+} while (0)
+
+#define do_rotate(ctx, fmt) do {            \
+    if (console) {                          \
+        rotate(ctx, fmt);                   \
+        clear_console_line();               \
+    }                                       \
+    else rotate(ctx, fmt "\r");             \
+} while (0)
+#else
+#define do_line(fmt, ...) mprintf(fmt "\r", __VA_ARGS__)
+#define do_rotate(ctx, fmt) rotate(ctx, fmt "\r")
 #endif
 
 /* Callback */
@@ -94,7 +130,7 @@ static void rotate(cb_data_t *cbctx, const char *fmt)
 
 static int sigloadcallback(const char *type, const char *name, unsigned int custom, void *context)
 {
-    rotate(context, "~%s%c\r");
+    do_rotate(context, "~%s%c");
     return 0;
 }
 
@@ -108,12 +144,12 @@ cl_error_t scancallback(int desc, int bytes, void *context)
         percent = MIN(100, (int) (((double) cbctx->count) * 100.0f / ((double) cbctx->size)));
         if (percent != cbctx->oldvalue)
         {
-            mprintf("~%s: [%3i%%]\r", cbctx->filename, percent);
+            do_line("~%s: [%3i%%]", cbctx->filename, percent);
             cbctx->oldvalue = percent;
         }
     }
     else /* archives or stdin */
-        rotate(cbctx, "~%s: [%c]\r");
+        do_rotate(cbctx, "~%s: [%c]");
 
     return 1;
 }
@@ -835,6 +871,11 @@ int scanmanager(const struct optstruct *opts)
 
     /* setup callback */
     if(optget(opts, "show-progress")->enabled) {
+#ifdef _WIN32
+        console = GetStdHandle(STD_OUTPUT_HANDLE);
+        if (GetFileType(console) != FILE_TYPE_CHAR)
+            console = NULL;
+#endif
         memset(&cbdata, 0, sizeof(cb_data_t));
         cl_engine_set_clcb_progress(engine, scancallback, &cbdata);
     }
