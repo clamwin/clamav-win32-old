@@ -8,7 +8,7 @@ CFLAGS+=-DHAVE_CONFIG_H -DNDEBUG -DWIN32_LEAN_AND_MEAN
 CFLAGS+=-Wall
 CFLAGS+=-Wno-unused -Wno-format -Wno-uninitialized -Wno-attributes
 CFLAGS+=-Wno-switch
-CFLAGS+=-pipe -fno-strict-aliasing
+CFLAGS+=-pipe -fno-strict-aliasing -mno-ms-bitfields
 CFLAGS+=-O3 -mtune=generic -fomit-frame-pointer
 
 LDFLAGS=-Wl,--enable-stdcall-fixup
