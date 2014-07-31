@@ -9,10 +9,12 @@
 #include <inttypes.h>
 #include <io.h>
 
+#ifndef _TIMEZONE_DEFINED
 struct timezone {
     int tz_minuteswest; /* minutes W of Greenwich */
     int tz_dsttime;     /* type of dst correction */
 };
+#endif
 
 static inline int gettimeofday(struct timeval *tv, struct timezone *tz)
 {

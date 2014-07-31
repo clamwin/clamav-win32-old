@@ -361,7 +361,7 @@ static void rtlib_bzero(void *s, size_t n)
 #error "No stack probe function for this compiler/architecture"
 #endif
 
-extern "C" void PROBE_FUN(void);
+extern "C" void * PROBE_FUN;
 
 #endif
 
