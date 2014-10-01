@@ -241,24 +241,39 @@ int cw_movefile(const char *source, const char *dest, int reboot)
     return 0;
 }
 
-#define fill_ai(ai, addr)                                               \
-    ai = calloc(1, sizeof(struct addrinfo));                            \
-    ai->ai_family = AF_INET;                                            \
-    ai->ai_socktype = hints->ai_socktype;                               \
-    ai->ai_protocol = hints->ai_protocol;                               \
-    ai->ai_addrlen = sizeof(struct sockaddr_in);                        \
-    ai->ai_addr = calloc(1, sizeof(struct sockaddr_in));                \
-    ((struct sockaddr_in *) ai->ai_addr)->sin_family = he->h_addrtype;  \
-    ((struct sockaddr_in *) ai->ai_addr)->sin_port = port;              \
-    ((struct sockaddr_in *) ai->ai_addr)->sin_addr.s_addr = ((struct in_addr *) addr)->s_addr
+static inline struct addrinfo *new_ai(int socktype, int protocol, int port, int address)
+{
+    struct addrinfo *ai;
+    struct sockaddr_in *ai_addr;
+
+    if (!(ai = calloc(1, sizeof(struct addrinfo))))
+        return NULL;
+
+    if (!(ai_addr = calloc(1, sizeof(struct sockaddr_in))))
+        return NULL;
+
+    ai_addr->sin_family = AF_INET;
+    ai_addr->sin_port = port;
+    ai_addr->sin_addr.s_addr = address;
+
+    ai->ai_family = PF_INET;
+    ai->ai_socktype = socktype;
+    ai->ai_protocol = protocol;
+    ai->ai_addrlen = sizeof(struct sockaddr_in);
+    ai->ai_addr = (struct sockaddr *) ai_addr;
+
+//    fprintf(stderr, "-> [%d.%d.%d.%d]\n", ((unsigned char *) &address)[0], ((unsigned char *) &address)[1], ((unsigned char *) &address)[2], ((unsigned char *) &address)[3]);
+
+    return ai;
+}
 
 int cw_getaddrinfo(const char *node, const char *service, const struct addrinfo *hints, struct addrinfo **res)
 {
     struct hostent *he;
-    struct addrinfo *ai;
+    struct addrinfo **p_ai_next = res;
     struct addrinfo default_hints;
+    char **p_addr;
     u_short port = 0;
-    char *p = NULL;
     int i;
 
     if (cw_helpers.ws2.ok)
@@ -274,22 +289,38 @@ int cw_getaddrinfo(const char *node, const char *service, const struct addrinfo 
         hints = &default_hints;
     }
 
-    if (hints->ai_flags)
+    // only AI_PASSIVE flag is supported
+    if (hints->ai_flags & ~AI_PASSIVE)
     {
         fprintf(stderr, "[getaddrinfo] unsupported ai_flags: 0x%x, please report\n", hints->ai_flags);
         return EAI_BADFLAGS;
     }
 
-    if (!node)
-    {
-        if (hints->ai_flags & AI_PASSIVE)
-            return EAI_BADFLAGS;
-        else
-            node = "localhost";
-    }
-
     if ((hints->ai_family != AF_UNSPEC) && (hints->ai_family != AF_INET))
         return EAI_FAMILY;
+
+    // only numeric services are supported
+    if (service)
+    {
+        char *p;
+        port = htons(strtoul(service, &p, 10));
+        if (*p)
+            return EAI_NONAME;
+    }
+
+    if (!node) // TODO: or numeric
+    {
+        int address;
+
+        if (hints->ai_flags & ~AI_PASSIVE)
+            return EAI_BADFLAGS;
+
+        address = htonl((hints->ai_flags & AI_PASSIVE) ? INADDR_ANY : INADDR_LOOPBACK);
+        if (!(*res = new_ai(hints->ai_socktype, hints->ai_protocol, port, address)))
+            return EAI_MEMORY;
+
+        return 0;
+    }
 
     if (!(he = gethostbyname(node)))
     {
@@ -309,18 +340,22 @@ int cw_getaddrinfo(const char *node, const char *service, const struct addrinfo 
         return EAI_SYSTEM;
     }
 
-    if (service)
-        port = htons(strtoul(service, &p, 10));
-
-    fill_ai(ai, he->h_addr_list[0]);
-    *res = ai;
-
-    for (i = 1; he->h_addr_list[i]; i++)
+    // WARNING: no loop over cnames
+    if ((he->h_addrtype != AF_INET) || (he->h_length != sizeof(struct in_addr)))
     {
-        fill_ai(ai->ai_next, he->h_addr_list[i]);
-        ai = ai->ai_next;
+        fprintf(stderr, "[getaddrinfo] looping over cnames is not implemented\n");
+        return EAI_SYSTEM;
     }
-    ai->ai_next = NULL;
+
+    *p_ai_next = NULL;
+    for (p_addr = he->h_addr_list; *p_addr; p_addr++)
+    {
+        *p_ai_next = new_ai(hints->ai_socktype, hints->ai_protocol, port, ((struct in_addr *) *p_addr)->s_addr);
+        if (!*p_ai_next)
+            return EAI_MEMORY;
+        p_ai_next = &((*p_ai_next)->ai_next);
+    }
+
     return 0;
 }
 
