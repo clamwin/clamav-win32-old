@@ -34,8 +34,6 @@
 #include <fcntl.h>
 #include <clamav.h>
 
-#undef main
-
 extern int gnulib_snprintf(char *str, size_t size, const char *format, ...);
 
 /*
