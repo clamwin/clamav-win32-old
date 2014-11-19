@@ -61,6 +61,9 @@
 #include "libclamav/conv.h"
 #include "libclamav/str.h"
 
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+
 #if defined(_WIN32)
 char * strptime(const char *buf, const char *fmt, struct tm *tm);
 #endif
