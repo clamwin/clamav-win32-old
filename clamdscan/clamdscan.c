@@ -34,10 +34,9 @@
 #include <time.h>
 #include <signal.h>
 
-#include <openssl/ssl.h>
-#include <openssl/err.h>
-#include "libclamav/crypto.h"
+#include "clamav.h"
 
+#include "libclamav/clamav.h"
 #include "shared/output.h"
 #include "shared/misc.h"
 #include "shared/optparser.h"
@@ -68,8 +67,6 @@ int main(int argc, char **argv)
 #ifndef _WIN32
 	struct sigaction sigact;
 #endif
-
-    cl_initialize_crypto();
 
     if((opts = optparse(NULL, argc, argv, 1, OPT_CLAMDSCAN, OPT_CLAMSCAN, NULL)) == NULL) {
 	mprintf("!Can't parse command line options\n");
@@ -186,7 +183,7 @@ void help(void)
 
     mprintf("\n");
     mprintf("                       ClamAV Daemon Client %s\n", get_version());
-    printf("           By The ClamAV Team: http://www.clamav.net/team\n");
+    printf("           By The ClamAV Team: http://www.clamav.net/about.html#credits\n");
     printf("           (C) 2007-2009 Sourcefire, Inc.\n\n");
 
     mprintf("    --help              -h             Show help\n");

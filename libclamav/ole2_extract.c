@@ -28,22 +28,24 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
+#include <stdlib.h>
+#include <errno.h>
+#include <conv.h>
 #ifdef	HAVE_UNISTD_H
 #include <unistd.h>
 #endif
-#include <ctype.h>
-#include <stdlib.h>
+
 #include "clamav.h"
-
-#include <openssl/ssl.h>
-#include <openssl/err.h>
-#include "libclamav/crypto.h"
-
 #include "cltypes.h"
 #include "others.h"
 #include "ole2_extract.h"
 #include "scanners.h"
 #include "fmap.h"
+#include "json_api.h"
+#if HAVE_JSON
+#include "msdoc.h"
+#endif
 
 #ifdef DEBUG_OLE2_LIST
 #define ole2_listmsg(...) cli_dbgmsg( __VA_ARGS__)
@@ -126,6 +128,27 @@ typedef struct property_tag {
     uint32_t size   __attribute__((packed));
     unsigned char   reserved[4];
 }               property_t;
+
+struct ole2_list_node;
+
+typedef struct ole2_list_node
+{
+  uint32_t Val;
+  struct ole2_list_node *Next;
+} ole2_list_node_t;
+
+typedef struct ole2_list
+{
+  uint32_t Size;
+  ole2_list_node_t *Head;
+} ole2_list_t;
+
+int ole2_list_init(ole2_list_t * list);
+int ole2_list_is_empty(ole2_list_t * list);
+uint32_t ole2_list_size(ole2_list_t * list);
+int ole2_list_push(ole2_list_t * list, uint32_t val);
+uint32_t ole2_list_pop(ole2_list_t * list);
+int ole2_list_delete(ole2_list_t * list);
 
 int
 ole2_list_init(ole2_list_t * list)
@@ -211,7 +234,7 @@ get_property_name2(char *name, int size)
     int             i, j;
     char           *newname;
 
-    if (*name == 0 || size <= 0 || size > 64) {
+    if (*name == 0 || size <= 0 || size > 128) {
         return NULL;
     }
     newname = (char *)cli_malloc(size * 7);
@@ -513,9 +536,13 @@ ole2_walk_property_tree(ole2_header_t * hdr, const char *dir, int32_t prop_index
 {
     property_t      prop_block[4];
     int32_t         idx, current_block, i, curindex;
-    char           *dirname;
+    char            *dirname;
     ole2_list_t     node_list;
     int             ret, func_ret;
+#if HAVE_JSON
+    char *name;
+    int toval = 0;
+#endif
 
     ole2_listmsg("ole2_walk_property_tree() called\n");
     func_ret = CL_SUCCESS;
@@ -539,16 +566,23 @@ ole2_walk_property_tree(ole2_header_t * hdr, const char *dir, int32_t prop_index
 
     while (!ole2_list_is_empty(&node_list)) {
         ole2_listmsg("within working loop, worklist size: %d\n", ole2_list_size(&node_list));
+#if HAVE_JSON
+        if (cli_json_timeout_cycle_check(ctx, &toval) != CL_SUCCESS) {
+            ole2_list_delete(&node_list);
+            return CL_ETIMEOUT;
+        }
+#endif
+
         current_block = hdr->prop_start;
 
         //pop off a node to work on
-            curindex = ole2_list_pop(&node_list);
+        curindex = ole2_list_pop(&node_list);
         ole2_listmsg("current index: %d\n", curindex);
         if ((curindex < 0) || (curindex > (int32_t) hdr->max_block_no)) {
             continue;
         }
         //read in the sector referenced by the current index
-            idx = curindex / 4;
+        idx = curindex / 4;
         for (i = 0; i < idx; i++) {
             current_block = ole2_get_next_block_number(hdr, current_block);
             if (current_block < 0) {
@@ -605,7 +639,7 @@ ole2_walk_property_tree(ole2_header_t * hdr, const char *dir, int32_t prop_index
                 continue;
             }
             hdr->sbat_root_start = prop_block[idx].start_block;
-            if (prop_block[idx].child != -1) {
+            if ((int)(prop_block[idx].child) != -1) {
                 ret = ole2_walk_property_tree(hdr, dir, prop_block[idx].child, handler, rec_level + 1, file_count, ctx, scansize);
                 if (ret != CL_SUCCESS) {
                     if ((ctx->options & CL_SCAN_ALLMATCHES) && (ret == CL_VIRUS)) {
@@ -617,13 +651,13 @@ ole2_walk_property_tree(ole2_header_t * hdr, const char *dir, int32_t prop_index
                     }
                 }
             }
-            if (prop_block[idx].prev != -1) {
+            if ((int)(prop_block[idx].prev) != -1) {
 	        if ((ret=ole2_list_push(&node_list, prop_block[idx].prev)) != CL_SUCCESS) {
 		    ole2_list_delete(&node_list);
 		    return ret;
 		}
 	    }
-	    if (prop_block[idx].next != -1) {
+	    if ((int)(prop_block[idx].next) != -1) {
 	        if ((ret=ole2_list_push(&node_list, prop_block[idx].next)) != CL_SUCCESS) {
 		    ole2_list_delete(&node_list);
 		    return ret;
@@ -655,7 +689,7 @@ ole2_walk_property_tree(ole2_header_t * hdr, const char *dir, int32_t prop_index
             } else {
                 cli_dbgmsg("OLE2: filesize exceeded\n");
             }
-            if (prop_block[idx].child != -1) {
+            if ((int)(prop_block[idx].child) != -1) {
                 ret = ole2_walk_property_tree(hdr, dir, prop_block[idx].child, handler, rec_level, file_count, ctx, scansize);
                 if (ret != CL_SUCCESS) {
                     if ((ctx->options & CL_SCAN_ALLMATCHES) && (ret == CL_VIRUS)) {
@@ -667,13 +701,13 @@ ole2_walk_property_tree(ole2_header_t * hdr, const char *dir, int32_t prop_index
                     }
                 }
             }
-            if (prop_block[idx].prev != -1) {
+            if ((int)(prop_block[idx].prev) != -1) {
 	        if ((ret=ole2_list_push(&node_list, prop_block[idx].prev)) != CL_SUCCESS) {
 		    ole2_list_delete(&node_list);
 		    return ret;
 		}
             }
-            if (prop_block[idx].next != -1) {
+            if ((int)(prop_block[idx].next) != -1) {
                 if ((ret=ole2_list_push(&node_list, prop_block[idx].next)) != CL_SUCCESS) {
 		    ole2_list_delete(&node_list);
 		    return ret;
@@ -683,6 +717,19 @@ ole2_walk_property_tree(ole2_header_t * hdr, const char *dir, int32_t prop_index
         case 1:                /* Directory */
             ole2_listmsg("directory node\n");
             if (dir) {
+#if HAVE_JSON
+                if ((ctx->options & CL_SCAN_FILE_PROPERTIES) && (ctx->wrkproperty != NULL)) {
+                    if (!json_object_object_get_ex(ctx->wrkproperty, "DigitalSignatures", NULL)) {
+                        name = get_property_name2(prop_block[idx].name, prop_block[idx].name_size);
+                        if (name) {
+                            if (!strcmp(name, "_xmlsignatures") || !strcmp(name, "_signatures")) {
+                                cli_jsonbool(ctx->wrkproperty, "HasDigitalSignatures", 1);
+                            }
+                            free(name);
+                        }
+                    }
+                }
+#endif
                 dirname = (char *)cli_malloc(strlen(dir) + 8);
                 if (!dirname) {
 		    ole2_listmsg("OLE2: malloc failed for dirname\n");
@@ -699,7 +746,7 @@ ole2_walk_property_tree(ole2_header_t * hdr, const char *dir, int32_t prop_index
                 cli_dbgmsg("OLE2 dir entry: %s\n", dirname);
             } else
                 dirname = NULL;
-            if (prop_block[idx].child != -1) {
+            if ((int)(prop_block[idx].child) != -1) {
                 ret = ole2_walk_property_tree(hdr, dirname, prop_block[idx].child, handler, rec_level + 1, file_count, ctx, scansize);
                 if (ret != CL_SUCCESS) {
                     if ((ctx->options & CL_SCAN_ALLMATCHES) && (ret == CL_VIRUS)) {
@@ -711,13 +758,13 @@ ole2_walk_property_tree(ole2_header_t * hdr, const char *dir, int32_t prop_index
                     }
                 }
             }
-            if (prop_block[idx].prev != -1) {
+            if ((int)(prop_block[idx].prev) != -1) {
 	        if ((ret=ole2_list_push(&node_list, prop_block[idx].prev)) != CL_SUCCESS) {
 		    ole2_list_delete(&node_list);
 		    return ret;
 		}
             }
-            if (prop_block[idx].next != -1) {
+            if ((int)(prop_block[idx].next) != -1) {
                 if ((ret=ole2_list_push(&node_list, prop_block[idx].next)) != CL_SUCCESS) {
 		    ole2_list_delete(&node_list);
 		    return ret;
@@ -746,6 +793,8 @@ handler_writefile(ole2_header_t * hdr, property_t * prop, const char *dir, cli_c
     bitset_t       *blk_bitset;
     char           *hash;
     uint32_t        cnt;
+
+    UNUSEDPARAM(ctx);
 
     if (prop->type != 2) {
         /* Not a file */
@@ -859,16 +908,50 @@ handler_writefile(ole2_header_t * hdr, property_t * prop, const char *dir, cli_c
 static int
 handler_enum(ole2_header_t * hdr, property_t * prop, const char *dir, cli_ctx * ctx)
 {
-    char           *name;
+    char           *name = NULL;
+#if HAVE_JSON
+    json_object *arrobj, *strmobj;
+
+    name = get_property_name2(prop->name, prop->name_size);
+    if (name) {
+        if (ctx->options & CL_SCAN_FILE_PROPERTIES && ctx->wrkproperty != NULL) {
+            arrobj = cli_jsonarray(ctx->wrkproperty, "Streams");
+            if (NULL == arrobj) {
+                cli_warnmsg("ole2: no memory for streams list or streams is not an array\n");
+            }
+            else {
+                strmobj = json_object_new_string(name);
+                json_object_array_add(arrobj, strmobj);
+            }
+
+            if (!strcmp(name, "powerpoint document")) {
+                cli_jsonstr(ctx->wrkproperty, "FileType", "CL_TYPE_MSPPT");
+            }
+            if (!strcmp(name, "worddocument")) {
+                cli_jsonstr(ctx->wrkproperty, "FileType", "CL_TYPE_MSWORD");
+            }
+            if (!strcmp(name, "workbook")) {
+                cli_jsonstr(ctx->wrkproperty, "FileType", "CL_TYPE_MSXL");
+            }
+
+        }
+    }
+#else
+    UNUSEDPARAM(ctx);
+#endif
+    UNUSEDPARAM(dir);
 
     if (!hdr->has_vba) {
-        name = get_property_name2(prop->name, prop->name_size);
+        if (!name)
+            name = get_property_name2(prop->name, prop->name_size);
         if (name) {
             if (!strcmp(name, "_vba_project") || !strcmp(name, "powerpoint document") || !strcmp(name, "worddocument") || !strcmp(name, "_1_ole10native"))
                 hdr->has_vba = 1;
-            free(name);
         }
     }
+
+    if (name)
+        free(name);
     return CL_SUCCESS;
 }
 
@@ -881,6 +964,8 @@ handler_otf(ole2_header_t * hdr, property_t * prop, const char *dir, cli_ctx * c
     int32_t         current_block, len, offset;
     int             ofd, ret;
     bitset_t       *blk_bitset;
+
+    UNUSEDPARAM(dir);
 
     if (prop->type != 2) {
         /* Not a file */
@@ -986,6 +1071,48 @@ handler_otf(ole2_header_t * hdr, property_t * prop, const char *dir, cli_ctx * c
         cli_bitset_free(blk_bitset);
         return CL_ESEEK;
     }
+
+#if HAVE_JSON
+    /* JSON Output Summary Information */
+    if (ctx->options & CL_SCAN_FILE_PROPERTIES && ctx->properties != NULL) {
+        char *name = get_property_name2(prop->name, prop->name_size);
+        if (name) {
+            if (!strncmp(name, "_5_summaryinformation", 21)) {
+                cli_dbgmsg("OLE2: detected a '_5_summaryinformation' stream\n");
+                /* JSONOLE2 - what to do if something breaks? */
+                if (cli_ole2_summary_json(ctx, ofd, 0) == CL_ETIMEOUT) {
+                    free(name);
+                    close(ofd);
+                    if (ctx && !(ctx->engine->keeptmp))
+                        cli_unlink(tempfile);
+
+                    free(tempfile);
+                    free(buff);
+                    cli_bitset_free(blk_bitset);
+                    return CL_ETIMEOUT;
+                }
+            }
+            if (!strncmp(name, "_5_documentsummaryinformation", 29)) {
+                cli_dbgmsg("OLE2: detected a '_5_documentsummaryinformation' stream\n");
+                /* JSONOLE2 - what to do if something breaks? */
+                if (cli_ole2_summary_json(ctx, ofd, 1) == CL_ETIMEOUT) {
+                    free(name);
+                    close(ofd);
+                    if (ctx && !(ctx->engine->keeptmp))
+                        cli_unlink(tempfile);
+
+                    free(tempfile);
+                    free(buff);
+                    cli_bitset_free(blk_bitset);
+                    return CL_ETIMEOUT;
+                }
+            }
+        }
+        free(name);
+    }
+#endif
+
+    /* Normal File Scan */
     ret = cli_magic_scandesc(ofd, ctx);
     close(ofd);
     free(buff);
@@ -1068,7 +1195,8 @@ int
 cli_ole2_extract(const char *dirname, cli_ctx * ctx, struct uniq **vba)
 {
     ole2_header_t   hdr;
-    int             hdr_size, ret = CL_CLEAN;
+    int             ret = CL_CLEAN;
+    size_t hdr_size;
     unsigned int    file_count = 0;
     unsigned long   scansize, scansize2;
     const void     *phdr;
@@ -1093,7 +1221,7 @@ cli_ole2_extract(const char *dirname, cli_ctx * ctx, struct uniq **vba)
         sizeof(off_t) - sizeof(bitset_t *) -
         sizeof(struct uniq *) - sizeof(int) - sizeof(fmap_t *);
 
-    if ((*ctx->fmap)->len < hdr_size) {
+    if ((size_t)((*ctx->fmap)->len) < (size_t)(hdr_size)) {
         return CL_CLEAN;
     }
     hdr.map = *ctx->fmap;

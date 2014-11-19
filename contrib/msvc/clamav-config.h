@@ -155,6 +155,10 @@
    you don't. */
 #undef HAVE_DECL_CYGWIN_CONV_PATH
 
+/* Define to 1 if you have a deprecated version of the 'libjson' library
+   (-ljson). */
+#undef HAVE_DEPRECATED_JSON
+
 /* Define to 1 if you have the <dirent.h> header file. */
 #define HAVE_DIRENT_H 1
 
@@ -191,6 +195,9 @@
 /* have getaddrinfo() */
 #undef HAVE_GETADDRINFO
 
+/* Define to 1 if you have the `getnameinfo' function. */
+#undef HAVE_GETNAMEINFO
+
 /* Define to 1 if getpagesize() is available */
 #undef HAVE_GETPAGESIZE
 
@@ -214,6 +221,9 @@
 
 /* in_port_t is defined */
 #undef HAVE_IN_PORT_T
+
+/* Define to 1 if you have the 'libjson' library (-ljson). */
+#undef HAVE_JSON
 
 /* Define to '1' if you have the check.h library */
 #undef HAVE_LIBCHECK
@@ -559,7 +569,7 @@
 #endif
 
 /* Stable releases tag */
-#define CLAMWIN_RELEASE "0.98.4"
+#define CLAMWIN_RELEASE "0.98.5"
 
 /* Version number of package */
 #ifdef CLAMWIN_RELEASE
@@ -649,3 +659,5 @@
 #else
 #include <platform.h>
 #endif
+
+#define LLVM_VERSION 28

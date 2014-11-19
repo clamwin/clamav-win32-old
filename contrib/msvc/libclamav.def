@@ -276,3 +276,7 @@ cli_bytecode_load                   @363 NONAME
 cli_bytecode_prepare2               @364 NONAME
 cli_bytecode_printversion           @365 NONAME
 cli_bytecode_run                    @366 NONAME
+cli_bytefunc_describe               @367 NONAME
+cli_bytetype_describe               @368 NONAME
+cli_bytevalue_describe              @369 NONAME
+

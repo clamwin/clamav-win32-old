@@ -22,10 +22,6 @@
 #include "clamav-config.h"
 #endif
 
-#include <openssl/ssl.h>
-#include <openssl/err.h>
-#include "libclamav/crypto.h"
-
 #include <errno.h>
 #include "xar.h"
 #include "fmap.h"
@@ -36,6 +32,7 @@
 #endif
 #endif
 #include <libxml/xmlreader.h>
+#include "clamav.h"
 #include "str.h"
 #include "scanners.h"
 #include "inflate64.h"
@@ -420,11 +417,15 @@ int cli_scanxar(cli_ctx *ctx)
     fmap_t *map = *ctx->fmap;
     long length, offset, size, at;
     int encoding;
-    z_stream strm = {0};
+    z_stream strm;
     char *toc, *tmpname;
     xmlTextReaderPtr reader = NULL;
     int a_hash, e_hash;
     unsigned char *a_cksum = NULL, *e_cksum = NULL;
+    void *a_hash_ctx = NULL, *e_hash_ctx = NULL;
+    char result[SHA1_HASH_SIZE];
+
+    memset(&strm, 0x00, sizeof(z_stream));
 
     /* retrieve xar header */
     if (fmap_readn(*ctx->fmap, &hdr, 0, sizeof(hdr)) != sizeof(hdr)) {
@@ -517,7 +518,7 @@ int cli_scanxar(cli_ctx *ctx)
             goto exit_toc;
     }
 
-    reader = xmlReaderForMemory(toc, hdr.toc_length_decompressed, "noname.xml", NULL, 0);
+    reader = xmlReaderForMemory(toc, hdr.toc_length_decompressed, "noname.xml", NULL, CLAMAV_MIN_XMLREADER_FLAGS);
     if (reader == NULL) {
         cli_dbgmsg("cli_scanxar: xmlReaderForMemory error for TOC\n");
         goto exit_toc;
@@ -538,8 +539,6 @@ int cli_scanxar(cli_ctx *ctx)
         unsigned char * blockp;
         void *a_sc, *e_sc;
         void *a_mc, *e_mc;
-        void *a_hash_ctx, *e_hash_ctx;
-        char result[SHA1_HASH_SIZE];
         char * expected;
 
         /* clean up temp file from previous loop iteration */
@@ -562,7 +561,11 @@ int cli_scanxar(cli_ctx *ctx)
 
 
         a_hash_ctx = xar_hash_init(a_hash, &a_sc, &a_mc);
+        if (a_hash_ctx == NULL)
+            goto exit_tmpfile;
         e_hash_ctx = xar_hash_init(e_hash, &e_sc, &e_mc);
+        if (e_hash_ctx == NULL)
+            goto exit_tmpfile;
 
         switch (encoding) {
         case CL_TYPE_GZ:
@@ -575,7 +578,7 @@ int cli_scanxar(cli_ctx *ctx)
                 break;
             }
             
-            while (at < map->len && at < offset+hdr.toc_length_compressed+hdr.size+length) {
+            while ((size_t)at < map->len && (unsigned long)at < offset+hdr.toc_length_compressed+hdr.size+length) {
                 unsigned long avail_in;
                 void * next_in;
                 unsigned int bytes = MIN(map->len - at, map->pgsz);
@@ -675,7 +678,7 @@ int cli_scanxar(cli_ctx *ctx)
 
                 at += CLI_LZMA_HDR_SIZE;
                 in_remaining -= CLI_LZMA_HDR_SIZE;
-                while (at < map->len && at < offset+hdr.toc_length_compressed+hdr.size+length) {
+                while ((size_t)at < map->len && (unsigned long)at < offset+hdr.toc_length_compressed+hdr.size+length) {
                     SizeT avail_in;
                     SizeT avail_out;
                     void * next_in;
@@ -754,7 +757,7 @@ int cli_scanxar(cli_ctx *ctx)
                 unsigned long write_len;
                 
                 if (ctx->engine->maxfilesize)
-                    write_len = MIN(ctx->engine->maxfilesize, length);
+                    write_len = MIN((size_t)(ctx->engine->maxfilesize), (size_t)length);
                 else
                     write_len = length;
                     
@@ -780,6 +783,7 @@ int cli_scanxar(cli_ctx *ctx)
 
         if (rc == CL_SUCCESS) {
             xar_hash_final(a_hash_ctx, result, a_hash);
+            a_hash_ctx = NULL;
             if (a_cksum != NULL) {
                 expected = cli_hex2str((char *)a_cksum);
                 if (xar_hash_check(a_hash, result, expected) != 0) {
@@ -790,9 +794,10 @@ int cli_scanxar(cli_ctx *ctx)
                 }
                 free(expected);
             }
+            xar_hash_final(e_hash_ctx, result, e_hash);
+            e_hash_ctx = NULL;
             if (e_cksum != NULL) {
                 if (do_extract_cksum) {
-                    xar_hash_final(e_hash_ctx, result, e_hash);
                     expected = cli_hex2str((char *)e_cksum);
                     if (xar_hash_check(e_hash, result, expected) != 0) {
                         cli_dbgmsg("cli_scanxar: extracted-checksum missing or mismatch.\n");
@@ -829,7 +834,11 @@ int cli_scanxar(cli_ctx *ctx)
 
  exit_tmpfile:
     xar_cleanup_temp_file(ctx, fd, tmpname);
-
+    if (a_hash_ctx != NULL)
+        xar_hash_final(a_hash_ctx, result, a_hash);
+    if (e_hash_ctx != NULL)
+        xar_hash_final(e_hash_ctx, result, e_hash);
+ 
  exit_reader:
     if (a_cksum != NULL)
         xmlFree(a_cksum);   

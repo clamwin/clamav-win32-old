@@ -45,10 +45,6 @@
 #include <cw_inline.h>
 #include <socket_inline.h>
 
-#include <openssl/ssl.h>
-#include <openssl/err.h>
-#include "libclamav/crypto.h"
-
 /* re-route main to cw_main to handle some startup code */
 #define main cw_main
 

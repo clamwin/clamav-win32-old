@@ -34,10 +34,6 @@
 #include <time.h>
 #include <libmilter/mfapi.h>
 
-#include <openssl/ssl.h>
-#include <openssl/err.h>
-#include "libclamav/crypto.h"
-
 #include "clamav.h"
 
 #include "shared/output.h"
@@ -59,6 +55,8 @@ int main(int argc, char **argv) {
     time_t currtime;
     mode_t umsk;
     int ret;
+
+    cl_initialize_crypto();
 
     memset(&descr, 0, sizeof(struct smfiDesc));
     descr.xxfi_name = "ClamAV";			/* filter name */

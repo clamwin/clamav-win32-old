@@ -25,6 +25,7 @@
 
 #define _CRT_SECURE_NO_DEPRECATE
 #define _CRT_NON_CONFORMING_SWPRINTFS
+#define OWN_WINSOCK
 #include <stdio.h>
 #include <stdlib.h>
 #include <windows.h>
@@ -32,6 +33,8 @@
 #include <io.h>
 #include <fcntl.h>
 #include <clamav.h>
+
+#undef main
 
 extern int gnulib_snprintf(char *str, size_t size, const char *format, ...);
 

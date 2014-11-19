@@ -552,7 +552,7 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\..\libclamav\json.c"
+				RelativePath="..\..\..\..\libclamav\json_api.c"
 				>
 			</File>
 			<File
@@ -613,6 +613,10 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\libclamav\ole2_extract.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\ooxml.c"
 				>
 			</File>
 			<File
@@ -720,6 +724,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\..\libclamav\stats_json.c"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\..\libclamav\str.c"
 				>
 			</File>
@@ -797,6 +805,10 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\libclamav\xar.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\xdp.c"
 				>
 			</File>
 			<File
@@ -1654,6 +1666,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\..\libclamav\json_api.h"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\..\libclamav\line.h"
 				>
 			</File>
@@ -1711,6 +1727,10 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\libclamav\ole2_extract.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\ooxml.h"
 				>
 			</File>
 			<File
@@ -1814,6 +1834,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\..\libclamav\stats_json.h"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\..\libclamav\str.h"
 				>
 			</File>
@@ -1895,6 +1919,10 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\libclamav\xar.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\xdp.h"
 				>
 			</File>
 			<File

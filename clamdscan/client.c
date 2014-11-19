@@ -52,10 +52,7 @@
 #include <sys/uio.h>
 #endif
 
-#include <openssl/ssl.h>
-#include <openssl/err.h>
-#include "libclamav/crypto.h"
-
+#include "libclamav/clamav.h"
 #include "shared/optparser.h"
 #include "shared/output.h"
 #include "shared/misc.h"
@@ -79,10 +76,11 @@ extern struct optstruct *clamdopts;
 static int isremote(const struct optstruct *opts) {
     int s, ret;
     const struct optstruct *opt;
-    static struct sockaddr_in testsock;
     char *ipaddr, port[10];
     struct addrinfo hints, *info, *p;
     int res;
+
+    UNUSEDPARAM(opts);
 
 #ifndef _WIN32
     if((opt = optget(clamdopts, "LocalSocket"))->enabled) {

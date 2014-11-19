@@ -34,10 +34,6 @@
 #include <ctype.h>
 #include <zlib.h>
 
-#include <openssl/ssl.h>
-#include <openssl/err.h>
-#include "libclamav/crypto.h"
-
 #include "clamav.h"
 
 #include "others.h"
@@ -47,6 +43,9 @@
 #include "mbox.h"
 #endif
 #include "blob.h"
+#ifdef HAVE_JSON
+#include "json.h"
+#endif
 
 #define PPT_LZW_BUFFSIZE 8192
 #define VBA_COMPRESSION_WINDOW 4096
@@ -129,7 +128,10 @@ get_unicode_name(const char *name, int size, int big_endian)
 				*ret++ = '_';
 				*ret++ = (char)(name[i] + '0');
 			} else {
-				const uint16_t x = (uint16_t)((name[i] << 8) | name[i + 1]);
+				uint16_t x;
+				if ((i + 1) >= size)
+					break;
+				x = (uint16_t)((name[i] << 8) | name[i + 1]);
 
 				*ret++ = '_';
 				*ret++ = (char)('a'+((x&0xF)));
@@ -511,6 +513,7 @@ cli_vba_inflate(int fd, off_t offset, int *size)
 	if(b == NULL)
 		return NULL;
 
+	memset(buffer, 0, sizeof(buffer));
 	lseek(fd, offset+3, SEEK_SET); /* 1byte ?? , 2byte length ?? */
 	clean = TRUE;
 	pos = 0;

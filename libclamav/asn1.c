@@ -24,10 +24,7 @@
 
 #include <time.h>
 
-#include <openssl/ssl.h>
-#include <openssl/err.h>
-#include "libclamav/crypto.h"
-
+#include "clamav.h"
 #include "asn1.h"
 #include "bignum.h"
 #include "matcher-hash.h"
@@ -839,8 +836,10 @@ static int asn1_parse_mscat(fmap_t *map, size_t offset, unsigned int size, crtmg
 		    break;
 		}
 	    }
-	    if(dsize)
-		break;
+	    if(dsize) {
+            crtmgr_free(&newcerts);
+            break;
+        }
 	    if(newcerts.crts) {
 		x509 = newcerts.crts;
 		cli_dbgmsg("asn1_parse_mscat: %u new certificates collected\n", newcerts.items);
@@ -880,8 +879,10 @@ static int asn1_parse_mscat(fmap_t *map, size_t offset, unsigned int size, crtmg
 		    }
 		    x509 = x509->next;
 		}
-		if(x509)
+		if(x509) {
+            crtmgr_free(&newcerts);
 		    break;
+        }
 		if(newcerts.items)
 		    cli_dbgmsg("asn1_parse_mscat: %u certificates did not verify\n", newcerts.items);
 		crtmgr_free(&newcerts);
@@ -1047,7 +1048,7 @@ static int asn1_parse_mscat(fmap_t *map, size_t offset, unsigned int size, crtmg
         break;
 
 	cl_update_hash(ctx, "\x31", 1);
-	cl_update_hash(ctx, attrs + 1, attrs_size - 1);
+	cl_update_hash(ctx, (void *)(attrs + 1), attrs_size - 1);
 	cl_finish_hash(ctx, sha1);
 
 	if(!fmap_need_ptr_once(map, asn1.content, asn1.size)) {
@@ -1291,7 +1292,7 @@ static int asn1_parse_mscat(fmap_t *map, size_t offset, unsigned int size, crtmg
             break;
 
         cl_update_hash(ctx, "\x31", 1);
-        cl_update_hash(ctx, attrs + 1, attrs_size - 1);
+        cl_update_hash(ctx, (void *)(attrs + 1), attrs_size - 1);
         cl_finish_hash(ctx, sha1);
 	} else {
         ctx = cl_hash_init("md5");
@@ -1299,7 +1300,7 @@ static int asn1_parse_mscat(fmap_t *map, size_t offset, unsigned int size, crtmg
             break;
 
         cl_update_hash(ctx, "\x31", 1);
-        cl_update_hash(ctx, attrs + 1, attrs_size - 1);
+        cl_update_hash(ctx, (void *)(attrs + 1), attrs_size - 1);
         cl_finish_hash(ctx, sha1);
 	}
 

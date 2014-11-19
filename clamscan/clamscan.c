@@ -38,10 +38,6 @@
 #include <sys/resource.h>
 #endif
 
-#include <openssl/ssl.h>
-#include <openssl/err.h>
-#include "libclamav/crypto.h"
-
 #include "others.h"
 #include "global.h"
 #include "manager.h"
@@ -210,7 +206,7 @@ void help(void)
 
     mprintf("\n");
     mprintf("                       Clam AntiVirus Scanner %s\n", get_version());
-    printf("           By The ClamAV Team: http://www.clamav.net/team\n");
+    printf("           By The ClamAV Team: http://www.clamav.net/about.html#credits\n");
     printf("           (C) 2007-2009 Sourcefire, Inc.\n\n");
 
     mprintf("    --help                -h             Print this help screen\n");

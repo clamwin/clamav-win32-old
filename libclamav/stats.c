@@ -53,14 +53,10 @@
 
 #include <errno.h>
 
-#include <openssl/ssl.h>
-#include <openssl/err.h>
-#include "libclamav/crypto.h"
-
 #include "libclamav/others.h"
 #include "libclamav/clamav.h"
 #include "libclamav/dconf.h"
-#include "libclamav/json.h"
+#include "libclamav/stats_json.h"
 #include "libclamav/stats.h"
 #include "libclamav/hostid.h"
 #include "libclamav/www.h"
@@ -581,6 +577,8 @@ char *clamav_stats_get_hostid(void *cbdata)
     };
     size_t bufsz, i;
     char *buf;
+
+    UNUSEDPARAM(cbdata);
 
 #if HAVE_SYSCTLBYNAME
     /*

@@ -46,10 +46,6 @@
 
 #include "platform.h"
 
-#include <openssl/ssl.h>
-#include <openssl/err.h>
-#include "libclamav/crypto.h"
-
 #include "libclamav/others.h"
 #include "libclamav/clamav.h"
 #include "libclamav/www.h"
@@ -268,7 +264,7 @@ void submit_post(const char *host, const char *port, const char *method, const c
 
     cli_dbgmsg("stats - Connected to %s:%s\n", host, port);
 
-    if (send(sockfd, buf, strlen(buf), 0) != strlen(buf)) {
+    if ((size_t)send(sockfd, buf, strlen(buf), 0) != (size_t)strlen(buf)) {
         closesocket(sockfd);
         free(buf);
         return;

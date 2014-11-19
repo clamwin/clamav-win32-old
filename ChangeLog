@@ -1,10 +1,107 @@
-Wed, 21 May 11:30:00 EDT 2014 (morgan)
+Wed, 12 Nov 2014 14:30:39 EDT (swebb)
+-------------------------------------
+* bb11176 - Instruct OpenSSL to allow MD5 when in FIPS-compliant mode.
+  Patch submitted by Reinhard Max.
+
+Mon, 10 Nov 2014 11:03:29 EDT (swebb)
+-------------------------------------
+* bb11155 - Adjust the logic surrounding adjusting the PE section sizes
+  This fixes a crash with maliciously crafted yoda's crypter files and
+  also improves virus detections for PE files. 
+
+Thu, 6 Nov 2014 14:51:26 EDT (swebb)
+-------------------------------------
+* bb11088 - Merge in fixes for clamscan -a crash bug
+
+Mon, 20 Oct 2014 11:33:18 EDT (swebb)
+-------------------------------------
+* Revert "bb#10731 - Allow to specificy a group for the socket of which
+  the user is not a member"
+
+Thu, 31 Jul 2014 19:11:22 EDT (swebb)
+-------------------------------------
+* Add support for XDP PDF file format
+
+Thu, Jul 31 11:50:23 EDT 2014 (swebb)
 ------------------------------------
-* 0.98.4 release tag.
+* bb#10731 - Allow specification of a group for the milter socket of which
+the user is not a member - patch submitted by Sebastian Andrzej Siewior
+
+Fri, 25 Jul 2014 12:26:04 EDT (klin)
+------------------------------------
+* bb#10981 - applied LLVM 3.1-3.4 - patch submitted by Andreas Cadhalpun
+
+Fri, 25 Jul 2014 12:06:13 (klin)
+--------------------------------
+* clambc: added diagnostic tools for bytecode IR
+
+Tue, 8 Jul 2014 19:53:41 EDT (swebb)
+------------------------------------
+* mass cleanup of compiler warnings
+
+Tue, 08 Jul 11:30:00 EDT 2014 (morgan)
+------------------------------------
+* 0.98.5 beta release
+
+Mon, 07 Jul 09:00:00 EDT 2014 (swebb)
+------------------------------------
+* 0.98.5-beta1 release engineering
+
+Thu, 03 Jul 22:14:40 EDT 2014 (swebb)
+------------------------------------
+* Call cl_initialize_crypto() in cl_init()
+
+Thu, 03 Jul 16:28:10 EDT 2014 (swebb)
+------------------------------------
+* Finalize PDF parsing code for the preclassification feature
+
+Wed, 25 Jun 16:26:33 EDT 2014 (swebb)
+------------------------------------
+* Finalize linking in libjson, a new optional dependency
+
+Fri, 13 Jun 2014 16:11:15 EDT (smorgan)
+---------------------------------------
+* add timeout facility for file property scanning
+
+Tue, 3 Jun 2014 13:31:50 EDT (smorgan)
+--------------------------------------
+* add callback for user processing of json string and json scan result
+
+Wed, 7 May 2014 10:56:35 EDT (swebb)
+------------------------------------
+* PE file properties collection
+
+Tue, 6 May 2014 15:26:30 EDT (klin)
+-----------------------------------
+* add api to read json to the bytecode api
+
+Thu, 1 May 2014 16:59:01 EDT (klin)
+-----------------------------------
+* docx/pptx/xlsx file properties collection
+
+Wed, 30 Apr 2014 16:38:55 EDT (swebb)
+-------------------------------------
+* pdf file properties collection
+
+Tue, 22 Apr 2014 14:22:39 EDT (klin)
+------------------------------------
+* json api wrapper
+
+Mon, 21 Apr 2014 18:30:28 EDT (klin)
+------------------------------------
+* doc/ppt/xls file properties collection
+
+Wed, 16 Apr 18:14:45 2014 EDT (smorgan)
+--------------------------------------
+* Initial libjson-c configure/build support and json file properties work
+
+---------------------------------
+Beginning of 0.98.5 Development |
+---------------------------------
 
 Mon, 12 May 17:30:00 EDT 2014 (morgan)
 ------------------------------------
-* 0.98.4 released to address Windows-specific issues
+* 0.98.4 release
 
 Mon, 12 May 2014 14:02:23 EDT (morgan)
 ------------------------------------
@@ -108,47 +205,63 @@ Thu Oct 23 18:01:46 EDT 2013 (dar)
 ------------------------------------
  * bb #9222: make fmap_unneed respect nested maps
 
-Tue Oct 15 16:03:25 2013 EDT 2013 (dar)
+Wed Oct 23 16:21:46 EDT 2013 (morgan)
+------------------------------------
+ * libclamav: bb#5978 - Allow html detection/normalization for graphic file types.
+
+Thu Oct 17 16:50:00 EDT 2013 (morgan)
+------------------------------------
+ * libclamav: bb#6348 - Add file type recognition for Office Open XML.
+
+Tue Oct 15 16:03:25 EDT 2013 (dar)
 ------------------------------------
  * libclamav: bb #9154 - ELF handling re-write
 
-Tue Oct 15 16:00:14 2013 EDT 2013 (dar)
+Tue Oct 15 16:00:14 EDT 2013 (dar)
 ------------------------------------
  * libclamav: bb #8696 - Bug reported by NIW Solutions
 
-Fri Oct 11 16:50:34 2013 EDT 2013 (dar)
+Mon Oct 14 17:07:40 EDT 2013 (morgan)
+------------------------------------
+ * bb #8209 - move perror()'s so they will work. Patches supplied by Bill Parker.
+
+Fri Oct 11 16:50:34 EDT 2013 (dar)
 ------------------------------------
  * bb #9072: clamscan message separator fix
 
-Thu Oct 3 10:49:11 2013 EDT 2013 (dar)
+Tue Oct 8 17:17:44 EDT 2013 (morgan)
+------------------------------------
+ * libclamav: Add support for XZ file type recognition and decompression.
+
+Thu Oct 3 10:49:11 EDT 2013 (dar)
 ------------------------------------
  * bb #1570: Support ADC compression in DMG
 
-Wed Oct 2 11:22:40 2013 EDT 2013 (dar)
+Wed Oct 2 11:22:40 EDT 2013 (dar)
 ------------------------------------
  * bb #9053: ClamAV 0.98 can't be compiled on FreeBSD 7
 
-Mon Sep 30 11:04:58 2013 EDT 2013 (dar)
+Mon Sep 30 11:04:58 EDT 2013 (dar)
 ------------------------------------
  * bb #9017: tomsfastmath warning with zLinux on s390x
 
-Fri Sep 15 18:15:36 2013 EDT 2013 (morgan)
+Fri Sep 15 18:15:36 EDT 2013 (morgan)
 ------------------------------------
  * win32: Import libxml2 2.9.1 components into windows builds for xmlReader support.
 
-Fri Sep 13 12:22:58 2013 EDT 2013 (morgan)
+Fri Sep 13 12:22:58 EDT 2013 (morgan)
 ------------------------------------
  * libclamav: Add support for scanning xar/pkg archive files.
 
-Tue Sep 3 18:37:13 2013 EDT 2013 (dar)
+Tue Sep 3 18:37:13 EDT 2013 (dar)
 ------------------------------------
  * V 0.98.0 RC
 
-Thu Aug 15 17:44:49 2013 EDT 2013 (dar)
+Thu Aug 15 17:44:49 EDT 2013 (dar)
 ------------------------------------
  * code quality fixes on libclamav, clamd, sigtool, clamav-milter, clamconf and clamdtop
 
-Fri Aug 9 18:33:06 2013 EDT 2013 (dar)
+Fri Aug 9 18:33:06 EDT 2013 (dar)
 ------------------------------------
  * code quality fixes on libclamav, libclamunrar and freshclam
 
@@ -367,65 +480,65 @@ Wed Nov 28 19:15:44 EDT 2012 (morgan)
 -------------------------------------
  * bb#1891 add Mark Pizzolato patch to fix clamd buffer bookkeeping errors
 
-Wed Nov 28 17:11:07 2012 (dar)
+Wed Nov 28 17:11:07 EDT 2012 (dar)
 -------------------------------------
  * bb #5405: raise configurable option limit
 
-Tue Nov 27 17:48:50 2012 (morgan)
+Tue Nov 27 17:48:50 EDT 2012 (morgan)
 -------------------------------------
  * for allscan mode, update usage messages and man pages
 
-Tue Nov 27 17:15:02 2012 (dar)
+Tue Nov 27 17:15:02 EDT 2012 (dar)
 -------------------------------------
  * bb #5405: Convert hard-coded maximum file sizes to configurable values with
  defaults
 
-Tue Nov 27 16:17:31 2012 (dar)
+Tue Nov 27 16:17:31 EDT 2012 (dar)
 -------------------------------------
  * Refactoring cache_remove to engine instead of full context object
 
-Tue Nov 27 11:24:52 2012 (dar)
+Tue Nov 27 11:24:52 EDT 2012 (dar)
 -------------------------------------
  * cache_remove and cacheset_remove functions to support corrections of false
  negatives
 
-Fri Nov 16 20:03:57 2012 (morgan) 
+Fri Nov 16 20:03:57 EDT 2012 (morgan)
 -------------------------------------
  * portability improvement for ping domain naming
 
-Thu Nov 15 10:50:22 2012 (morgan)
+Thu Nov 15 10:50:22 EDT 2012 (morgan)
 -------------------------------------
  * change formatting of ip address dns label within freshclam ping-host names to hex ascii
 
-Wed Nov 14 16:12:21 2012 (morgan)
+Wed Nov 14 16:12:21 EDT 2012 (morgan)
 -------------------------------------
  * widen freshclam domain arrays
 
-Fri Nov 9 17:08:50 2012 (morgan)
+Fri Nov 9 17:08:50 EDT 2012 (morgan)
 -------------------------------------
  * bb5224: fix dereference of a null pointer reported by clang analyzer
 
-Fri Nov 9 15:31:51 2012 (morgan)
+Fri Nov 9 15:31:51 EDT 2012 (morgan)
 -------------------------------------
  * fix dereference of a null pointer reported by clang analyzer
 
-Fri Nov 9 11:49:27 2012 (dar)
+Fri Nov 9 11:49:27 EDT 2012 (dar)
 -------------------------------------
  * libclamav: type tweak for CAB files
 
-Tue Nov 6 10:35:10 2012 (dar)
+Tue Nov 6 10:35:10 EDT 2012 (dar)
 -------------------------------------
  * bb#6038: fix compile warning in unit test code due to type mismatch
 
-Tue Nov 6 10:05:35 2012 (dar)
+Tue Nov 6 10:05:35 EDT 2012 (dar)
 -------------------------------------
  * bb #4516 - fix for mszip compression in CAB files
 
-Mon Nov 5 13:36:22 2012 (swebb)
+Mon Nov 5 13:36:22 EDT 2012 (swebb)
 -------------------------------------
  * bb1823 - Enable linking with custom zlib
 
-Fri Nov 2 14:15:45 2012 (morgan)
+Fri Nov 2 14:15:45 EDT 2012 (morgan)
 -------------------------------------
  * fixes cvd load error on some i386 builds caused by -D_FILE_OFFSET_BITS=64 and a long story
 
@@ -12905,7 +13018,6 @@ Mon May  1 19:54:57 CEST 2006 (tk)
 ----------------------------------
   * freshclam/manager.c: fix possible buffer overflow
     Reported by Ulf Harnhammar <metaur*telia.com> and Peter <remllov_*gmx.de>
-    See http://www.clamav.net/security/0.88.2.html for details.
 
 Sun Apr 30 19:23:35 BST 2006 (njh)
 ----------------------------------
@@ -18532,8 +18644,7 @@ Tue Feb 10 17:05:31 GMT 2004 (njh)
 
 Tue Feb 10 14:38:35 GMT 2004 (njh)
 ----------------------------------
-  * contrib:	Removed mfc30d.dll. It can now be downloaded (if needed)
-	from http://www.clamav.net/w32/mfc30d.zip
+  * contrib:	Removed mfc30d.dll. 
 
 Tue Feb 10 14:35:07 CET 2004 (tk)
 ---------------------------------
