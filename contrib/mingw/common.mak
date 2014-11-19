@@ -1,7 +1,7 @@
 top=../..
 msvc=$(top)/contrib/msvc
 
-CFLAGS=-I$(msvc) -I$(msvc)/include -I$(msvc)/gnulib
+CFLAGS=-I$(msvc) -I$(msvc)/include -I$(msvc)/gnulib -I$(msvc)/json-c
 CFLAGS+=-I$(top) -I$(top)/shared -I$(top)/libclamav -I$(top)/libclamav/nsis
 CFLAGS+=-I$(top)/win32/3rdparty/bzip2 -I$(top)/win32/3rdparty/pthreads -I$(top)/win32/3rdparty/zlib
 CFLAGS+=-DHAVE_CONFIG_H -DNDEBUG -DWIN32_LEAN_AND_MEAN

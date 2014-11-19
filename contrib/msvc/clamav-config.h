@@ -223,7 +223,7 @@
 #undef HAVE_IN_PORT_T
 
 /* Define to 1 if you have the 'libjson' library (-ljson). */
-#undef HAVE_JSON
+#define HAVE_JSON 1
 
 /* Define to '1' if you have the check.h library */
 #undef HAVE_LIBCHECK

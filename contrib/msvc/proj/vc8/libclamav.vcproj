@@ -43,7 +43,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="../..;../../include;../../gnulib;../../../..;../../../../libclamav;../../../../libclamav/regex;../../../../libclamav/nsis;../../../../libclamav/lzma;../../../../win32/3rdparty/bzip2;../../../../win32/3rdparty/pthreads;../../../../win32/3rdparty/zlib"
+				AdditionalIncludeDirectories="../..;../../include;../../gnulib;&quot;../../json-c&quot;;../../../..;../../../../libclamav;../../../../libclamav/regex;../../../../libclamav/nsis;../../../../libclamav/lzma;../../../../win32/3rdparty/bzip2;../../../../win32/3rdparty/pthreads;../../../../win32/3rdparty/zlib"
 				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;WIN32_LEAN_AND_MEAN;HAVE_CONFIG_H;PTW32_STATIC_LIB"
 				MinimalRebuild="true"
 				ExceptionHandling="0"
@@ -127,7 +127,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="../..;../../include;../../gnulib;../../../..;../../../../libclamav;../../../../libclamav/regex;../../../../libclamav/nsis;../../../../libclamav/lzma;../../../../win32/3rdparty/bzip2;../../../../win32/3rdparty/pthreads;../../../../win32/3rdparty/zlib"
+				AdditionalIncludeDirectories="../..;../../include;../../gnulib;&quot;../../json-c&quot;;../../../..;../../../../libclamav;../../../../libclamav/regex;../../../../libclamav/nsis;../../../../libclamav/lzma;../../../../win32/3rdparty/bzip2;../../../../win32/3rdparty/pthreads;../../../../win32/3rdparty/zlib"
 				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;WIN32_LEAN_AND_MEAN;HAVE_CONFIG_H;PTW32_STATIC_LIB"
 				MinimalRebuild="true"
 				ExceptionHandling="0"
@@ -211,7 +211,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories="../..;../../include;../../gnulib;../../../..;../../../../libclamav;../../../../libclamav/regex;../../../../libclamav/nsis;../../../../libclamav/lzma;../../../../win32/3rdparty/bzip2;../../../../win32/3rdparty/pthreads;../../../../win32/3rdparty/zlib"
+				AdditionalIncludeDirectories="../..;../../include;../../gnulib;&quot;../../json-c&quot;;../../../..;../../../../libclamav;../../../../libclamav/regex;../../../../libclamav/nsis;../../../../libclamav/lzma;../../../../win32/3rdparty/bzip2;../../../../win32/3rdparty/pthreads;../../../../win32/3rdparty/zlib"
 				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;WIN32_LEAN_AND_MEAN;HAVE_CONFIG_H;PTW32_STATIC_LIB"
 				ExceptionHandling="0"
 				SmallerTypeCheck="false"
@@ -296,7 +296,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories="../..;../../include;../../gnulib;../../../..;../../../../libclamav;../../../../libclamav/regex;../../../../libclamav/nsis;../../../../libclamav/lzma;../../../../win32/3rdparty/bzip2;../../../../win32/3rdparty/pthreads;../../../../win32/3rdparty/zlib"
+				AdditionalIncludeDirectories="../..;../../include;../../gnulib;&quot;../../json-c&quot;;../../../..;../../../../libclamav;../../../../libclamav/regex;../../../../libclamav/nsis;../../../../libclamav/lzma;../../../../win32/3rdparty/bzip2;../../../../win32/3rdparty/pthreads;../../../../win32/3rdparty/zlib"
 				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;WIN32_LEAN_AND_MEAN;HAVE_CONFIG_H;PTW32_STATIC_LIB"
 				ExceptionHandling="0"
 				SmallerTypeCheck="false"
@@ -604,6 +604,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\..\libclamav\msdoc.c"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\..\libclamav\msexpand.c"
 				>
 			</File>
@@ -633,6 +637,10 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\libclamav\pdf.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\pdfng.c"
 				>
 			</File>
 			<File
@@ -1718,6 +1726,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\..\libclamav\msdoc.h"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\..\libclamav\msexpand.h"
 				>
 			</File>
@@ -2396,6 +2408,94 @@
 				</File>
 				<File
 					RelativePath="..\..\..\..\win32\3rdparty\bzip2\randtable.c"
+					>
+				</File>
+			</Filter>
+			<Filter
+				Name="json-c"
+				>
+				<File
+					RelativePath="..\..\json-c\arraylist.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\json-c\arraylist.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\json-c\bits.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\json-c\config.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\json-c\debug.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\json-c\debug.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\json-c\json_config.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\json-c\json_inttypes.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\json-c\json_object.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\json-c\json_object.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\json-c\json_object_private.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\json-c\json_tokener.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\json-c\json_tokener.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\json-c\json_util.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\json-c\json_util.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\json-c\linkhash.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\json-c\linkhash.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\json-c\math_compat.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\json-c\printbuf.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\json-c\printbuf.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\json-c\random_seed.c"
 					>
 				</File>
 			</Filter>

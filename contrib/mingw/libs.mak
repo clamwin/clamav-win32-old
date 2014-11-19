@@ -4,6 +4,9 @@ CFLAGS+=-DPTW32_STATIC_LIB -D_WINDLL
 gnulib_SOURCES=$(wildcard $(msvc)/gnulib/*.c)
 gnulib_OBJECTS=$(gnulib_SOURCES:.c=.o)
 
+json_c_SOURCES=$(wildcard $(msvc)/json-c/*.c)
+json_c_OBJECTS=$(json_c_SOURCES:.c=.o)
+
 libclamunrar_SOURCES=$(wildcard $(top)/libclamunrar/*.c)
 libclamunrar_OBJECTS=$(libclamunrar_SOURCES:.c=.o)
 libclamunrar_OBJECTS+=$(msvc)/resources/libclamunrar-rc.o
@@ -42,7 +45,7 @@ libclamav_SOURCES:=$(subst $(top)/libclamav/tomsfastmath/misc/fp_ident.c,,$(libc
 
 libclamav_OBJECTS=$(libclamav_SOURCES:.c=.o)
 libclamav_OBJECTS+=$(msvc)/resources/libclamav-rc.o
-libclamav.dll: $(libclamav_OBJECTS) $(gnulib_OBJECTS)
+libclamav.dll: $(libclamav_OBJECTS) $(gnulib_OBJECTS) $(json_c_OBJECTS)
 	$(DLLWRAP) $(LDFLAGS) --def $(msvc)/libclamav.def --implib $@.a -o $@ $^ -Lopenssl -lssl -lcrypto -lws2_32 -lgdi32
 
 # LLVM
@@ -63,5 +66,5 @@ llvm-clean:
 clean:
 	@rm -f libclamav.dll libclamav.dll.a
 	@rm -f $(CLAMAV_LIBS) $(addsuffix .a,$(CLAMAV_LIBS))
-	@rm -f $(gnulib_OBJECTS) $(libclamunrar_OBJECTS) $(libclamunrar_iface_OBJECTS) $(libclamav_OBJECTS)
+	@rm -f $(gnulib_OBJECTS) $(json_c_OBJECTS) $(libclamunrar_OBJECTS) $(libclamunrar_iface_OBJECTS) $(libclamav_OBJECTS)
 	@echo Project cleaned
