@@ -2514,7 +2514,9 @@ static int dispatch_prescan(clcb_pre_scan cb, cli_ctx *ctx, const char *filetype
             cli_dbgmsg("cli_magic_scandesc: file whitelisted by callback\n");
             perf_stop(ctx, PERFT_PRECB);
             ctx->hook_lsig_matches = old_hook_lsig_matches;
+            /* returns CL_CLEAN */
             *run_cleanup = 1;
+            break;
         case CL_VIRUS:
             cli_dbgmsg("cli_magic_scandesc: file blacklisted by callback\n");
             cli_append_virus(ctx, "Detected.By.Callback");
@@ -2522,6 +2524,7 @@ static int dispatch_prescan(clcb_pre_scan cb, cli_ctx *ctx, const char *filetype
             ctx->hook_lsig_matches = old_hook_lsig_matches;
             *run_cleanup = 1;
             res = CL_VIRUS;
+            break;
         case CL_CLEAN:
             break;
         default:
@@ -2779,11 +2782,13 @@ static int magic_scandesc(cli_ctx *ctx, cli_file_t type)
 #if HAVE_JSON
             if ((ctx->options & CL_SCAN_FILE_PROPERTIES) && (ctx->wrkproperty != NULL)) {
                 ret = cli_process_ooxml(ctx);
-                if (ret == CL_ETIMEOUT) {
-                    return magic_scandesc_cleanup(ctx, type, hash, hashed_size, cache_clean, ret, parent_property);
+                if (ret == CL_EMEM || ret == CL_ENULLARG) {
+                    /* critical error */
+                    break;
                 }
                 else if (ret != CL_SUCCESS) {
-                    /* JSONOOXML - what to do if something else fails? placeholder */
+                    /* allow for the CL_TYPE_ZIP scan to occur; cli_process_ooxml other possible returns: */
+                    /* CL_ETIMEOUT, CL_EMAXSIZE, CL_EMAXFILES, CL_EPARSE, CL_EFORMAT, CL_BREAK, CL_ESTAT  */
                     ret = CL_SUCCESS;
                 }
             }

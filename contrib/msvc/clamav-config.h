@@ -569,7 +569,7 @@
 #endif
 
 /* Stable releases tag */
-#define CLAMWIN_RELEASE "0.98.5"
+#define CLAMWIN_RELEASE "0.98.6"
 
 /* Version number of package */
 #ifdef CLAMWIN_RELEASE
