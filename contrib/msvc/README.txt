@@ -1,6 +1,6 @@
 -- ClamAV native win32 port --
 
-Copyright (c) 2005-2014 Gianluigi Tiesi <sherpya@netfarm.it>
+Copyright (c) 2005-2015 Gianluigi Tiesi <sherpya@netfarm.it>
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU Library General Public
@@ -14,6 +14,11 @@ Library General Public License for more details.
 You should have received a copy of the GNU Library General Public
 License along with this software; if not, write to the
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+
+Sources can be found here:
+https://github.com/clamwin/clamav-win32
+
+Please look at COPYING.* files at the root of the project for third party licenses.
 
 --
 
