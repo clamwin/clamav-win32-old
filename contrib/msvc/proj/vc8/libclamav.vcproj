@@ -616,6 +616,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\..\libclamav\msxml.c"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\..\libclamav\ole2_extract.c"
 				>
 			</File>
@@ -1735,6 +1739,10 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\libclamav\mspack.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\msxml.h"
 				>
 			</File>
 			<File
