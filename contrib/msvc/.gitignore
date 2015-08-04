@@ -3,6 +3,7 @@
 *.pdb
 *.ncb
 *.suo
+*.sdf
 *.vcproj.*.user
 /Debug
 /Release

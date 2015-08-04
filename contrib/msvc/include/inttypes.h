@@ -43,8 +43,8 @@ typedef uint32_t u_int32_t;
 typedef uint16_t u_int16_t;
 typedef uint8_t  u_int8_t;
 
-typedef unsigned long int uintmax_t;
-typedef long int intmax_t;
+typedef long long          intmax_t;
+typedef unsigned long long uintmax_t;
 
 #ifndef __cplusplus
 typedef uint32_t mode_t;

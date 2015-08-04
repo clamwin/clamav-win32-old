@@ -315,7 +315,7 @@ static inline SOCKET inl_socket(int domain, int type, int protocol)
 #define socket (int) inl_socket
 
 /* <arpa/inet.h> */
-static inline const char *inet_ntop(int af, const void *src, char *dst, socklen_t size)
+static inline const char * WSAAPI inet_ntop(int af, const void *src, char *dst, size_t size)
 {
     unsigned char *ip = (unsigned char *) src;
     if ((af != AF_INET) || (size < 16))
