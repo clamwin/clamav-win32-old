@@ -53,9 +53,6 @@ extern "C" {
 #ifndef OPENSSL_THREADS
 # define OPENSSL_THREADS
 #endif
-#ifndef OPENSSL_NO_DYNAMIC_ENGINE
-# define OPENSSL_NO_DYNAMIC_ENGINE
-#endif
 
 /* The OPENSSL_NO_* macros are also defined as NO_* if the application
    asks for it.  This is a transient feature that is provided for those
@@ -223,7 +220,7 @@ extern "C" {
 #endif
 
 #if defined(DES_RISC1) && defined(DES_RISC2)
-YOU SHOULD NOT HAVE BOTH DES_RISC1 AND DES_RISC2 DEFINED!!!!!
+#error YOU SHOULD NOT HAVE BOTH DES_RISC1 AND DES_RISC2 DEFINED!!!!!
 #endif
 
 /* Unroll the inner loop, this sometimes helps, sometimes hinders.
@@ -242,7 +239,7 @@ YOU SHOULD NOT HAVE BOTH DES_RISC1 AND DES_RISC2 DEFINED!!!!!
    optimization options.  Older Sparc's work better with only UNROLL, but
    there's no way to tell at compile time what it is you're running on */
  
-#if defined( sun )		/* Newer Sparc's */
+#if defined( __sun ) || defined ( sun )		/* Newer Sparc's */
 #  define DES_PTR
 #  define DES_RISC1
 #  define DES_UNROLL
