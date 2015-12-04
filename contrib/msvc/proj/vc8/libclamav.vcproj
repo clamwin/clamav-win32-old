@@ -43,8 +43,8 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="../..;../../include;../../gnulib;&quot;../../json-c&quot;;../../../..;../../../../libclamav;../../../../libclamav/regex;../../../../libclamav/nsis;../../../../libclamav/lzma;../../../../win32/3rdparty/bzip2;../../../../win32/3rdparty/pthreads;../../../../win32/3rdparty/zlib"
-				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;WIN32_LEAN_AND_MEAN;HAVE_CONFIG_H;PTW32_STATIC_LIB"
+				AdditionalIncludeDirectories="../..;../../include;../../gnulib;&quot;../../json-c&quot;;../../../..;../../../../libclamav;../../../../libclamav/regex;../../../../libclamav/nsis;../../../../libclamav/lzma;../../../../win32/3rdparty/bzip2;../../../../win32/3rdparty/pthreads;../../../../win32/3rdparty/zlib;../../../../win32/3rdparty/pcre"
+				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;WIN32_LEAN_AND_MEAN;HAVE_CONFIG_H;PTW32_STATIC_LIB;PCRE_STATIC"
 				MinimalRebuild="true"
 				ExceptionHandling="0"
 				BasicRuntimeChecks="3"
@@ -127,8 +127,8 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="../..;../../include;../../gnulib;&quot;../../json-c&quot;;../../../..;../../../../libclamav;../../../../libclamav/regex;../../../../libclamav/nsis;../../../../libclamav/lzma;../../../../win32/3rdparty/bzip2;../../../../win32/3rdparty/pthreads;../../../../win32/3rdparty/zlib"
-				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;WIN32_LEAN_AND_MEAN;HAVE_CONFIG_H;PTW32_STATIC_LIB"
+				AdditionalIncludeDirectories="../..;../../include;../../gnulib;&quot;../../json-c&quot;;../../../..;../../../../libclamav;../../../../libclamav/regex;../../../../libclamav/nsis;../../../../libclamav/lzma;../../../../win32/3rdparty/bzip2;../../../../win32/3rdparty/pthreads;../../../../win32/3rdparty/zlib;../../../../win32/3rdparty/pcre"
+				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;WIN32_LEAN_AND_MEAN;HAVE_CONFIG_H;PTW32_STATIC_LIB;PCRE_STATIC"
 				MinimalRebuild="true"
 				ExceptionHandling="0"
 				BasicRuntimeChecks="3"
@@ -211,8 +211,8 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories="../..;../../include;../../gnulib;&quot;../../json-c&quot;;../../../..;../../../../libclamav;../../../../libclamav/regex;../../../../libclamav/nsis;../../../../libclamav/lzma;../../../../win32/3rdparty/bzip2;../../../../win32/3rdparty/pthreads;../../../../win32/3rdparty/zlib"
-				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;WIN32_LEAN_AND_MEAN;HAVE_CONFIG_H;PTW32_STATIC_LIB"
+				AdditionalIncludeDirectories="../..;../../include;../../gnulib;&quot;../../json-c&quot;;../../../..;../../../../libclamav;../../../../libclamav/regex;../../../../libclamav/nsis;../../../../libclamav/lzma;../../../../win32/3rdparty/bzip2;../../../../win32/3rdparty/pthreads;../../../../win32/3rdparty/zlib;../../../../win32/3rdparty/pcre"
+				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;WIN32_LEAN_AND_MEAN;HAVE_CONFIG_H;PTW32_STATIC_LIB;PCRE_STATIC"
 				ExceptionHandling="0"
 				SmallerTypeCheck="false"
 				RuntimeLibrary="2"
@@ -296,8 +296,8 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories="../..;../../include;../../gnulib;&quot;../../json-c&quot;;../../../..;../../../../libclamav;../../../../libclamav/regex;../../../../libclamav/nsis;../../../../libclamav/lzma;../../../../win32/3rdparty/bzip2;../../../../win32/3rdparty/pthreads;../../../../win32/3rdparty/zlib"
-				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;WIN32_LEAN_AND_MEAN;HAVE_CONFIG_H;PTW32_STATIC_LIB"
+				AdditionalIncludeDirectories="../..;../../include;../../gnulib;&quot;../../json-c&quot;;../../../..;../../../../libclamav;../../../../libclamav/regex;../../../../libclamav/nsis;../../../../libclamav/lzma;../../../../win32/3rdparty/bzip2;../../../../win32/3rdparty/pthreads;../../../../win32/3rdparty/zlib;../../../../win32/3rdparty/pcre"
+				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;WIN32_LEAN_AND_MEAN;HAVE_CONFIG_H;PTW32_STATIC_LIB;PCRE_STATIC"
 				ExceptionHandling="0"
 				SmallerTypeCheck="false"
 				RuntimeLibrary="2"
@@ -2532,6 +2532,110 @@
 				</File>
 				<File
 					RelativePath="..\..\json-c\random_seed.c"
+					>
+				</File>
+			</Filter>
+			<Filter
+				Name="pcre"
+				>
+				<File
+					RelativePath="..\..\..\..\win32\3rdparty\pcre\config.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\win32\3rdparty\pcre\pcre.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\win32\3rdparty\pcre\pcre_byte_order.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\win32\3rdparty\pcre\pcre_chartables.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\win32\3rdparty\pcre\pcre_compile.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\win32\3rdparty\pcre\pcre_config.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\win32\3rdparty\pcre\pcre_dfa_exec.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\win32\3rdparty\pcre\pcre_exec.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\win32\3rdparty\pcre\pcre_fullinfo.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\win32\3rdparty\pcre\pcre_get.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\win32\3rdparty\pcre\pcre_globals.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\win32\3rdparty\pcre\pcre_internal.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\win32\3rdparty\pcre\pcre_jit_compile.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\win32\3rdparty\pcre\pcre_maketables.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\win32\3rdparty\pcre\pcre_newline.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\win32\3rdparty\pcre\pcre_ord2utf8.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\win32\3rdparty\pcre\pcre_refcount.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\win32\3rdparty\pcre\pcre_string_utils.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\win32\3rdparty\pcre\pcre_study.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\win32\3rdparty\pcre\pcre_tables.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\win32\3rdparty\pcre\pcre_ucd.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\win32\3rdparty\pcre\pcre_valid_utf8.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\win32\3rdparty\pcre\pcre_version.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\win32\3rdparty\pcre\pcre_xclass.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\..\win32\3rdparty\pcre\ucp.h"
 					>
 				</File>
 			</Filter>

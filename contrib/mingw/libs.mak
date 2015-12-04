@@ -37,6 +37,8 @@ libclamav_SOURCES+=$(wildcard $(top)/libclamav/7z/*.c)
 
 libclamav_SOURCES+=$(wildcard $(top)/libclamav/tomsfastmath/*/*.c)
 
+libclamav_SOURCES+=$(wildcard $(top)/win32/3rdparty/pcre/*.c)
+
 # exclusions
 libclamav_SOURCES:=$(subst $(top)/libclamav/regex/engine.c,,$(libclamav_SOURCES))
 libclamav_SOURCES:=$(subst $(top)/libclamav/bytecode_nojit.c,,$(libclamav_SOURCES))
