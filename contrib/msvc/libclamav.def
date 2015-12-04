@@ -16,6 +16,7 @@ cl_engine_set_clcb_progress
 cl_engine_set_clcb_sigload
 cl_engine_set_clcb_stats_get_hostid
 cl_engine_set_clcb_stats_submit
+cl_engine_set_clcb_virus_found
 cl_engine_set_num
 cl_engine_set_str
 cl_engine_settings_apply
@@ -150,39 +151,43 @@ cli_hex2str                         @116 NONAME
 cli_hex2ui                          @117 NONAME
 cli_initroots                       @118 NONAME
 cli_isnumber                        @119 NONAME
-cli_malloc                          @120 NONAME
-cli_matchregex                      @121 NONAME
-cli_ole2_extract                    @122 NONAME
-cli_parse_add                       @123 NONAME
-cli_ppt_vba_read                    @124 NONAME
-cli_readn                           @125 NONAME
-cli_regcomp                         @126 NONAME
-cli_regexec                         @127 NONAME
-cli_regfree                         @128 NONAME
-cli_rndnum                          @129 NONAME
-cli_scancpio_newc                   @130 NONAME
-cli_scancpio_odc                    @131 NONAME
-cli_scancpio_old                    @132 NONAME
-cli_scanmacho                       @133 NONAME
-cli_sigperf_events_destroy          @134 NONAME
-cli_sigperf_print                   @135 NONAME
-cli_str2hex                         @136 NONAME
-cli_strbcasestr                     @137 NONAME
-cli_strdup                          @138 NONAME
-cli_strerror                        @139 NONAME
-cli_strtok                          @140 NONAME
-cli_strtokenize                     @141 NONAME
-cli_utf16toascii                    @142 NONAME
-cli_vba_inflate                     @143 NONAME
-cli_vba_readdir                     @144 NONAME
-cli_versig2                         @145 NONAME
-cli_wm_decrypt_macro                @146 NONAME
-cli_wm_readdir                      @147 NONAME
-cli_writen                          @148 NONAME
+cli_ldbtokenize                     @120 NONAME
+cli_malloc                          @121 NONAME
+cli_matchregex                      @122 NONAME
+cli_ole2_extract                    @123 NONAME
+cli_parse_add                       @124 NONAME
+cli_ppt_vba_read                    @125 NONAME
+cli_readn                           @126 NONAME
+cli_regcomp                         @127 NONAME
+cli_regexec                         @128 NONAME
+cli_regfree                         @129 NONAME
+cli_rndnum                          @130 NONAME
+cli_scancpio_newc                   @131 NONAME
+cli_scancpio_odc                    @132 NONAME
+cli_scancpio_old                    @133 NONAME
+cli_scanmacho                       @134 NONAME
+cli_sigperf_events_destroy          @135 NONAME
+cli_sigperf_print                   @136 NONAME
+cli_str2hex                         @137 NONAME
+cli_strbcasestr                     @138 NONAME
+cli_strdup                          @139 NONAME
+cli_strerror                        @140 NONAME
+cli_strtok                          @141 NONAME
+cli_strtokenize                     @142 NONAME
+cli_utf16toascii                    @143 NONAME
+cli_vba_inflate                     @144 NONAME
+cli_vba_readdir                     @145 NONAME
+cli_versig2                         @146 NONAME
+cli_wm_decrypt_macro                @147 NONAME
+cli_wm_readdir                      @148 NONAME
+cli_writen                          @149 NONAME
 
-html_normalise_map                  @150 NONAME
-uniq_get                            @157 NONAME
-fmap                                @158 NONAME
+html_normalise_map                  @160 NONAME
+text_normalize_init                 @161 NONAME
+text_normalize_reset                @162 NONAME
+text_normalize_map                  @163 NONAME
+uniq_get                            @164 NONAME
+fmap                                @165 NONAME
 
 ; optparser
 optget                              @170 NONAME
@@ -279,4 +284,3 @@ cli_bytecode_run                    @366 NONAME
 cli_bytefunc_describe               @367 NONAME
 cli_bytetype_describe               @368 NONAME
 cli_bytevalue_describe              @369 NONAME
-

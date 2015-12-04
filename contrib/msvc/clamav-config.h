@@ -387,6 +387,9 @@
 /* Define to 1 if you have the `sysctlbyname' function. */
 #undef HAVE_SYSCTLBYNAME
 
+/* Define to 1 if you have the <sys/cdefs.h> header file. */
+#undef HAVE_SYS_CDEFS_H
+
 /* Define to 1 if you have the <sys/dl.h> header file. */
 #undef HAVE_SYS_DL_H
 
@@ -404,6 +407,9 @@
 
 /* Define to 1 if you have the <sys/param.h> header file. */
 #undef HAVE_SYS_PARAM_H
+
+/* Define to 1 if you have the <sys/queue.h> header file. */
+#undef HAVE_SYS_QUEUE_H
 
 /* "have <sys/select.h>" */
 #undef HAVE_SYS_SELECT_H
@@ -437,6 +443,9 @@
 
 /* This value is set to 1 to indicate that the system argz facility works */
 #undef HAVE_WORKING_ARGZ
+
+/* yara sources are compiled in */
+#undef HAVE_YARA
 
 /* For internal use only - DO NOT DEFINE */
 #undef HAVE__INTERNAL__SHA_COLLECT
@@ -569,7 +578,7 @@
 #endif
 
 /* Stable releases tag */
-#define CLAMWIN_RELEASE "0.98.7"
+#define CLAMWIN_RELEASE "0.99"
 
 /* Version number of package */
 #ifdef CLAMWIN_RELEASE
@@ -596,6 +605,10 @@
 #  define WORDS_BIGENDIAN 0
 # endif
 #endif
+
+/* Define to 1 if `lex' declares `yytext' as a `char *' by default, not a
+   `char[]'. */
+#undef YYTEXT_POINTER
 
 /* Define to 1 to make fseeko visible on some hosts (e.g. glibc 2.2). */
 #undef _LARGEFILE_SOURCE

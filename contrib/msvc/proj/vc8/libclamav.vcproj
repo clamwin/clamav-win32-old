@@ -580,6 +580,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\..\libclamav\matcher-pcre.c"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\..\libclamav\matcher.c"
 				>
 			</File>
@@ -700,6 +704,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\..\libclamav\regex_pcre.c"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\..\libclamav\regex_suffix.c"
 				>
 			</File>
@@ -744,6 +752,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\..\libclamav\strlcat.c"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\..\libclamav\swf.c"
 				>
 			</File>
@@ -761,6 +773,10 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\libclamav\textnorm.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\tiff.c"
 				>
 			</File>
 			<File
@@ -1706,6 +1722,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\..\libclamav\matcher-pcre.h"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\..\libclamav\matcher.h"
 				>
 			</File>
@@ -1818,6 +1838,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\..\libclamav\regex_pcre.h"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\..\libclamav\regex_suffix.h"
 				>
 			</File>
@@ -1879,6 +1903,10 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\libclamav\textnorm.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\tiff.h"
 				>
 			</File>
 			<File
