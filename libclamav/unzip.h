@@ -1,4 +1,5 @@
 /*
+ *  Copyright (C) 2015 Cisco Systems, Inc. and/or its affiliates. All rights reserved.
  *  Copyright (C) 2007-2008 Sourcefire, Inc.
  *
  *  Authors: Alberto Wu
@@ -160,6 +161,8 @@ enum ALGO {
 #define CH_eattrib	((uint32_t)cli_readint32((uint8_t *)(ch)+38))
 #define CH_off  	((uint32_t)cli_readint32((uint8_t *)(ch)+42))
 #define SIZEOF_CH 46
+
+#define SIZEOF_EH 12
 #endif /* UNZIP_PRIVATE */
 
 #endif /* __UNZIP_H */

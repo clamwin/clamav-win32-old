@@ -1,4 +1,5 @@
 /*
+ *  Copyright (C) 2015 Cisco Systems, Inc. and/or its affiliates. All rights reserved.
  *  Copyright (C) 2010 Sourcefire, Inc.
  *
  *  Authors: aCaB <acab@clamav.net>, Török Edvin <edwin@clamav.net>
@@ -85,9 +86,9 @@ static void cacheset_lru_remove(struct cache_set *map, size_t howmany)
     while (howmany--) {
 	struct cache_key *old;
 	assert(map->lru_head);
-	assert(!old->lru_prev);
 	/* Remove a key from the head of the list */
 	old = map->lru_head;
+	assert(!old->lru_prev);
 	map->lru_head = old->lru_next;
 	old->size = CACHE_KEY_DELETED;
 	/* This slot is now deleted, it is not empty,
@@ -895,22 +896,11 @@ void cache_remove(unsigned char *md5, size_t size, const struct cl_engine *engin
     return;
 }
 
-/* Hashes a file onto the provided buffer and looks it up the cache.
-   Returns CL_VIRUS if found, CL_CLEAN if not FIXME or a recoverable error,
-   and returns CL_EREAD if unrecoverable */
-int cache_check(unsigned char *hash, cli_ctx *ctx) {
+int cache_get_MD5(unsigned char *hash, cli_ctx *ctx)
+{
     fmap_t *map;
     size_t todo, at = 0;
     void *hashctx;
-    int ret;
-
-    if(!ctx || !ctx->engine || !ctx->engine->cache)
-       return CL_VIRUS;
-
-    if (ctx->engine->engine_options & ENGINE_OPTIONS_DISABLE_CACHE) {
-        cli_dbgmsg("cache_check: Caching disabled. Returning CL_VIRUS.\n");
-        return CL_VIRUS;
-    }
 
     map = *ctx->fmap;
     todo = map->len;
@@ -918,7 +908,6 @@ int cache_check(unsigned char *hash, cli_ctx *ctx) {
     hashctx = cl_hash_init("md5");
     if (!(hashctx))
         return CL_VIRUS;
-
 
     while(todo) {
         const void *buf;
@@ -941,6 +930,29 @@ int cache_check(unsigned char *hash, cli_ctx *ctx) {
 
     cl_finish_hash(hashctx, hash);
 
+    return CL_CLEAN;
+}
+
+/* Hashes a file onto the provided buffer and looks it up the cache.
+   Returns CL_VIRUS if found, CL_CLEAN if not FIXME or a recoverable error,
+   and returns CL_EREAD if unrecoverable */
+int cache_check(unsigned char *hash, cli_ctx *ctx) {
+    fmap_t *map;
+    int ret;
+
+    if(!ctx || !ctx->engine || !ctx->engine->cache)
+       return CL_VIRUS;
+
+    if (ctx->engine->engine_options & ENGINE_OPTIONS_DISABLE_CACHE) {
+        cli_dbgmsg("cache_check: Caching disabled. Returning CL_VIRUS.\n");
+        return CL_VIRUS;
+    }
+
+    ret = cache_get_MD5(hash, ctx);
+    if (ret != CL_CLEAN)
+        return ret;
+        
+    map = *ctx->fmap;
     ret = cache_lookup_hash(hash, map->len, ctx->engine->cache, ctx->recursion);
     cli_dbgmsg("cache_check: %02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x is %s\n", hash[0], hash[1], hash[2], hash[3], hash[4], hash[5], hash[6], hash[7], hash[8], hash[9], hash[10], hash[11], hash[12], hash[13], hash[14], hash[15], (ret == CL_VIRUS) ? "negative" : "positive");
     return ret;

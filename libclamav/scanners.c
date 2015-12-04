@@ -1,6 +1,6 @@
 /*
+ *  Copyright (C) 2015 Cisco Systems, Inc. and/or its affiliates. All rights reserved.
  *  Copyright (C) 2007-2013 Sourcefire, Inc.
- *  Copyright (C) 2014 Cisco Systems, Inc. and/or its affiliates. All rights reserved.
  *
  *  Authors: Tomasz Kojm
  *
@@ -106,6 +106,7 @@
 #include "xdp.h"
 #include "json_api.h"
 #include "msxml.h"
+#include "tiff.h"
 
 #ifdef HAVE_BZLIB_H
 #include <bzlib.h>
@@ -681,10 +682,8 @@ static int cli_scanbzip(cli_ctx *ctx)
 	}
 
 	if (!strm.avail_out || BZ_STREAM_END == rc) {
-	    size += sizeof(buf) - strm.avail_out;
 
-	    if(cli_checklimits("Bzip", ctx, size + FILEBUFF, 0, 0)!=CL_CLEAN)
-		break;
+	    size += sizeof(buf) - strm.avail_out;
 
 	    if(cli_writen(fd, buf, sizeof(buf) - strm.avail_out) != sizeof(buf) - strm.avail_out) {
 		cli_dbgmsg("Bzip: Can't write to file.\n");
@@ -699,6 +698,10 @@ static int cli_scanbzip(cli_ctx *ctx)
 		free(tmpname);
 		return CL_EWRITE;
 	    }
+
+	    if(cli_checklimits("Bzip", ctx, size, 0, 0) != CL_CLEAN)
+		break;
+
 	    strm.next_out = buf;
 	    strm.avail_out = sizeof(buf);
 	}
@@ -706,16 +709,18 @@ static int cli_scanbzip(cli_ctx *ctx)
 
     BZ2_bzDecompressEnd(&strm);
 
-    if(ret == CL_VIRUS) {
-	close(fd);
-	if(!ctx->engine->keeptmp)
-	    if (cli_unlink(tmpname)) ret = CL_EUNLINK;
-	free(tmpname);
-	return ret;
-    }
-
     if((ret = cli_magic_scandesc(fd, ctx)) == CL_VIRUS ) {
 	cli_dbgmsg("Bzip: Infected with %s\n", cli_get_last_virus(ctx));
+	close(fd);
+	if(!ctx->engine->keeptmp) {
+	    if (cli_unlink(tmpname)) {
+		ret = CL_EUNLINK;
+		free(tmpname);
+		return ret;
+	    }
+	}
+	free(tmpname);
+	return CL_VIRUS;
     }
     close(fd);
     if(!ctx->engine->keeptmp)
@@ -954,12 +959,12 @@ static int vba_scandata(const unsigned char *data, unsigned int len, cli_ctx *ct
 	viruses_found++;
 
     if (ret == CL_CLEAN || (ret == CL_VIRUS && SCAN_ALL)) {
-	ret = cli_lsig_eval(ctx, troot, &tmdata, NULL, NULL);
+	ret = cli_exp_eval(ctx, troot, &tmdata, NULL, NULL);
 	if (ret == CL_VIRUS)
 	    viruses_found++;
 
 	if (ret == CL_CLEAN || (ret == CL_VIRUS && SCAN_ALL))
-	    ret = cli_lsig_eval(ctx, groot, &gmdata, NULL, NULL);
+	    ret = cli_exp_eval(ctx, groot, &gmdata, NULL, NULL);
     }
     cli_ac_freedata(&tmdata);
     cli_ac_freedata(&gmdata);
@@ -1301,134 +1306,184 @@ static int cli_scanhtml(cli_ctx *ctx)
 
 static int cli_scanscript(cli_ctx *ctx)
 {
-    const unsigned char *buff;
-    unsigned char* normalized;
-    struct text_norm_state state;
-    char *tmpname = NULL;
-    int ofd = -1, ret;
-    struct cli_matcher *troot;
-    uint32_t maxpatlen, offset = 0;
-    struct cli_matcher *groot;
-    struct cli_ac_data gmdata, tmdata;
-    struct cli_ac_data *mdata[2];
-    fmap_t *map;
-    size_t at = 0;
-    unsigned int viruses_found = 0;
-    uint64_t curr_len;
-    struct cli_target_info info;
+	const unsigned char *buff;
+	unsigned char* normalized;
+	struct text_norm_state state;
+	char *tmpname = NULL;
+	int ofd = -1, ret;
+	struct cli_matcher *troot;
+	uint32_t maxpatlen, offset = 0;
+	struct cli_matcher *groot;
+	struct cli_ac_data gmdata, tmdata;
+	struct cli_ac_data *mdata[2];
+	fmap_t *map;
+	size_t at = 0;
+	unsigned int viruses_found = 0;
+	uint64_t curr_len;
+	struct cli_target_info info;
 
-    if (!ctx || !ctx->engine->root)
-        return CL_ENULLARG;
+	if (!ctx || !ctx->engine->root)
+		return CL_ENULLARG;
 
-    map = *ctx->fmap;
-    curr_len = map->len;
-    groot = ctx->engine->root[0];
-    troot = ctx->engine->root[7];
-    maxpatlen = troot ? troot->maxpatlen : 0;
+	map = *ctx->fmap;
+	curr_len = map->len;
+	groot = ctx->engine->root[0];
+	troot = ctx->engine->root[7];
+	maxpatlen = troot ? troot->maxpatlen : 0;
 
-    cli_dbgmsg("in cli_scanscript()\n");
+	cli_dbgmsg("in cli_scanscript()\n");
 
-    /* CL_ENGINE_MAX_SCRIPTNORMALIZE */
-    if(curr_len > ctx->engine->maxscriptnormalize) {
-        cli_dbgmsg("cli_scanscript: exiting (file larger than MaxScriptSize)\n");
-        return CL_CLEAN;
-    }
+	/* CL_ENGINE_MAX_SCRIPTNORMALIZE */
+	if(curr_len > ctx->engine->maxscriptnormalize) {
+		cli_dbgmsg("cli_scanscript: exiting (file larger than MaxScriptSize)\n");
+		return CL_CLEAN;
+	}
 
-	/* dump to disk only if explicitly asked to,
+	/* dump to disk only if explicitly asked to
+	 * or if necessary to check relative offsets,
 	 * otherwise we can process just in-memory */
-	if(ctx->engine->keeptmp) {
+	if(ctx->engine->keeptmp || (troot && troot->ac_reloff_num > 0)) {
 		if((ret = cli_gentempfd(ctx->engine->tmpdir, &tmpname, &ofd))) {
 			cli_dbgmsg("cli_scanscript: Can't generate temporary file/descriptor\n");
 			return ret;
 		}
-		cli_dbgmsg("cli_scanscript: saving normalized file to %s\n", tmpname);
+		if (ctx->engine->keeptmp)
+			cli_dbgmsg("cli_scanscript: saving normalized file to %s\n", tmpname);
 	}
 
 	if(!(normalized = cli_malloc(SCANBUFF + maxpatlen))) {
 		cli_dbgmsg("cli_scanscript: Unable to malloc %u bytes\n", SCANBUFF);
-        free(tmpname);
+		free(tmpname);
 		return CL_EMEM;
 	}
 
 	text_normalize_init(&state, normalized, SCANBUFF + maxpatlen);
 	ret = CL_CLEAN;
 
-	if ((ret = cli_ac_initdata(&tmdata, troot?troot->ac_partsigs:0, troot?troot->ac_lsigs:0, troot?troot->ac_reloff_num:0, CLI_DEFAULT_AC_TRACKLEN))) {
-        free(tmpname);
-	    return ret;
-	}
 
-        if (troot) {
-	    cli_targetinfo(&info, 7, map);
-	    ret = cli_ac_caloff(troot, &tmdata, &info);
-	    if (ret) {
-		cli_ac_freedata(&tmdata);
-        free(tmpname);
+	if ((ret = cli_ac_initdata(&tmdata, troot?troot->ac_partsigs:0, troot?troot->ac_lsigs:0, troot?troot->ac_reloff_num:0, CLI_DEFAULT_AC_TRACKLEN))) {
+		free(tmpname);
 		return ret;
-	    }
 	}
 
 	if ((ret = cli_ac_initdata(&gmdata, groot->ac_partsigs, groot->ac_lsigs, groot->ac_reloff_num, CLI_DEFAULT_AC_TRACKLEN))) {
-	    cli_ac_freedata(&tmdata);
-        free(tmpname);
-	    return ret;
+		cli_ac_freedata(&tmdata);
+		free(tmpname);
+		return ret;
 	}
-	mdata[0] = &tmdata;
-	mdata[1] = &gmdata;
 
-	while(1) {
-	    size_t len = MIN(map->pgsz, map->len - at);
-	    buff = fmap_need_off_once(map, at, len);
-	    at += len;
-	    if(!buff || !len || state.out_pos + len > state.out_len) {
-		/* flush if error/EOF, or too little buffer space left */
-		if((ofd != -1) && (write(ofd, state.out, state.out_pos) == -1)) {
-		    cli_errmsg("cli_scanscript: can't write to file %s\n",tmpname);
-		    close(ofd);
-		    ofd = -1;
-		    /* we can continue to scan in memory */
+	mdata[0] = &tmdata;
+	mdata[1] = &gmdata; 
+
+	/* If there's a relative offset in troot, normalize the file.*/
+	if (troot && troot->ac_reloff_num > 0) {
+		size_t map_off = 0;
+		while(map_off < map->len) {
+			size_t written;
+			if (!(written = text_normalize_map(&state, map, map_off))) break;
+			map_off += written;
+
+			if  (write(ofd, state.out, state.out_pos) == -1) {
+				cli_errmsg("cli_scanscript: can't write to file %s\n",tmpname);
+				close(ofd);
+				free(tmpname);
+				return CL_EWRITE;
+			}
+			text_normalize_reset(&state);
 		}
-		/* when we flush the buffer also scan */
-		if(cli_scanbuff(state.out, state.out_pos, offset, ctx, CL_TYPE_TEXT_ASCII, mdata) == CL_VIRUS) {
-		    if (SCAN_ALL)
-			viruses_found++;
-		    else {
-			ret = CL_VIRUS;
-			break;
-		    }
+
+		/* Temporarily store the normalized file map in the context. */
+		*ctx->fmap = fmap(ofd, 0, 0);
+		if (!(*ctx->fmap)) {
+			cli_errmsg("cli_scanscript: could not map file %s\n",tmpname);
+		} else {
+
+			/* scan map */
+			ret = cli_fmap_scandesc(ctx, CL_TYPE_TEXT_ASCII, 0, NULL, AC_SCAN_VIR, NULL, NULL);
+			if(ret == CL_VIRUS) {
+				viruses_found++;
+			}
+			funmap(*ctx->fmap);
 		}
-		if(ctx->scanned)
-		    *ctx->scanned += state.out_pos / CL_COUNT_PRECISION;
-		offset += state.out_pos;
-		/* carry over maxpatlen from previous buffer */
-		if (state.out_pos > maxpatlen)
-		    memmove(state.out, state.out + state.out_pos - maxpatlen, maxpatlen); 
-		text_normalize_reset(&state);
-		state.out_pos = maxpatlen;
-	    }
-	    if(!len) break;
-	    if(!buff || text_normalize_buffer(&state, buff, len) != len) {
-		cli_dbgmsg("cli_scanscript: short read during normalizing\n");
-	    }
+		*ctx->fmap = map;
+
+		/* If we aren't keeping temps, delete the normalized file after scan. */
+		if(!(ctx->engine->keeptmp))
+			if (cli_unlink(tmpname)) ret = CL_EUNLINK;
+
+	} else {
+		/* Since the above is moderately costly all in all,
+		 * do the old stuff if there's no relative offsets. */
+
+		if (troot) {
+			cli_targetinfo(&info, 7, map);
+			ret = cli_ac_caloff(troot, &tmdata, &info);
+			if (ret) {
+				cli_ac_freedata(&tmdata);
+				free(tmpname);
+				return ret;
+			}
+		}
+
+		while(1) {
+			size_t len = MIN(map->pgsz, map->len - at);
+			buff = fmap_need_off_once(map, at, len);
+			at += len;
+			if(!buff || !len || state.out_pos + len > state.out_len) {
+				/* flush if error/EOF, or too little buffer space left */
+				if((ofd != -1) && (write(ofd, state.out, state.out_pos) == -1)) {
+					cli_errmsg("cli_scanscript: can't write to file %s\n",tmpname);
+					close(ofd);
+					ofd = -1;
+					/* we can continue to scan in memory */
+				}
+				/* when we flush the buffer also scan */
+				if(cli_scanbuff(state.out, state.out_pos, offset, ctx, CL_TYPE_TEXT_ASCII, mdata) == CL_VIRUS) {
+					if (SCAN_ALL)
+						viruses_found++;
+					else {
+						ret = CL_VIRUS;
+						break;
+					}
+				}
+				if(ctx->scanned)
+					*ctx->scanned += state.out_pos / CL_COUNT_PRECISION;
+				offset += state.out_pos;
+				/* carry over maxpatlen from previous buffer */
+				if (state.out_pos > maxpatlen)
+					memmove(state.out, state.out + state.out_pos - maxpatlen, maxpatlen); 
+				text_normalize_reset(&state);
+				state.out_pos = maxpatlen;
+			}
+			if(!len) break;
+			if(!buff || text_normalize_buffer(&state, buff, len) != len) {
+				cli_dbgmsg("cli_scanscript: short read during normalizing\n");
+			}
+		}
+
 	}
+
 	if(ctx->engine->keeptmp) {
 		free(tmpname);
-        if (ofd >= 0)
-            close(ofd);
+		if (ofd >= 0)
+			close(ofd);
 	}
 	free(normalized);
+
 	if(ret != CL_VIRUS || SCAN_ALL)  {
-	    if ((ret = cli_lsig_eval(ctx, troot, &tmdata, NULL, NULL)) == CL_VIRUS)
-		viruses_found++;
-	    if(ret != CL_VIRUS || SCAN_ALL)
-		if ((ret = cli_lsig_eval(ctx, groot, &gmdata, NULL, NULL)) == CL_VIRUS)
-		    viruses_found++;
+		if ((ret = cli_exp_eval(ctx, troot, &tmdata, NULL, NULL)) == CL_VIRUS)
+			viruses_found++;
+		if(ret != CL_VIRUS || SCAN_ALL)
+			if ((ret = cli_exp_eval(ctx, groot, &gmdata, NULL, NULL)) == CL_VIRUS)
+				viruses_found++;
 	}
+
 	cli_ac_freedata(&tmdata);
 	cli_ac_freedata(&gmdata);
 
 	if (SCAN_ALL && viruses_found)
-	    return CL_VIRUS;
+		return CL_VIRUS;
+
 	return ret;
 }
 
@@ -2403,7 +2458,10 @@ static int cli_scanraw(cli_ctx *ctx, cli_file_t type, uint8_t typercg, cli_file_
         
 	if(nret != CL_VIRUS) switch(ret) {
 	    case CL_TYPE_HTML:
-		if (SCAN_HTML && (type == CL_TYPE_TEXT_ASCII || type == CL_TYPE_GRAPHICS) &&
+		/* bb#11196 - autoit script file misclassified as HTML */
+		if (ctx->container_type == CL_TYPE_AUTOIT) {
+		    ret = CL_TYPE_TEXT_ASCII;
+		} else if (SCAN_HTML && (type == CL_TYPE_TEXT_ASCII || type == CL_TYPE_GRAPHICS) &&
                     (DCONF_DOC & DOC_CONF_HTML)) {
 		    *dettype = CL_TYPE_HTML;
 		    nret = cli_scanhtml(ctx);
@@ -2466,6 +2524,7 @@ static void emax_reached(cli_ctx *ctx) {
 
 static int magic_scandesc_cleanup(cli_ctx *ctx, cli_file_t type, unsigned char *hash, size_t hashed_size, int cache_clean, int retcode, void *parent_property)
 {
+    int cb_retcode;
 #if HAVE_JSON
     ctx->wrkproperty = (struct json_object *)(parent_property);
 #else
@@ -2474,10 +2533,18 @@ static int magic_scandesc_cleanup(cli_ctx *ctx, cli_file_t type, unsigned char *
 
     UNUSEDPARAM(type);
 
+    if (retcode == CL_CLEAN && (ctx->found_possibly_unwanted || ctx->num_viruses != 0))
+        cb_retcode = CL_VIRUS;
+    else
+        cb_retcode = retcode;
+
     cli_dbgmsg("cli_magic_scandesc: returning %d %s\n", retcode, __AT__);
     if(ctx->engine->cb_post_scan) {
+        const char * virusname = NULL;
         perf_start(ctx, PERFT_POSTCB);
-        switch(ctx->engine->cb_post_scan(fmap_fd(*ctx->fmap), retcode, retcode == CL_VIRUS ? cli_get_last_virus(ctx) : NULL, ctx->cb_ctx)) {
+        if (cb_retcode == CL_VIRUS)
+            virusname = cli_get_last_virus(ctx);
+        switch(ctx->engine->cb_post_scan(fmap_fd(*ctx->fmap), cb_retcode, virusname, ctx->cb_ctx)) {
         case CL_BREAK:
             cli_dbgmsg("cli_magic_scandesc: file whitelisted by post_scan callback\n");
             perf_stop(ctx, PERFT_POSTCB);
@@ -2496,9 +2563,10 @@ static int magic_scandesc_cleanup(cli_ctx *ctx, cli_file_t type, unsigned char *
         }
         perf_stop(ctx, PERFT_POSTCB);
     }
-    if (retcode == CL_CLEAN && cache_clean) {
+    if (cb_retcode == CL_CLEAN && cache_clean) {
         perf_start(ctx, PERFT_CACHE);
-        cache_add(hash, hashed_size, ctx);
+        if (!(SCAN_PROPERTIES))
+            cache_add(hash, hashed_size, ctx);
         perf_stop(ctx, PERFT_CACHE);
     }
     return retcode;
@@ -2551,7 +2619,7 @@ static int magic_scandesc(cli_ctx *ctx, cli_file_t type)
 	uint8_t typercg = 1;
 	cli_file_t current_container_type = ctx->container_type;
 	size_t current_container_size = ctx->container_size, hashed_size;
-	unsigned char hash[16];
+	unsigned char hash[16] = {'\0'};
 	bitset_t *old_hook_lsig_matches;
 	const char *filetype;
 	int cache_clean = 0, res;
@@ -2671,17 +2739,27 @@ static int magic_scandesc(cli_ctx *ctx, cli_file_t type)
     }
 
     perf_start(ctx, PERFT_CACHE);
-    res = cache_check(hash, ctx);
+    if (!(SCAN_PROPERTIES))
+        res = cache_check(hash, ctx);
 
 #if HAVE_JSON
     if (SCAN_PROPERTIES /* ctx.options & CL_SCAN_FILE_PROPERTIES && ctx->wrkproperty != NULL */) {
         char hashstr[33];
-        snprintf(hashstr, 33, "%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x", hash[0], hash[1], hash[2], hash[3], hash[4], hash[5], hash[6], hash[7], hash[8], hash[9], hash[10], hash[11], hash[12], hash[13], hash[14], hash[15]);
-
-        ret = cli_jsonstr(ctx->wrkproperty, "FileMD5", hashstr);
+        ret = cache_get_MD5(hash, ctx);
         if (ret != CL_SUCCESS) {
             early_ret_from_magicscan(ret);
         }
+        snprintf(hashstr, 33, "%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
+                 hash[0], hash[1], hash[2], hash[3], hash[4], hash[5], hash[6], hash[7],
+                 hash[8], hash[9], hash[10], hash[11], hash[12], hash[13], hash[14], hash[15]);
+
+        ret = cli_jsonstr(ctx->wrkproperty, "FileMD5", hashstr);
+        if (ctx->engine->engine_options & ENGINE_OPTIONS_DISABLE_CACHE)
+            memset(hash, 0, sizeof(hash));
+        if (ret != CL_SUCCESS) {
+            early_ret_from_magicscan(ret);
+        }
+        res = CL_VIRUS;
     }
 #endif
 
@@ -2991,9 +3069,13 @@ static int magic_scandesc(cli_ctx *ctx, cli_file_t type)
 
 	    if(ctx->img_validate && SCAN_ALGO && ret != CL_VIRUS && ret != CL_EPARSE)
 		ret = cli_parsegif(ctx);
+
+	    if(ctx->img_validate && SCAN_ALGO && ret != CL_VIRUS && ret != CL_EPARSE)
+		ret = cli_parsetiff(ctx);
+
 	    break;
 
-        case CL_TYPE_PDF: /* FIXMELIMITS: pdf should be an archive! */
+	case CL_TYPE_PDF: /* FIXMELIMITS: pdf should be an archive! */
 	    ctx->container_type = CL_TYPE_PDF;
 	    if(SCAN_PDF && (DCONF_DOC & DOC_CONF_PDF))
 		ret = cli_scanpdf(ctx, 0);
@@ -3048,6 +3130,7 @@ static int magic_scandesc(cli_ctx *ctx, cli_file_t type)
 		/* TODO: consider calling this from cli_scanscript() for
 		 * a normalised text
 		 */
+
 		ret = cli_scan_structured(ctx);
 	    break;
 
@@ -3149,6 +3232,9 @@ static int magic_scandesc(cli_ctx *ctx, cli_file_t type)
 		ctx->corrupted_input = corrupted_input;
 	    }
 	    perf_nested_stop(ctx, PERFT_PE, PERFT_SCAN);
+	    break;
+	case CL_TYPE_BINARY_DATA:
+	    ret = cli_fmap_scandesc(ctx, CL_TYPE_OTHER, 0, NULL, AC_SCAN_VIR, NULL, NULL);
 	    break;
 	default:
 	    break;
@@ -3405,9 +3491,6 @@ static int scan_common(int desc, cl_fmap_t *map, const char **virname, unsigned 
     ctx.virname = virname;
     ctx.scanned = scanned;
     ctx.options = scanoptions;
-#if 0 /* for development testing only */
-    ctx.options |= CL_SCAN_FILE_PROPERTIES;
-#endif
     ctx.found_possibly_unwanted = 0;
     ctx.container_type = CL_TYPE_ANY;
     ctx.container_size = 0;
@@ -3515,7 +3598,7 @@ static int scan_common(int desc, cl_fmap_t *map, const char **virname, unsigned 
 
                 /* backwards compatibility: scan the json string unless a virus was detected */
                 if (rc != CL_VIRUS && ctx.engine->root[13]->ac_lsigs) {
-                    cli_warnmsg("scan_common: running depeciated preclass bytecodes for target type 13\n");
+                    cli_dbgmsg("scan_common: running deprecated preclass bytecodes for target type 13\n");
                     ctx.options &= ~CL_SCAN_FILE_PROPERTIES;
                     rc = cli_mem_scandesc(jstring, strlen(jstring), &ctx);
                 }
@@ -3557,16 +3640,13 @@ static int scan_common(int desc, cl_fmap_t *map, const char **virname, unsigned 
     }
 #endif
 
-    if (ctx.options & CL_SCAN_ALLMATCHES) {
-	*virname = (char *)ctx.virname; /* temp hack for scanall mode until api augmentation */
-	if (rc == CL_CLEAN && ctx.num_viruses)
-	    rc = CL_VIRUS;
-    }
-
     cli_bitset_free(ctx.hook_lsig_matches);
     free(ctx.fmap);
-    if(rc == CL_CLEAN && ctx.found_possibly_unwanted)
-	rc = CL_VIRUS;
+    if (rc == CL_CLEAN) {
+        if ((ctx.num_viruses != 0 && ctx.options & CL_SCAN_ALLMATCHES) ||
+            ctx.found_possibly_unwanted)
+                rc = CL_VIRUS;
+    }
     cli_logg_unsetup();
     perf_done(&ctx);
     return rc;

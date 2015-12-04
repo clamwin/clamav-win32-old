@@ -1,4 +1,5 @@
 /*
+ *  Copyright (C) 2015 Cisco Systems, Inc. and/or its affiliates. All rights reserved.
  *  Copyright (C) 2008 Sourcefire, Inc.
  *
  *  Authors: Tomasz Kojm
@@ -45,5 +46,10 @@
 #define CLI_DEFAULT_MAXICONSPE          100
 
 #define CLI_DEFAULT_MAXPARTITIONS       50
+
+/* TODO - set better defaults */
+#define CLI_DEFAULT_PCRE_MATCH_LIMIT     10000
+#define CLI_DEFAULT_PCRE_RECMATCH_LIMIT  5000
+#define CLI_DEFAULT_PCRE_MAX_FILESIZE    26214400
 
 #endif

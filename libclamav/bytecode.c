@@ -1,6 +1,7 @@
 /*
  *  Load, and verify ClamAV bytecode.
  *
+ *  Copyright (C) 2015 Cisco Systems, Inc. and/or its affiliates. All rights reserved.
  *  Copyright (C) 2009-2013 Sourcefire, Inc.
  *
  *  Authors: Török Edvin
@@ -1454,6 +1455,11 @@ void cli_sigperf_print()
     struct sigperf_elem stats[MAX_BC], *elem = stats;
     int i, elems = 0, max_name_len = 0, name_len;
 
+    if (!g_sigid || !g_sigevents) {
+        cli_warnmsg("cli_sigperf_print: statistics requested but no bytecodes were loaded!\n");
+        return;
+    }
+
     memset(stats, 0, sizeof(stats));
     for (i=0;i<MAX_BC;i++) {
 	union ev_val val;
@@ -1479,6 +1485,8 @@ void cli_sigperf_print()
 	elem++;
 	elems++;
     }
+    if (max_name_len < strlen("Bytecode name"))
+        max_name_len = strlen("Bytecode name");
 
     cli_qsort(stats, elems, sizeof(struct sigperf_elem), sigelem_comp);
 

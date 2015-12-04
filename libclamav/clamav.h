@@ -1,6 +1,6 @@
 /*
+ *  Copyright (C) 2015 Cisco Systems, Inc. and/or its affiliates. All rights reserved.
  *  Copyright (C) 2007-2013 Sourcefire, Inc.
- *  Copyright (C) 2014 Cisco Systems, Inc. and/or its affiliates. All rights reserved.
  *
  *  Authors: Tomasz Kojm
  *
@@ -144,6 +144,9 @@ typedef enum {
 #define CL_DB_UNSIGNED	    0x10000 /* internal */
 #define CL_DB_BYTECODE_STATS 0x20000
 #define CL_DB_ENHANCED      0x40000
+#define CL_DB_PCRE_STATS    0x80000
+#define CL_DB_YARA_EXCLUDE  0x100000
+#define CL_DB_YARA_ONLY     0x200000
 
 /* recommended db settings */
 #define CL_DB_STDOPT	    (CL_DB_PHISHING | CL_DB_PHISHING_URLS | CL_DB_BYTECODE)
@@ -243,7 +246,10 @@ enum cl_engine_field {
     CL_ENGINE_STATS_TIMEOUT,        /* uint32_t */
     CL_ENGINE_MAX_PARTITIONS,       /* uint32_t */
     CL_ENGINE_MAX_ICONSPE,          /* uint32_t */
-    CL_ENGINE_TIME_LIMIT            /* uint32_t */
+    CL_ENGINE_TIME_LIMIT,           /* uint32_t */
+    CL_ENGINE_PCRE_MATCH_LIMIT,     /* uint64_t */
+    CL_ENGINE_PCRE_RECMATCH_LIMIT,  /* uint64_t */
+    CL_ENGINE_PCRE_MAX_FILESIZE     /* uint64_t */
 };
 
 enum bytecode_security {
@@ -370,6 +376,20 @@ CL_BREAK = Whitelisted by callback - break, scan result is set to CL_CLEAN
 CL_VIRUS = Blacklisted by callback - break, scan result is set to CL_VIRUS
 */
 extern void cl_engine_set_clcb_progress(struct cl_engine *engine, clcb_progress callback, void *context);
+
+typedef void (*clcb_virus_found)(int fd, const char *virname, void *context);
+/* VIRUS FOUND
+   Called for each virus found.
+
+Input:
+fd      = File descriptor which is was scanned
+virname = Virus name 
+context = Opaque application provided data
+
+Output:
+none
+*/
+extern void cl_engine_set_clcb_virus_found(struct cl_engine *engine, clcb_virus_found callback);
 
 typedef int (*clcb_sigload)(const char *type, const char *name, unsigned int custom, void *context);
 /* SIGNATURE LOAD

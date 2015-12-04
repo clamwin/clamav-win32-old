@@ -1,6 +1,7 @@
 /*
  * Extract component parts of OLE2 files (e.g. MS Office Documents)
  * 
+ * Copyright (C) 2015 Cisco Systems, Inc. and/or its affiliates. All rights reserved.
  * Copyright (C) 2007-2013 Sourcefire, Inc.
  * 
  * Authors: Kevin Lin
@@ -123,7 +124,9 @@ ole2_convert_utf(summary_ctx_t *sctx, char *begin, size_t sz, const char *encodi
 
     cd = iconv_open("UTF-8", encoding);
     if (cd == (iconv_t)(-1)) {
-        cli_errmsg("ole2_convert_utf: could not initialize iconv\n");
+        char errbuf[128];
+        cli_strerror(errno, errbuf, sizeof(errbuf)); 
+        cli_errmsg("ole2_convert_utf: could not initialize iconv for encoding %s: %s\n", encoding, errbuf);
         sctx->flags |= OLE2_CODEPAGE_ERROR_UNINITED;
     }
     else {

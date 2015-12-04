@@ -1,6 +1,7 @@
 /*
  *  ClamAV bytecode handler tool.
  *
+ *  Copyright (C) 2015 Cisco Systems, Inc. and/or its affiliates. All rights reserved.
  *  Copyright (C) 2009-2012 Sourcefire, Inc.
  *
  *  Authors: Török Edvin
@@ -50,7 +51,7 @@ static void help(void)
     printf("           Clam AntiVirus: Bytecode Testing Tool %s\n",
 	   get_version());
     printf("           By The ClamAV Team: http://www.clamav.net/about.html#credits\n");
-    printf("           (C) 2009 Sourcefire, Inc.\n\n");
+    printf("           (C) 2009-2015 Cisco Systems, Inc.\n\n");
     printf("clambc <file> [function] [param1 ...]\n\n");
     printf("    --help                 -h         Show help\n");
     printf("    --version              -V         Show version\n");
@@ -62,7 +63,7 @@ static void help(void)
     printf("    --printbcir            -c         Print IR of bytecode signature\n");
     printf("    --trace <level>        -T         Set bytecode trace level 0..7 (default 7)\n");
     printf("    --no-trace-showsource  -s         Don't show source line during tracing\n");
-    printf("    --bytecode-statistics             Collect and print bytecode execution statistics\n");
+    printf("    --statistics=bytecode             Collect and print bytecode execution statistics\n");
     printf("    file                              file to test\n");
     printf("\n");
     return;
@@ -246,7 +247,7 @@ int main(int argc, char *argv[])
     FILE *f;
     struct cli_bc *bc;
     struct cli_bc_ctx *ctx;
-    int rc, dbgargc;
+    int rc, dbgargc, bc_stats=0;
     struct optstruct *opts;
     const struct optstruct *opt;
     unsigned funcid=0, i;
@@ -319,8 +320,15 @@ int main(int argc, char *argv[])
     bcs.all_bcs = bc;
     bcs.count = 1;
 
-    rc = cli_bytecode_load(bc, f, NULL, optget(opts, "trust-bytecode")->enabled, 
-			   optget(opts, "bytecode-statistics")->enabled);
+    if((opt = optget(opts, "statistics"))->enabled) {
+	while(opt) {
+	    if (!strcasecmp(opt->strarg, "bytecode"))
+		bc_stats=1;
+	    opt = opt->nextarg;
+        }
+    }
+
+    rc = cli_bytecode_load(bc, f, NULL, optget(opts, "trust-bytecode")->enabled, bc_stats);
     if (rc != CL_SUCCESS) {
 	fprintf(stderr,"Unable to load bytecode: %s\n", cl_strerror(rc));
 	optfree(opts);

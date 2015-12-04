@@ -1,4 +1,5 @@
 /*
+ *  Copyright (C) 2015 Cisco Systems, Inc. and/or its affiliates. All rights reserved.
  *  Copyright (C) 2007-2009 Sourcefire, Inc.
  *
  *  Authors: Tomasz Kojm, Trog, Török Edvin
@@ -802,7 +803,7 @@ fds_free (struct fd_data *data)
 
 #ifdef FANOTIFY
 int
-fan_checkowner (int pid, const struct optstruct *opts)
+onas_fan_checkowner (int pid, const struct optstruct *opts)
 {
     char path[32];
     STATBUF sb;

@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2014 Cisco and/or its affiliates. All rights reserved.
+ *  Copyright (C) 2015 Cisco Systems, Inc. and/or its affiliates. All rights reserved.
  *  Copyright (C) 2007-2013 Sourcefire, Inc.
  *
  *  Authors: Tomasz Kojm
@@ -42,6 +42,7 @@ struct cli_dconf {
     uint32_t phishing;
     uint32_t bytecode;
     uint32_t stats;
+    uint32_t pcre;
 };
 
 /* PE flags */
@@ -89,6 +90,7 @@ struct cli_dconf {
 #define ARCH_CONF_XAR       0x80000
 #define ARCH_CONF_HFSPLUS   0x100000
 #define ARCH_CONF_XZ        0x200000
+#define ARCH_CONF_PASSWD    0x400000
 
 /* Document flags */
 #define DOC_CONF_HTML		0x1
@@ -128,6 +130,11 @@ struct cli_dconf {
 /* Stats/Intel flags */
 #define DCONF_STATS_DISABLED            0x1
 #define DCONF_STATS_PE_SECTION_DISABLED 0x2
+
+/* PCRE flags */
+#define PCRE_CONF_SUPPORT 0x1
+#define PCRE_CONF_OPTIONS 0x2
+#define PCRE_CONF_GLOBAL  0x4
 
 #define BYTECODE_ENGINE_MASK (BYTECODE_INTERPRETER | BYTECODE_JIT_X86 | BYTECODE_JIT_PPC | BYTECODE_JIT_ARM)
 

@@ -1,4 +1,5 @@
 /*
+ *  Copyright (C) 2015 Cisco Systems, Inc. and/or its affiliates. All rights reserved.
  *  Copyright (C) 2007-2009 Sourcefire, Inc.
  *
  *  Authors: Tomasz Kojm
@@ -83,7 +84,7 @@ static void help(void)
     printf("\n");
     printf("                      Clam AntiVirus Daemon %s\n", get_version());
     printf("           By The ClamAV Team: http://www.clamav.net/about.html#credits\n");
-    printf("           (C) 2007-2009 Sourcefire, Inc.\n\n");
+    printf("           (C) 2007-2015 Cisco Systems, Inc.\n\n");
 
     printf("    --help                   -h             Show this help.\n");
     printf("    --version                -V             Show version number.\n");
@@ -171,6 +172,10 @@ int main(int argc, char **argv)
     /* parse the config file */
     cfgfile = optget(opts, "config-file")->strarg;
     pt = strdup(cfgfile);
+    if (pt == NULL) {
+	fprintf(stderr, "ERROR: Unable to allocate memory for config file\n");
+	return 1;
+    }
     if((opts = optparse(cfgfile, 0, NULL, 1, OPT_CLAMD, 0, opts)) == NULL) {
         fprintf(stderr, "ERROR: Can't open/parse the config file %s\n", pt);
         free(pt);
@@ -509,6 +514,8 @@ int main(int argc, char **argv)
 
         cl_engine_set_clcb_hash(engine, hash_callback);
 
+        cl_engine_set_clcb_virus_found(engine, clamd_virus_found_cb);
+
         if(optget(opts, "LeaveTemporaryFiles")->enabled)
             cl_engine_set_num(engine, CL_ENGINE_KEEPTMP, 1);
 
@@ -593,6 +600,12 @@ int main(int argc, char **argv)
 #endif
 
         if((ret = cl_load(dbdir, engine, &sigs, dboptions))) {
+            logg("!%s\n", cl_strerror(ret));
+            ret = 1;
+            break;
+        }
+
+        if((ret = statinidir_th(dbdir))) {
             logg("!%s\n", cl_strerror(ret));
             ret = 1;
             break;

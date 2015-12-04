@@ -102,17 +102,17 @@ Allow loading bytecode from outside digitally signed .c[lv]d files.
 \fB\-\-bytecode\-timeout=N\fR
 Set bytecode timeout in milliseconds (default: 60000 = 60s)
 .TP 
-\fB\-\-bytecode\-statistics[=yes/no(*)]\fR
-Collect and print bytecode statistics.
+\fB\-\-statistics[=none(*)/bytecode/pcre]\fR
+Collect and print execution statistics.
 .TP 
 \fB\-\-detect\-pua[=yes/no(*)]\fR
 Detect Possibly Unwanted Applications.
 .TP 
 \fB\-\-exclude\-pua=CATEGORY\fR
-Exclude a specific PUA category. This option can be used multiple times. See http://www.clamav.net/documentation.html#pua for the complete list of PUA
+Exclude a specific PUA category. This option can be used multiple times. See http://www.clamav.net/doc/pua.html for the complete list of PUA
 .TP 
 \fB\-\-include\-pua=CATEGORY\fR
-Only include a specific PUA category. This option can be used multiple times. See http://www.clamav.net/documentation.html#pua for the complete list of PUA
+Only include a specific PUA category. This option can be used multiple times. See http://www.clamav.net/doc/pua.html for the complete list of PUA
 .TP 
 \fB\-\-detect\-structured[=yes/no(*)]\fR
 Use the DLP (Data Loss Prevention) module to detect SSN and Credit Card numbers inside documents/text files.
@@ -213,6 +213,15 @@ This option sets the maximum number of partitions of a raw disk image to be scan
 .TP
 \fB\-\-max\-iconspe=#n\fR
 This option sets the maximum number of icons within a PE to be scanned. This must be a positive integer (default: 100).
+.TP
+\fB\-\-pcre-match-limit=#n\fR
+Maximum calls to the PCRE match function (default: 10000).
+.TP
+\fB\-\-pcre-recmatch-limit=#n\fR
+Maximum recursive calls to the PCRE match function (default: 5000).
+.TP
+\fB\-\-pcre-max-filesize=#n\fR
+Maximum size file to perform PCRE subsig matching (default: 25 MB, max: <4 GB).
 .TP
 \fB\-\-enable\-stats\fR
 This option enables submission of statistical data. (Default: stats submissions disabled)

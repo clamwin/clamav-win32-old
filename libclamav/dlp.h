@@ -1,6 +1,7 @@
 /* 
  *  Simple library to detect and validate SSN and Credit Card numbers.
  *
+ *  Copyright (C) 2015 Cisco Systems, Inc. and/or its affiliates. All rights reserved.
  *  Copyright (C) 2007-2008 Sourcefire, Inc.
  *
  *  Authors: Martin Roesch <roesch@sourcefire.com>
@@ -132,5 +133,9 @@ int dlp_has_stripped_ssn(const unsigned char *buffer, int length);
  *      1 on detect, 0 on fail
  */
 int dlp_has_normal_ssn(const unsigned char *buffer, int length);
+
+int cdn_ctn_is_valid(const char *, int);
+int cdn_eft_is_valid(const char *, int);
+int us_micr_is_valid(const char *, int);
 
 #endif  /* __DLP_H_ */

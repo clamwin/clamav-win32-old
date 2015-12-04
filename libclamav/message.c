@@ -1,4 +1,5 @@
 /*
+ *  Copyright (C) 2015 Cisco Systems, Inc. and/or its affiliates. All rights reserved.
  *  Copyright (C) 2007-2008 Sourcefire, Inc.
  *
  *  Authors: Nigel Horne
@@ -480,6 +481,7 @@ messageAddArguments(message *m, const char *s)
 	while(*string) {
 		const char *key, *cptr;
 		char *data, *field;
+        size_t datasz=0;
 
 		if(isspace(*string & 0xff) || (*string == ';')) {
 			string++;
@@ -592,12 +594,14 @@ messageAddArguments(message *m, const char *s)
 
 			*ptr = '\0';
 
+            datasz = strlen(kcopy) + strlen(data) + 2;
 			field = cli_realloc(kcopy, strlen(kcopy) + strlen(data) + 2);
 			if(field) {
-				strcat(field, "=");
-				strcat(field, data);
-			} else
+                cli_strlcat(field, "=", datasz);
+                cli_strlcat(field, data, datasz);
+			} else {
 				free(kcopy);
+            }
 			free(data);
 		} else {
 			size_t len;

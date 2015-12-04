@@ -1,6 +1,7 @@
 /*
  *  ClamdTOP
  *
+ *  Copyright (C) 2015 Cisco Systems, Inc. and/or its affiliates. All rights reserved.
  *  Copyright (C) 2008 - 2013 Sourcefire, Inc.
  *
  *  Authors: Török Edvin
@@ -617,6 +618,7 @@ static int make_connection_real(const char *soname, conn_t *conn)
     struct addrinfo hints, *res=NULL, *p;
     int err;
 
+    OOM_CHECK(pt);
     conn->tcp = 0;
 
 #ifndef _WIN32
@@ -1087,11 +1089,13 @@ static void parse_stats(conn_t *conn, struct stats *stats, unsigned idx)
 
 	if (!conn->version) {
 		stats->engine_version = strdup("???");
+		OOM_CHECK(stats->engine_version);
 		return;
 	}
 	p = pstart = vstart = strchr(conn->version, ' ');
 	if (!vstart) {
 	    stats->engine_version = strdup("???");
+	    OOM_CHECK(stats->engine_version);
 	    return;
 	}
 	/* find digit in version */
@@ -1113,9 +1117,10 @@ static void parse_stats(conn_t *conn, struct stats *stats, unsigned idx)
 	stats->engine_version[p-pstart] = '\0';
 
 	pstart = strchr(p, '/');
-	if (!pstart)
+	if (!pstart) {
 		stats->db_version = strdup("????");
-	else {
+		OOM_CHECK(stats->db_version);
+	} else {
 		pstart++;
 		p = strchr(pstart, '/');
 		if (!p)
@@ -1230,7 +1235,7 @@ static void help(void)
     printf("\n");
     printf("           Clam AntiVirus: Monitoring Tool %s\n", get_version());
     printf("           By The ClamAV Team: http://www.clamav.net/about.html#credits\n");
-    printf("           (C) 2008-2009 Sourcefire, Inc.\n\n");
+    printf("           (C) 2008-2015 Cisco Systems, Inc.\n\n");
     printf("clamdtop [-hVc] [host[:port] /path/to/clamd.socket ...]\n\n");
     printf("    --help                 -h         Show help\n");
     printf("    --version              -V         Show version\n");

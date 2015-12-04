@@ -522,6 +522,31 @@ Example
 # Default: 100
 #MaxIconsPE 200
 
+# This option sets the maximum calls to the PCRE match function during an instance of regex matching.
+# Instances using more than this limit will be terminated and alert the user but the scan will continue.
+# For more information on match_limit, see the PCRE documentation.
+# Negative values are not allowed.
+# WARNING: setting this limit too high may severely impact performance.
+# Default: 10000
+#PCREMatchLimit 20000
+
+# This option sets the maximum recursive calls to the PCRE match function during an instance of regex matching.
+# Instances using more than this limit will be terminated and alert the user but the scan will continue.
+# For more information on match_limit_recursion, see the PCRE documentation.
+# Negative values are not allowed and values > PCREMatchLimit are superfluous.
+# WARNING: setting this limit too high may severely impact performance.
+# Default: 5000
+#PCRERecMatchLimit 10000
+
+# This option sets the maximum filesize for which PCRE subsigs will be executed.
+# Files exceeding this limit will not have PCRE subsigs executed unless a subsig is encompassed to a smaller buffer.
+# Negative values are not allowed.
+# Setting this value to zero disables the limit.
+# WARNING: setting this limit too high or disabling it may severely impact performance.
+# Default: 25M
+#PCREMaxFileSize 100M
+
+
 ##
 ## On-access Scan Settings
 ##
@@ -530,6 +555,14 @@ Example
 # Clamuko/Dazuko support has been deprecated.
 # Default: no
 #ScanOnAccess yes
+
+# Set the  mount point to be scanned. The mount point specified, or the mount point 
+# containing the specified directory will be watched. If any directories are specified, 
+# this option will preempt the DDD system. This will notify only. It can be used multiple times.
+# (On-access scan only)
+# Default: disabled
+#OnAccessMountPath /
+#OnAccessMountPath /home/user
 
 # Don't scan files larger than OnAccessMaxFileSize
 # Value of 0 disables the limit.
@@ -554,6 +587,23 @@ Example
 # Default: disabled
 #OnAccessExcludeUID 0
 
+# Toggles dynamic directory determination. Allows for recursively watching include paths.
+# (On-access scan only)
+# Default: no
+#OnAccessDisableDDD yes
+
+# Modifies fanotify blocking behaviour when handling permission events.
+# If off, fanotify will only notify if the file scanned is a virus,
+# and not perform any blocking.
+# (On-access scan only)
+# Default: no
+#OnAccessPrevention yes
+
+# Toggles extra scanning and notifications when a file or directory is created or moved.
+# Requires the  DDD system to kick-off extra scans.
+# (On-access scan only)
+# Default: no
+#OnAccessExtraScanning yes
 
 ##
 ## Bytecode

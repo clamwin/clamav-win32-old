@@ -1,4 +1,5 @@
 /*
+ *  Copyright (C) 2015 Cisco Systems, Inc. and/or its affiliates. All rights reserved.
  *  Copyright (C) 2009 Sourcefire, Inc.
  *
  *  Authors: Tomasz Kojm, aCaB
@@ -23,7 +24,9 @@
 #endif
 
 #if defined(C_SOLARIS)
+#ifndef __EXTENSIONS__
 #define __EXTENSIONS__
+#endif
 #endif
 
 /* must be first because it may define _XOPEN_SOURCE */
@@ -45,6 +48,7 @@
 #ifndef _WIN32
 #include <arpa/inet.h>
 #include <sys/socket.h>
+#include <sys/un.h>
 #include <netdb.h>
 #endif
 
@@ -224,7 +228,8 @@ static int chkpath(const char *path)
    if((opt = optget(clamdopts, "ExcludePath"))->enabled) {
 	while(opt) {
 	    if(match_regex(path, opt->strarg) == 1) {
-		logg("~%s: Excluded\n", path);
+                if (printinfected != 1)
+                    logg("~%s: Excluded\n", path);
 		return 1;
 	    }
 	    opt = opt->nextarg;
@@ -317,9 +322,18 @@ int dsresult(int sockd, int scantype, const char *filename, int *printok, int *e
 		    logg("Failed to parse reply: \"%s\"\n", bol);
 		return -1;
 	    } else if(!memcmp(eol - 7, " FOUND", 6)) {
+                static char last_filename[PATH_MAX+1] = {'\0'};
 		*(eol - 7) = 0;
 		*printok = 0;
-		infected++;
+                if (scantype != ALLMATCH) {
+                    infected++;
+                } else {
+                    if (filename != NULL && strcmp(filename, last_filename)) {
+                        infected++;
+                        strncpy(last_filename, filename, PATH_MAX);
+                        last_filename[PATH_MAX] = '\0';
+                    }
+                }
 		if(filename) {
 		    if(scantype >= STREAM) {
 			logg("~%s%s FOUND\n", filename, colon);

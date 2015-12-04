@@ -1,6 +1,7 @@
 /*
  *  Unit tests for regular expression processing.
  *
+ *  Copyright (C) 2015 Cisco Systems, Inc. and/or its affiliates. All rights reserved.
  *  Copyright (C) 2008 Sourcefire, Inc.
  *
  *  Authors: Török Edvin
@@ -489,8 +490,6 @@ static void do_phishing_test_allscan(const struct rtest *rtest)
 			}
 			break;
 	}
-	if (ctx.num_viruses)
-	    free((void *)ctx.virname);
 }
 
 #ifdef CHECK_HAVE_LOOPS

@@ -37,6 +37,9 @@ solaris*)
   ;;
 esac
 
+m4_include([../../m4/reorganization/libs/openssl.m4])
+AC_SUBST(SSL_CPPFLAGS, [$SSL_CPPFLAGS])
+
 AM_MAINTAINER_MODE
 LT_INIT([disable-static])
 if test "$GXX" != "yes"; then

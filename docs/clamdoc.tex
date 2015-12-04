@@ -68,11 +68,11 @@
     \setcounter{page}{0}
 
     \pagestyle{empty}
-    \includegraphics[width=353pt]{clam}
+    \includegraphics[width=353pt]{html/demon.png}
     \vspace{3cm}
     \begin{flushright}
 	\rule[-1ex]{8cm}{3pt}\\
-	\huge Clam AntiVirus 0.98.7\\
+	\huge Clam AntiVirus 0.99\\
 	\huge \emph{User Manual}\\
     \end{flushright}
 
@@ -84,7 +84,7 @@
     \noindent
     \begin{boxedminipage}[b]{\textwidth}
     ClamAV User Manual,
-    \copyright \  2015 Cisco Systems, Inc.
+    \copyright \  2014 Cisco Systems, Inc.
     Authors: Tomasz Kojm\\
     This document is distributed under the terms of the GNU General
     Public License v2.\\
@@ -335,6 +335,24 @@
 	$ ./configure --enable-milter
     \end{verbatim}
     See section /ref{sec:clamavmilter} for more details on clamav-milter.
+
+    \subsection{Using the system LLVM}
+    Some problems have been reported when compiling ClamAV's built-in LLVM with recent
+    C++ compiler releases. These problems may be avoided by installing and using
+    an external LLVM system library. To configure ClamAV to use LLVM that is installed
+    as a system library instead of the built-in LLVM JIT, use following: 
+    \begin{verbatim}
+	$ ./configure --with-system-llvm=/myllvm/bin/llvm-config
+	$ make
+	$ sudo make install
+    \end{verbatim}
+    The argument to \verb+--with-system-llvm+ is optional, indicating the path name of
+    the LLVM configuration utility (llvm-config). With no argument to \verb+--with-system-llvm+,
+    \verb+./configure+ will search for LLVM in /usr/local/ and then /usr.
+    \\\\
+    Recommended versions of LLVM are 3.2, 3.3, 3.4, and 3.5. Some installations have
+    reported problems using earlier LLVM versions. Versions of LLVM beyond 3.5 are not
+    currently supported in ClamAV.
 
     \subsection{Running unit tests}\label{unit-testing}
 	ClamAV includes unit tests that allow you to test that the compiled binaries work correctly on your platform.
@@ -719,7 +737,9 @@ N * * * *	/usr/local/bin/freshclam --quiet
     \subsection{On-access Scanning}\label{On-access}
     There is a special thread in \verb+clamd+ that performs on-access
     scanning under Linux and shares internal virus database
-    with the daemon. \textbf{You must follow some important rules when
+    with the daemon. By default, this thread will only notify you when
+    potential threats are discovered. If you turn on prevention via
+    \verb+clamd.conf+ then \textbf{you must follow some important rules when
     using it:}
     \begin{itemize}
 	\item Always stop the daemon cleanly - using the SHUTDOWN command or
@@ -730,14 +750,36 @@ N * * * *	/usr/local/bin/freshclam --quiet
 	      files will be automatically blocked and the scanner (including
 	      \verb+clamd+!) will not be able to detect any viruses. In the
 	      result \textbf{all infected mails may be delivered.}
+	\item Watch your entire filesystem only using the \verb+clamd.conf+
+	      OnAccessMountPath option. While this will disable on-access prevention,
+	      it will avoid potential system lockups caused by fanotify's blocking
+	      functionality.
+	\item Using the On-Access Scanner to watch a virtual filesytem will result
+	      in undefined behaviour.
     \end{itemize}
-    For example, to protect the whole system add the following lines to
+    The default configuration utilizes inotify to recursively keep track of
+    directories. If you need to protect more than 8192 directories it will
+    be necessary to change inotify's \verb+max_user_watches+ value.
+    \\\\
+    This can be done temporarily with:
+    \begin{verbatim}
+    $ sysctl fs.inotify.max_user_watches=<n>
+    \end{verbatim}
+    Where \verb+<n>+ is the new maximum desired.
+    \\\\
+    To watch your entire filesystem add the following lines to
     \verb+clamd.conf+:
     \begin{verbatim}
 	ScanOnAccess yes
-	OnAccessIncludePath /
-	OnAccessExcludePath /proc
-	OnAccessExcludePath /temporary/dir/of/your/mail/scanning/software
+	OnAccessMountPath /
+    \end{verbatim}
+    Similarly, to protect your home directory add the following lines to
+    \verb+clamd.conf+:
+    \begin{verbatim}
+	ScanOnAccess yes
+	OnAccessIncludePath /home
+	OnAccessExcludePath /home/user/temp/dir/of/your/mail/scanning/software
+	OnAccessPrevention yes
     \end{verbatim}
     For more configuration options, type 'man clamd.conf' or reference the
     example clamd.conf.

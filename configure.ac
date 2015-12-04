@@ -20,7 +20,7 @@ dnl   MA 02110-1301, USA.
 AC_PREREQ([2.59])
 dnl For a release change [devel] to the real version [0.xy]
 dnl also change VERSION below
-AC_INIT([ClamAV], [0.98.7], [http://bugs.clamav.net/], [clamav], [http://www.clamav.net/])
+AC_INIT([ClamAV], [0.99], [http://bugs.clamav.net/], [clamav], [http://www.clamav.net/])
 
 AH_BOTTOM([#include "platform.h"])
 dnl put configure auxiliary into config
@@ -81,6 +81,7 @@ dnl libclamav dependencies
 m4_include([m4/reorganization/libs/xml.m4])
 m4_include([m4/reorganization/libs/openssl.m4])
 m4_include([m4/reorganization/libs/json.m4])
+m4_include([m4/reorganization/libs/pcre.m4])
 
 AM_MAINTAINER_MODE
 m4_include([m4/reorganization/libs/libz.m4])
@@ -122,6 +123,7 @@ m4_include([m4/reorganization/clamdtop.m4])
 m4_include([m4/reorganization/distcheck.m4])
 m4_include([m4/reorganization/llvm.m4])
 m4_include([m4/reorganization/sha_collect.m4])
+m4_include([m4/reorganization/yara.m4])
 
 m4_include([m4/reorganization/bsd.m4])
 
@@ -179,7 +181,10 @@ fi
 
 AM_CONDITIONAL([ENABLE_LLVM],
 	       [test "$subdirfailed" != "yes" && test "$enable_llvm" != "no"])
+AM_CONDITIONAL([ENABLE_YARA],
+	       [test "$enable_yara" != "no"])
 no_recursion="yes";
+
 AC_OUTPUT([libclamav/Makefile])
 
 # Print a summary of what features we enabled
@@ -244,6 +249,7 @@ if test "x$XML_LIBS" = "x"; then
 else
     CL_MSG_STATUS([libxml2     ],[yes, from $XML_HOME],[])
 fi
+CL_MSG_STATUS([yara        ],[$enable_yara],[$enable_yara])
 
 # Yep, downgrading the compiler avoids the bug too:
 # 4.0.x, and 4.1.0 are the known buggy versions

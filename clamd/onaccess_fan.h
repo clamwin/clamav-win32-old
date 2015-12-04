@@ -1,4 +1,5 @@
 /*
+ *  Copyright (C) 2015 Cisco Systems, Inc. and/or its affiliates. All rights reserved.
  *  Copyright (C) 2011 Sourcefire, Inc.
  *
  *  Authors: Tomasz Kojm
@@ -21,6 +22,6 @@
 #ifndef __FAN_H
 #define __FAN_H
 
-void *fan_th(void *arg);
+void *onas_fan_th(void *arg);
 
 #endif

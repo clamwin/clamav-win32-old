@@ -45,15 +45,21 @@ clamd_SOURCES = \
     others.c \
     others.h \
     shared.h \
-    fan.c \
-    fan.h
+    onaccess_fan.c \
+    onaccess_fan.h \
+    onaccess_ddd.c \
+    onaccess_ddd.h \
+    onaccess_hash.c \
+    onaccess_hash.h \
+    onaccess_scth.c \
+    onaccess_scth.h
 
 AM_CFLAGS=@WERR_CFLAGS@
 
 endif
 
 LIBS = $(top_builddir)/libclamav/libclamav.la @CLAMD_LIBS@ @THREAD_LIBS@
-AM_CPPFLAGS = -I$(top_srcdir) -I$(top_srcdir)/shared -I$(top_srcdir)/libclamav @SSL_CPPFLAGS@ @JSON_CPPFLAGS@
+AM_CPPFLAGS = -I$(top_srcdir) -I$(top_srcdir)/shared -I$(top_srcdir)/libclamav @SSL_CPPFLAGS@ @JSON_CPPFLAGS@ @PCRE_CPPFLAGS@
 
 # it does support --help and --version but with the default config file
 # it outputs an error message which tells us to edit the config files

@@ -1,4 +1,5 @@
 /*
+ *  Copyright (C) 2015 Cisco Systems, Inc. and/or its affiliates. All rights reserved.
  *  Copyright (C) 2002 - 2013 Sourcefire, Inc.
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -49,14 +50,11 @@ clamd_connect (const char *cfgfile, const char *option)
 #ifndef	_WIN32
     struct sockaddr_un server;
 #endif
-#ifdef HAVE_GETADDRINFO
+
     struct addrinfo hints, *res, *p;
     char port[6];
     int ret;
-#else
-    struct sockaddr_in server2;
-    struct hostent *he;
-#endif
+
     struct optstruct *opts;
     const struct optstruct *opt;
     int sockd;
@@ -103,7 +101,6 @@ clamd_connect (const char *cfgfile, const char *option)
 #endif
     if ((opt = optget (opts, "TCPSocket"))->enabled)
     {
-#ifdef HAVE_GETADDRINFO
         memset (&hints, 0, sizeof (hints));
         hints.ai_family = AF_UNSPEC;
         hints.ai_socktype = SOCK_STREAM;
@@ -151,48 +148,6 @@ clamd_connect (const char *cfgfile, const char *option)
             freeaddrinfo (res);
             opt = opt->nextarg;
         }
-
-#else /* IPv4 */
-
-        if ((sockd = socket (AF_INET, SOCK_STREAM, 0)) < 0)
-        {
-            logg ("!%s: Can't create TCP socket: %s\n", option, strerror(errno));
-            optfree (opts);
-            return -1;
-        }
-
-        server2.sin_family = AF_INET;
-        server2.sin_port = htons (opt->numarg);
-
-        if ((opt = optget (opts, "TCPAddr"))->enabled)
-        {
-            if ((he = gethostbyname (opt->strarg)) == 0)
-            {
-                logg ("^Clamd was NOT notified: Can't resolve hostname '%s': %s\n",
-                    opt->strarg, strerror(errno));
-                optfree (opts);
-                closesocket (sockd);
-                return -1;
-            }
-            server2.sin_addr = *(struct in_addr *) he->h_addr_list[0];
-        }
-        else
-            server2.sin_addr.s_addr = inet_addr ("127.0.0.1");
-
-
-        if (connect
-            (sockd, (struct sockaddr *) &server2,
-             sizeof (struct sockaddr_in)) < 0)
-        {
-            logg ("^Clamd was NOT notified: Can't connect to clamd on %s:%d: %s\n",
-                inet_ntoa (server2.sin_addr), ntohs (server2.sin_port), strerror(errno));
-            closesocket (sockd);
-            optfree (opts);
-            return -1;
-        }
-
-        return sockd;
-#endif
     }
     else
     {

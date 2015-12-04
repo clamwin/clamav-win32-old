@@ -1,5 +1,7 @@
 /*
+ *  Copyright (C) 2015 Cisco Systems, Inc. and/or its affiliates. All rights reserved.
  *  Copyright (C) 2007-2013 Sourcefire, Inc.
+ *  All Rights Reserved.
  *
  *  Authors: Tomasz Kojm
  *
@@ -34,6 +36,7 @@
 #include "others.h"
 #include "matcher-ac.h"
 #include "matcher-bm.h"
+#include "matcher-pcre.h"
 #include "filetypes.h"
 #include "matcher.h"
 #include "pe.h"
@@ -52,6 +55,10 @@
 #include "perflogging.h"
 #include "bytecode_priv.h"
 #include "bytecode_api_impl.h"
+#ifdef HAVE_YARA
+#include "yara_clam.h"
+#include "yara_exec.h"
+#endif
 
 #ifdef CLI_PERF_LOGGING
 
@@ -95,9 +102,11 @@ static inline int matcher_run(const struct cli_matcher *root,
 			      cli_file_t ftype,
 			      struct cli_matched_type **ftoffset,
 			      unsigned int acmode,
+                              unsigned int pcremode,
 			      struct cli_ac_result **acres,
 			      fmap_t *map,
 			      struct cli_bm_off *offdata,
+			      struct cli_pcre_off *poffdata,
 			      cli_ctx *ctx)
 {
     int ret;
@@ -106,8 +115,6 @@ static inline int matcher_run(const struct cli_matcher *root,
     uint32_t orig_length, orig_offset;
     const unsigned char* orig_buffer;
     unsigned int viruses_found = 0;
-
-    UNUSEDPARAM(map);
 
     if (root->filter) {
 	if(filter_search_ext(root->filter, buffer, length, &info) == -1) {
@@ -157,11 +164,70 @@ static inline int matcher_run(const struct cli_matcher *root,
     }
     PERF_LOG_TRIES(acmode, 0, length);
     ret = cli_ac_scanbuff(buffer, length, virname, NULL, acres, root, mdata, offset, ftype, ftoffset, acmode, ctx);
+	if (ret != CL_CLEAN) {
+	    if (ret != CL_VIRUS)
+		return ret;
+
+	    /* else (ret == CL_VIRUS) */
+	    if (SCAN_ALL)
+		viruses_found = 1;
+	    else {
+		cli_append_virus(ctx, *virname);
+		return ret;
+	    }
+	}
+
+    /* due to logical triggered, pcres cannot be evaluated until after full subsig matching */
+    /* cannot save pcre execution state without possible evasion; must scan entire buffer */
+    /* however, scanning the whole buffer may require the whole buffer being loaded into memory */
+#if HAVE_PCRE
+    if (root->pcre_metas) {
+        int rc;
+        uint64_t maxfilesize;
+
+        if (map && (pcremode == PCRE_SCAN_FMAP)) {
+            if (offset+length >= map->len) {
+                /* check that scanned map does not exceed pcre maxfilesize limit */
+                maxfilesize = (uint64_t)cl_engine_get_num(ctx->engine, CL_ENGINE_PCRE_MAX_FILESIZE, &rc);
+                if (rc != CL_SUCCESS)
+                    return rc;
+                if (maxfilesize && (map->len > maxfilesize)) {
+                    cli_dbgmsg("matcher_run: pcre max filesize (map) exceeded (limit: %llu, needed: %llu)\n", maxfilesize, (long long unsigned)map->len);
+                    return CL_EMAXSIZE;
+                }
+
+                cli_dbgmsg("matcher_run: performing regex matching on full map: %u+%u(%u) >= %zu\n", offset, length, offset+length, map->len);
+
+                buffer = fmap_need_off_once(map, 0, map->len);
+                if (!buffer)
+                    return CL_EMEM;
+
+                /* scan the full buffer */
+                ret = cli_pcre_scanbuf(buffer, map->len, virname, acres, root, mdata, poffdata, ctx);
+            }
+        }
+        else if (pcremode == PCRE_SCAN_BUFF) {
+            /* check that scanned buffer does not exceed pcre maxfilesize limit */
+            maxfilesize = (uint64_t)cl_engine_get_num(ctx->engine, CL_ENGINE_PCRE_MAX_FILESIZE, &rc);
+            if (rc != CL_SUCCESS)
+                return rc;
+            if (maxfilesize && (length > maxfilesize)) {
+                cli_dbgmsg("matcher_run: pcre max filesize (buf) exceeded (limit: %llu, needed: %u)\n", maxfilesize, length);
+                return CL_EMAXSIZE;
+            }
+
+            cli_dbgmsg("matcher_run: performing regex matching on buffer with no map: %u+%u(%u)\n", offset, length, offset+length);
+            /* scan the specified buffer */
+            ret = cli_pcre_scanbuf(buffer, length, virname, acres, root, mdata, poffdata, ctx);
+        }
+    }
+#endif /* HAVE_PCRE */
+    /* end experimental fragment */
 
     if (ctx && !SCAN_ALL && ret == CL_VIRUS)
-	cli_append_virus(ctx, *virname);
+        cli_append_virus(ctx, *virname);
     if (ctx && SCAN_ALL && viruses_found)
-	return CL_VIRUS;
+        return CL_VIRUS;
 
     return ret;
 }
@@ -199,7 +265,7 @@ int cli_scanbuff(const unsigned char *buffer, uint32_t length, uint32_t offset, 
 	if(!acdata && (ret = cli_ac_initdata(&mdata, troot->ac_partsigs, troot->ac_lsigs, troot->ac_reloff_num, CLI_DEFAULT_AC_TRACKLEN)))
 	    return ret;
 
-	ret = matcher_run(troot, buffer, length, &virname, acdata ? (acdata[0]): (&mdata), offset, NULL, ftype, NULL, AC_SCAN_VIR, NULL, *ctx->fmap, NULL, ctx);
+	ret = matcher_run(troot, buffer, length, &virname, acdata ? (acdata[0]): (&mdata), offset, NULL, ftype, NULL, AC_SCAN_VIR, PCRE_SCAN_BUFF, NULL, *ctx->fmap, NULL, NULL, ctx);
 
 	if(!acdata)
 	    cli_ac_freedata(&mdata);
@@ -219,7 +285,7 @@ int cli_scanbuff(const unsigned char *buffer, uint32_t length, uint32_t offset, 
     if(!acdata && (ret = cli_ac_initdata(&mdata, groot->ac_partsigs, groot->ac_lsigs, groot->ac_reloff_num, CLI_DEFAULT_AC_TRACKLEN)))
 	return ret;
 
-    ret = matcher_run(groot, buffer, length, &virname, acdata ? (acdata[1]): (&mdata), offset, NULL, ftype, NULL, AC_SCAN_VIR, NULL, *ctx->fmap, NULL, ctx);
+    ret = matcher_run(groot, buffer, length, &virname, acdata ? (acdata[1]): (&mdata), offset, NULL, ftype, NULL, AC_SCAN_VIR, PCRE_SCAN_BUFF, NULL, *ctx->fmap, NULL, NULL, ctx);
 
     if(!acdata)
 	cli_ac_freedata(&mdata);
@@ -633,88 +699,120 @@ int cli_scandesc(int desc, cli_ctx *ctx, cli_file_t ftype, uint8_t ftonly, struc
     return ret;
 }
 
-int cli_lsig_eval(cli_ctx *ctx, struct cli_matcher *root, struct cli_ac_data *acdata, struct cli_target_info *target_info, const char *hash)
+static int lsig_eval(cli_ctx *ctx, struct cli_matcher *root, struct cli_ac_data *acdata, struct cli_target_info *target_info, const char *hash, uint32_t lsid)
 {
-	unsigned int i, evalcnt;
-	uint64_t evalids;
-	fmap_t *map = *ctx->fmap;
-	unsigned int viruses_found = 0;
+    unsigned evalcnt = 0;
+    uint64_t evalids = 0;
+    fmap_t *map = *ctx->fmap;
+    struct cli_ac_lsig *ac_lsig = root->ac_lsigtable[lsid];
+    char * exp = ac_lsig->u.logic;
+    char* exp_end = exp + strlen(exp);
+    int rc;
+
+    rc = cli_ac_chkmacro(root, acdata, lsid);
+    if (rc != CL_SUCCESS)
+        return rc;
+    if (cli_ac_chklsig(exp, exp_end, acdata->lsigcnt[lsid], &evalcnt, &evalids, 0) == 1) {
+        if(ac_lsig->tdb.container && ac_lsig->tdb.container[0] != ctx->container_type)
+            return CL_CLEAN;
+        if(ac_lsig->tdb.filesize && (ac_lsig->tdb.filesize[0] > map->len || ac_lsig->tdb.filesize[1] < map->len))
+            return CL_CLEAN;
+
+        if(ac_lsig->tdb.ep || ac_lsig->tdb.nos) {
+            if(!target_info || target_info->status != 1)
+                return CL_CLEAN;
+            if(ac_lsig->tdb.ep && (ac_lsig->tdb.ep[0] > target_info->exeinfo.ep || ac_lsig->tdb.ep[1] < target_info->exeinfo.ep))
+                return CL_CLEAN;
+            if(ac_lsig->tdb.nos && (ac_lsig->tdb.nos[0] > target_info->exeinfo.nsections || ac_lsig->tdb.nos[1] < target_info->exeinfo.nsections))
+                return CL_CLEAN;
+        }
+
+        if(hash && ac_lsig->tdb.handlertype) {
+            if(memcmp(ctx->handlertype_hash, hash, 16)) {
+                ctx->recursion++;
+                memcpy(ctx->handlertype_hash, hash, 16);
+                if(cli_magic_scandesc_type(ctx, ac_lsig->tdb.handlertype[0]) == CL_VIRUS) {
+                    ctx->recursion--;
+                    return CL_VIRUS;
+                }
+                ctx->recursion--;
+                return CL_CLEAN;
+            }
+        }
+        
+        if(ac_lsig->tdb.icongrp1 || ac_lsig->tdb.icongrp2) {
+            if(!target_info || target_info->status != 1)
+                return CL_CLEAN;
+            if(matchicon(ctx, &target_info->exeinfo, ac_lsig->tdb.icongrp1, ac_lsig->tdb.icongrp2) == CL_VIRUS) {
+                if(!ac_lsig->bc_idx) {
+                    cli_append_virus(ctx, ac_lsig->virname);
+                    return CL_VIRUS;
+                } else if(cli_bytecode_runlsig(ctx, target_info, &ctx->engine->bcs, ac_lsig->bc_idx, acdata->lsigcnt[lsid], acdata->lsigsuboff_first[lsid], map) == CL_VIRUS) {
+                    return CL_VIRUS;
+                }
+            }
+            return CL_CLEAN;
+        }
+        if(!ac_lsig->bc_idx) {
+            cli_append_virus(ctx, ac_lsig->virname);
+            return CL_VIRUS;
+        }
+        if(cli_bytecode_runlsig(ctx, target_info, &ctx->engine->bcs, ac_lsig->bc_idx, acdata->lsigcnt[lsid], acdata->lsigsuboff_first[lsid], map) == CL_VIRUS) {
+            return CL_VIRUS;
+        }
+    }
+    
+    return CL_CLEAN;
+}
+
+#ifdef HAVE_YARA
+static int yara_eval(cli_ctx *ctx, struct cli_matcher *root, struct cli_ac_data *acdata, struct cli_target_info *target_info, const char *hash, uint32_t lsid)
+{
+    struct cli_ac_lsig *ac_lsig = root->ac_lsigtable[lsid];
+    int rc;
+    YR_SCAN_CONTEXT context = {0};
+ 
+    if (target_info != NULL) {
+        context.file_size = target_info->fsize;
+        if (target_info->status == 1)   
+            context.entry_point = target_info->exeinfo.ep;
+    }
+    context.fmap = *ctx->fmap;
+
+    rc = yr_execute_code(ac_lsig, acdata, &context, 0, 0);
+
+    if (rc == CL_VIRUS) {
+        if (ac_lsig->flag & CLI_LSIG_FLAG_PRIVATE) {
+            rc = CL_CLEAN;
+        } else {
+            cli_append_virus(ctx, ac_lsig->virname);
+        }
+    }
+    return rc;
+}
+#endif
+
+int cli_exp_eval(cli_ctx *ctx, struct cli_matcher *root, struct cli_ac_data *acdata, struct cli_target_info *target_info, const char *hash)
+{
+    uint8_t viruses_found = 0;
+    uint32_t i;
+    int32_t rc = CL_SUCCESS;
 
     for(i = 0; i < root->ac_lsigs; i++) {
-	evalcnt = 0;
-	evalids = 0;
-	cli_ac_chkmacro(root, acdata, i);
-	if(cli_ac_chklsig(root->ac_lsigtable[i]->logic, root->ac_lsigtable[i]->logic + strlen(root->ac_lsigtable[i]->logic), acdata->lsigcnt[i], &evalcnt, &evalids, 0) == 1) {
-	    if(root->ac_lsigtable[i]->tdb.container && root->ac_lsigtable[i]->tdb.container[0] != ctx->container_type)
-		continue;
-	    if(root->ac_lsigtable[i]->tdb.filesize && (root->ac_lsigtable[i]->tdb.filesize[0] > map->len || root->ac_lsigtable[i]->tdb.filesize[1] < map->len))
-		continue;
-
-	    if(root->ac_lsigtable[i]->tdb.ep || root->ac_lsigtable[i]->tdb.nos) {
-		if(!target_info || target_info->status != 1)
-		    continue;
-		if(root->ac_lsigtable[i]->tdb.ep && (root->ac_lsigtable[i]->tdb.ep[0] > target_info->exeinfo.ep || root->ac_lsigtable[i]->tdb.ep[1] < target_info->exeinfo.ep))
-		    continue;
-		if(root->ac_lsigtable[i]->tdb.nos && (root->ac_lsigtable[i]->tdb.nos[0] > target_info->exeinfo.nsections || root->ac_lsigtable[i]->tdb.nos[1] < target_info->exeinfo.nsections))
-		    continue;
-	    }
-
-	    if(hash && root->ac_lsigtable[i]->tdb.handlertype) {
-		if(memcmp(ctx->handlertype_hash, hash, 16)) {
-		    ctx->recursion++;
-		    memcpy(ctx->handlertype_hash, hash, 16);
-		    if(cli_magic_scandesc_type(ctx, root->ac_lsigtable[i]->tdb.handlertype[0]) == CL_VIRUS) {
-			ctx->recursion--;
-			if (SCAN_ALL) {
-			    viruses_found++;
-			    continue;
-			}
-			return CL_VIRUS;
-		    }
-		    ctx->recursion--;
-		    continue;
-		}
-	    }
-
-	    if(root->ac_lsigtable[i]->tdb.icongrp1 || root->ac_lsigtable[i]->tdb.icongrp2) {
-		if(!target_info || target_info->status != 1)
-		    continue;
-		if(matchicon(ctx, &target_info->exeinfo, root->ac_lsigtable[i]->tdb.icongrp1, root->ac_lsigtable[i]->tdb.icongrp2) == CL_VIRUS) {
-		    if(!root->ac_lsigtable[i]->bc_idx) {
-			cli_append_virus(ctx, root->ac_lsigtable[i]->virname);
-			if (SCAN_ALL) {
-                            viruses_found++;
-                            continue;
-                        }
-			return CL_VIRUS;
-		    } else if(cli_bytecode_runlsig(ctx, target_info, &ctx->engine->bcs, root->ac_lsigtable[i]->bc_idx, acdata->lsigcnt[i], acdata->lsigsuboff_first[i], map) == CL_VIRUS) {
-			if (SCAN_ALL) {
-                            viruses_found++;
-                            continue;
-                        }
-			return CL_VIRUS;
-		    }
-		}
-		continue;
-	    }
-	    if(!root->ac_lsigtable[i]->bc_idx) {
-		cli_append_virus(ctx, root->ac_lsigtable[i]->virname);
-		if (SCAN_ALL) {
-		    viruses_found++;
-		    continue;
-		}
- 		return CL_VIRUS;
-	    }
-	    if(cli_bytecode_runlsig(ctx, target_info, &ctx->engine->bcs, root->ac_lsigtable[i]->bc_idx, acdata->lsigcnt[i], acdata->lsigsuboff_first[i], map) == CL_VIRUS) {
-		if (SCAN_ALL) {
-		    viruses_found++;
-		    continue;
-		}
- 		return CL_VIRUS;
-	    }
-	}
+        if (root->ac_lsigtable[i]->type == CLI_LSIG_NORMAL)
+            rc = lsig_eval(ctx, root, acdata, target_info, hash, i);
+#ifdef HAVE_YARA
+        else if (root->ac_lsigtable[i]->type == CLI_YARA_NORMAL || root->ac_lsigtable[i]->type == CLI_YARA_OFFSET)
+            rc = yara_eval(ctx, root, acdata, target_info, hash, i);
+#endif
+        if (rc == CL_VIRUS) {
+            viruses_found = 1;
+            if (SCAN_ALL)
+                continue;
+            break;
+        }
     }
-    if (SCAN_ALL && viruses_found)
+    if (viruses_found)
 	return CL_VIRUS;
     return CL_CLEAN;
 }
@@ -727,6 +825,7 @@ int cli_fmap_scandesc(cli_ctx *ctx, cli_file_t ftype, uint8_t ftonly, struct cli
     uint32_t maxpatlen, offset = 0;
     struct cli_ac_data gdata, tdata;
     struct cli_bm_off toff;
+    struct cli_pcre_off gpoff, tpoff;
     unsigned char digest[CLI_HASH_AVAIL_TYPES][32];
     struct cli_matcher *groot = NULL, *troot = NULL;
     struct cli_target_info info;
@@ -802,12 +901,26 @@ int cli_fmap_scandesc(cli_ctx *ctx, cli_file_t ftype, uint8_t ftonly, struct cli
             cl_hash_destroy(sha256ctx);
             return ret;
         }
+        if((ret = cli_pcre_recaloff(groot, &gpoff, &info, ctx))) {
+            cli_ac_freedata(&gdata);
+            if(info.exeinfo.section)
+                free(info.exeinfo.section);
+
+            cli_hashset_destroy(&info.exeinfo.vinfo);
+            cl_hash_destroy(md5ctx);
+            cl_hash_destroy(sha1ctx);
+            cl_hash_destroy(sha256ctx);
+            return ret;
+
+        }
     }
 
     if(troot) {
         if((ret = cli_ac_initdata(&tdata, troot->ac_partsigs, troot->ac_lsigs, troot->ac_reloff_num, CLI_DEFAULT_AC_TRACKLEN)) || (ret = cli_ac_caloff(troot, &tdata, &info))) {
-            if(!ftonly)
+            if(!ftonly) {
                 cli_ac_freedata(&gdata);
+                cli_pcre_freeoff(&gpoff);
+            }
             if(info.exeinfo.section)
                 free(info.exeinfo.section);
 
@@ -820,8 +933,10 @@ int cli_fmap_scandesc(cli_ctx *ctx, cli_file_t ftype, uint8_t ftonly, struct cli
         if(troot->bm_offmode) {
             if(map->len >= CLI_DEFAULT_BM_OFFMODE_FSIZE) {
                 if((ret = cli_bm_initoff(troot, &toff, &info))) {
-                    if(!ftonly)
+                    if(!ftonly) {
                         cli_ac_freedata(&gdata);
+                        cli_pcre_freeoff(&gpoff);
+                    }
 
                     cli_ac_freedata(&tdata);
                     if(info.exeinfo.section)
@@ -836,6 +951,24 @@ int cli_fmap_scandesc(cli_ctx *ctx, cli_file_t ftype, uint8_t ftonly, struct cli
 
                 bm_offmode = 1;
             }
+        }
+        if ((ret = cli_pcre_recaloff(troot, &tpoff, &info, ctx))) {
+            if(!ftonly) {
+                cli_ac_freedata(&gdata);
+                cli_pcre_freeoff(&gpoff);
+            }
+
+            cli_ac_freedata(&tdata);
+            if(bm_offmode)
+                cli_bm_freeoff(&toff);
+            if(info.exeinfo.section)
+                free(info.exeinfo.section);
+
+            cli_hashset_destroy(&info.exeinfo.vinfo);
+            cl_hash_destroy(md5ctx);
+            cl_hash_destroy(sha1ctx);
+            cl_hash_destroy(sha256ctx);
+            return ret;
         }
     }
 
@@ -883,19 +1016,22 @@ int cli_fmap_scandesc(cli_ctx *ctx, cli_file_t ftype, uint8_t ftonly, struct cli
 
         if(troot) {
                 virname = NULL;
-                ret = matcher_run(troot, buff, bytes, &virname, &tdata, offset, &info, ftype, ftoffset, acmode, acres, map, bm_offmode ? &toff : NULL, ctx);
+                ret = matcher_run(troot, buff, bytes, &virname, &tdata, offset, &info, ftype, ftoffset, acmode, PCRE_SCAN_FMAP, acres, map, bm_offmode ? &toff : NULL, &tpoff, ctx);
 
             if (virname) {
                 /* virname already appended by matcher_run */
                 viruses_found = 1;
             }
             if((ret == CL_VIRUS && !SCAN_ALL) || ret == CL_EMEM) {
-                if(!ftonly)
+                if(!ftonly) {
                     cli_ac_freedata(&gdata);
+                    cli_pcre_freeoff(&gpoff);
+                }
 
                 cli_ac_freedata(&tdata);
                 if(bm_offmode)
                     cli_bm_freeoff(&toff);
+                cli_pcre_freeoff(&tpoff);
 
                 if(info.exeinfo.section)
                     free(info.exeinfo.section);
@@ -910,7 +1046,7 @@ int cli_fmap_scandesc(cli_ctx *ctx, cli_file_t ftype, uint8_t ftonly, struct cli
 
         if(!ftonly) {
             virname = NULL;
-            ret = matcher_run(groot, buff, bytes, &virname, &gdata, offset, &info, ftype, ftoffset, acmode, acres, map, NULL, ctx);
+            ret = matcher_run(groot, buff, bytes, &virname, &gdata, offset, &info, ftype, ftoffset, acmode, PCRE_SCAN_FMAP, acres, map, NULL, &gpoff, ctx);
 
             if (virname) {
                 /* virname already appended by matcher_run */
@@ -918,10 +1054,12 @@ int cli_fmap_scandesc(cli_ctx *ctx, cli_file_t ftype, uint8_t ftonly, struct cli
             }
             if((ret == CL_VIRUS && !SCAN_ALL) || ret == CL_EMEM) {
                 cli_ac_freedata(&gdata);
+                cli_pcre_freeoff(&gpoff);
                 if(troot) {
                     cli_ac_freedata(&tdata);
                     if(bm_offmode)
                         cli_bm_freeoff(&toff);
+                    cli_pcre_freeoff(&tpoff);
                 }
 
                 if(info.exeinfo.section)
@@ -1037,19 +1175,21 @@ int cli_fmap_scandesc(cli_ctx *ctx, cli_file_t ftype, uint8_t ftonly, struct cli
 
     if(troot) {
         if(ret != CL_VIRUS || SCAN_ALL)
-            ret = cli_lsig_eval(ctx, troot, &tdata, &info, (const char *)refhash);
+            ret = cli_exp_eval(ctx, troot, &tdata, &info, (const char *)refhash);
         if (ret == CL_VIRUS)
             viruses_found++;
 
         cli_ac_freedata(&tdata);
         if(bm_offmode)
             cli_bm_freeoff(&toff);
+        cli_pcre_freeoff(&tpoff);
     }
 
     if(groot) {
         if(ret != CL_VIRUS || SCAN_ALL)
-            ret = cli_lsig_eval(ctx, groot, &gdata, &info, (const char *)refhash);
+            ret = cli_exp_eval(ctx, groot, &gdata, &info, (const char *)refhash);
         cli_ac_freedata(&gdata);
+        cli_pcre_freeoff(&gpoff);
     }
 
     if(info.exeinfo.section)

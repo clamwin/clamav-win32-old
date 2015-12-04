@@ -1,4 +1,5 @@
 /*
+ *  Copyright (C) 2015 Cisco Systems, Inc. and/or its affiliates. All rights reserved.
  *  Copyright (C) 2007-2008 Sourcefire, Inc.
  *
  *  Authors: Tomasz Kojm, Nigel Horne, Török Edvin
@@ -202,6 +203,30 @@ int cli_hex2num(const char *hex)
 
     return ret;
 }
+
+int cli_xtoi(const char *hex)
+{
+    int len, val, i;
+    char * hexbuf;
+
+    len = strlen(hex);
+
+    if(len % 2 == 0)
+        return cli_hex2num(hex);
+        
+    hexbuf = cli_calloc(len+2, sizeof(char));
+    if (hexbuf == NULL) {
+        cli_errmsg("cli_xtoi(): cli_malloc fails.\n");
+        return -1;
+    }
+    
+    for(i = 0; i < len; i++)
+        hexbuf[i+1] = hex[i];
+    val = cli_hex2num(hexbuf);
+    free(hexbuf);
+    return val;
+}
+
 
 char *cli_str2hex(const char *string, unsigned int len)
 {
@@ -452,6 +477,34 @@ size_t cli_strtokenize(char *buffer, const char delim, const size_t token_count,
 
 	    return tokens_found;
 	}
+    }
+    return tokens_found;
+}
+
+size_t cli_ldbtokenize(char *buffer, const char delim, const size_t token_count, const char **tokens, int token_skip)
+{
+    size_t tokens_found, i;
+    int within_pcre = 0;
+
+    for(tokens_found = 0; tokens_found < token_count; ) {
+        tokens[tokens_found++] = buffer;
+
+        while (*buffer != '\0') {
+            if (!within_pcre && (*buffer == delim))
+                break;
+            else if ((tokens_found > token_skip) && (*(buffer-1) != '\\') && (*buffer == '/'))
+                within_pcre = !within_pcre;
+            buffer++;
+        }
+
+        if(*buffer != '\0') {
+            *buffer++ = '\0';
+        } else {
+            i = tokens_found;
+            while(i < token_count)
+                tokens[i++] = NULL;
+            return tokens_found;
+        }
     }
     return tokens_found;
 }

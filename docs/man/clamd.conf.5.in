@@ -334,12 +334,12 @@ Detect Possibly Unwanted Applications.
 Default: No
 .TP
 \fBExcludePUA CATEGORY\fR
-Exclude a specific PUA category. This directive can be used multiple times. See http://www.clamav.net/documentation.html#pua for the complete list of PUA categories.
+Exclude a specific PUA category. This directive can be used multiple times. See http://www.clamav.net/doc/pua.html for the complete list of PUA categories.
 .br
 Default: disabled
 .TP
 \fBIncludePUA CATEGORY\fR
-Only include a specific PUA category. This directive can be used multiple times. See http://www.clamav.net/documentation.html#pua for the complete list of PUA categories.
+Only include a specific PUA category. This directive can be used multiple times. See http://www.clamav.net/doc/pua.html for the complete list of PUA categories.
 .br
 Default: disabled
 .TP 
@@ -577,6 +577,45 @@ WARNING: setting this limit too high may result in severe damage or impact perfo
 .br
 Default: 100
 .TP
+\fBPCREMatchLimit NUMBER\fR
+This option sets the maximum calls to the PCRE match function during an instance of regex matching.
+.br
+Instances using more than this limit will be terminated and alert the user but the scan will continue.
+.br
+For more information on match_limit, see the PCRE documentation.
+.br
+Negative values are not allowed.
+.br
+WARNING: setting this limit too high may severely impact performance.
+.br
+Default: 10000
+.TP
+\fBPCRERecMatchLimit NUMBER\fR
+This option sets the maximum recursive calls to the PCRE match function during an instance of regex matching.
+.br
+Instances using more than this limit will be terminated and alert the user but the scan will continue.
+.br
+For more information on match_limit_recursion, see the PCRE documentation.
+.br
+Negative values are not allowed and values > PCREMatchLimit are superfluous.
+.br
+WARNING: setting this limit too high may severely impact performance.
+.br
+Default: 5000
+.TP
+\fBPCREMaxFileSize SIZE\fR
+This option sets the maximum filesize for which PCRE subsigs will be executed.
+.br
+Files exceeding this limit will not have PCRE subsigs executed unless a subsig is encompassed to a smaller buffer.
+.br
+Negative values are not allowed.
+.br
+Setting this value to zero disables the limit.
+.br
+WARNING: setting this limit too high or disabling it may severely impact performance.
+.br
+Default: 25M
+.TP
 \fBScanOnAccess BOOL\fR
 This option enables on-access scanning (Linux only)
 .br
@@ -603,6 +642,21 @@ Default: disabled
 Files larger than this value will not be scanned in on access.
 .br
 Default: 5M
+.TP
+\fBOnAccessMountPath STRING\fR
+Specifies a mount point (including all files and directories under it), which should be scanned on access. This option can be used multiple times.
+.br
+Default: disabled
+.TP
+\fBOnAccessDisableDDD BOOL\fR
+Disables the dynamic directory determination system which allows for recursively watching include paths.
+.br
+Default: no
+.TP
+\fBOnAccessPrevention BOOL\fR
+Enables fanotify blocking when malicious files are found.
+.br
+Default: disabled
 .TP
 \fBDisableCertCheck BOOL\fR
 Disable authenticode certificate chain verification in PE files.

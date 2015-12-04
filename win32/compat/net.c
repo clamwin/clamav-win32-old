@@ -1,4 +1,5 @@
 /*
+ *  Copyright (C) 2015 Cisco Systems, Inc. and/or its affiliates. All rights reserved.
  *  Copyright (C) 2009 Sourcefire, Inc.
  *
  *  Authors: aCaB <acab@clamav.net>
@@ -330,10 +331,6 @@ const char *w32_inet_ntop(int af, const void *src, char *dst, socklen_t size) {
     }
     strcpy(dst, ret);
     return ret;
-}
-
-struct hostent *w32_gethostbyname(const char *name) {
-    return gethostbyname(name);
 }
 
 int w32_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout) {

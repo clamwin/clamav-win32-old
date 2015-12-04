@@ -1,4 +1,5 @@
 /*
+ *  Copyright (C) 2015 Cisco Systems, Inc. and/or its affiliates. All rights reserved.
  *  Copyright (C) 2009-2013 Sourcefire, Inc.
  *  Author: Tomasz Kojm <tkojm@clamav.net>
  *
@@ -201,7 +202,7 @@ static void help(void)
     printf("\n");
     printf("           Clam AntiVirus: Configuration Tool %s\n", get_version());
     printf("           By The ClamAV Team: http://www.clamav.net/about.html#credits\n");
-    printf("           (C) 2009 Sourcefire, Inc.\n\n");
+    printf("           (C) 2009-2015 Cisco Systems, Inc.\n\n");
 
     printf("    --help                 -h         Show help\n");
     printf("    --version              -V         Show version\n");
@@ -457,8 +458,12 @@ int main(int argc, char **argv)
 #ifdef HAVE_BZLIB_H
 	printf("BZIP2 ");
 #endif
+
 #ifdef HAVE_LIBXML2
 	printf("LIBXML2 ");
+#endif
+#ifdef HAVE_PCRE
+	printf("PCRE ");
 #endif
 #ifdef HAVE_ICONV
 	printf("ICONV ");

@@ -18,6 +18,7 @@ CLAMAV_PUBLIC {
     cl_engine_set_clcb_pre_scan;
     cl_engine_set_clcb_post_scan;
     cl_engine_set_clcb_progress;
+    cl_engine_set_clcb_virus_found;
     cl_engine_set_clcb_sigload;
     cl_engine_set_clcb_pre_cache;
     cl_engine_settings_copy;
@@ -58,15 +59,26 @@ CLAMAV_PUBLIC {
     cl_finish_hash;
     cl_hash_destroy;
     cl_engine_stats_enable;
+    lsig_sub_matched;
 };
 CLAMAV_PRIVATE {
   global:
     cli_sigperf_print; 
     cli_sigperf_events_destroy; 
+    cli_pcre_perf_print;
+    cli_pcre_perf_events_destroy;
+    cli_pcre_init;
+    cli_pcre_build;
+    cli_pcre_scanbuf;
+    cli_pcre_recaloff;
+    cli_pcre_freeoff;
 
     cli_gettmpdir;
     cli_strtok;
     cli_strtokenize;
+    cli_ldbtokenize;
+    cli_strlcat;
+    cli_strlcpy;
     cli_cvdunpack;
     cli_regcomp;
     cli_regexec;
@@ -94,6 +106,9 @@ CLAMAV_PRIVATE {
     cli_str2hex;
     cli_hashfile;
     cli_hashstream;
+    text_normalize_init;
+    text_normalize_reset;
+    text_normalize_map;
     html_normalise_map;
     cli_utf16toascii;
 
@@ -151,6 +166,7 @@ CLAMAV_PRIVATE {
     cli_ac_freedata;
     cli_ac_free;
     cli_ac_chklsig;
+    cli_sigopts_handler;
     cli_parse_add;
     cli_bm_init;
     cli_bm_scanbuff;

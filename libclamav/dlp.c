@@ -1,6 +1,7 @@
 /* 
  *  Simple library to detect and validate SSN and Credit Card numbers.
  *
+ *  Copyright (C) 2015 Cisco Systems, Inc. and/or its affiliates. All rights reserved.
  *  Copyright (C) 2007-2008 Sourcefire, Inc.
  *
  *  Authors: Martin Roesch <roesch@sourcefire.com>
@@ -36,6 +37,9 @@
 /* detection mode macros for the contains_* functions */
 #define DETECT_MODE_DETECT  0
 #define DETECT_MODE_COUNT   1
+
+#define IIN_SIZE 6
+#define MAX_CC_BREAKS 8
 
 /* group number mapping is here */
 /* http://www.socialsecurity.gov/employer/highgroup.txt */
@@ -116,6 +120,58 @@ static int ssn_max_group[MAX_AREA+1] = { 0,
 */
 
 
+/*
+  Following is a table of payment card "issuer identification number" ranges
+  and additional info such as card number length.
+*/
+
+struct iin_map_struct {
+    uint32_t iin_start;
+    uint32_t iin_end;
+    uint8_t card_len;
+    uint8_t luhn;
+    const char* iin_name;
+};
+
+/* Maestro card range, 550000-699999, encompasses ranges
+   of several other cards including Discover and UnionPay.
+*/
+
+static struct iin_map_struct iin_map[] = {
+    {100000, 199999, 15, 1, "UATP"},
+    {300000, 305999, 14, 1, "Diner's Club - Carte Blanche"},
+    {309500, 309599, 14, 1, "Diner's Club International"},
+    {340000, 349999, 15, 1, "American Express"},
+    {352800, 358999, 16, 1, "JCB"},
+    {360000, 369999, 14, 1, "Diner's Club International"},
+    {370000, 379999, 15, 1, "American Express"},
+    {380000, 399999, 16, 1, "Diner's Club International"},
+    {400000, 499999, 16, 1, "Visa"},
+    {500000, 509999, 16, 1, "Maestro"},
+    {510000, 559999, 16, 1, "Master Card"},
+    {560000, 699999, 16, 1, "Maestro/Discover/UnionPay/etc."},
+    {0}
+};
+
+/* Fixme: some card ranges can have lengths other than 16 */
+
+static const struct iin_map_struct * get_iin(char * digits)
+{
+    int iin = atoi(digits);
+    int i = 0;
+
+    while (iin_map[i].iin_start != 0) {
+        if (iin < iin_map[i].iin_start)
+            break;
+        if (iin <= iin_map[i].iin_end) {
+            cli_dbgmsg("Credit card IIN %s matched range for %s\n", digits, iin_map[i].iin_name);
+            return &iin_map[i];
+        }
+        i++;
+    }
+    cli_dbgmsg("Credit card %s did not match an IIN range\n", digits);
+    return NULL;
+}
 
 int dlp_is_valid_cc(const unsigned char *buffer, int length)
 {
@@ -125,6 +181,9 @@ int dlp_is_valid_cc(const unsigned char *buffer, int length)
     int val = 0;
     int digits = 0;
     char cc_digits[20];
+    int pad_allowance = MAX_CC_BREAKS;
+    const struct iin_map_struct * iin;
+    int need;
     
     if(buffer == NULL || length < 13)
         return 0;
@@ -132,29 +191,51 @@ int dlp_is_valid_cc(const unsigned char *buffer, int length)
      * credit cards
      * reference => http://www.beachnet.com/~hstiles/cardtype.html
      */
-    if(!isdigit(buffer[0]) || buffer[0] > '6')
+    if(!isdigit(buffer[0]) || buffer[0] > '6' || buffer[0] == 2)
         return 0;
-        
-    if(length > 19)
-        length = 19;
 
-    for(i = 0; i < length; i++)
-    {
-	if(isdigit(buffer[i]) == 0)
-	{
-	    if(buffer[i] == ' ' || buffer[i] == '-')
-		continue;
-	    else
-		break;
+    if(length > 19 + pad_allowance)     /* max credit card length is 19, with allowance for punctuation */
+        length = 19 + pad_allowance;
+
+    /* Look for possible 6 digit IIN */
+    for(i = 0; i < length && digits < IIN_SIZE; i++) {
+	if(isdigit(buffer[i]) == 0) {
+            if(buffer[i] == ' ' || buffer[i] == '-')
+                if (pad_allowance-- > 0)
+                    continue;
+            break;
 	}
 	cc_digits[digits] = buffer[i];
 	digits++;
     }
-    cc_digits[digits] = 0;
 
+    if (digits == IIN_SIZE)
+        cc_digits[digits] = 0;
+    else 
+        return 0;
+
+    /* See if it is a valid IIN. */ 
+    iin = get_iin(cc_digits);
+    if (iin == NULL)
+         return 0;
+
+    /* Look for the remaining needed digits. */
+    for (/*same 'i' from previous for-loop*/; i < length && digits < iin->card_len; i++) {
+	if(isdigit(buffer[i]) == 0) {
+            if(buffer[i] == ' ' || buffer[i] == '-')
+                if (pad_allowance-- > 0)
+                    continue;
+            break;
+	}
+	cc_digits[digits] = buffer[i];
+        digits++;
+    }
+
+    // should be !isdigit(buffer[i]) ?
     if(digits < 13 || (i < length && isdigit(buffer[i])))
 	return 0;
 
+    //figure out luhn digits 
     for(i = digits - 1; i >= 0; i--)
     {
 	val = cc_digits[i] - '0';
@@ -169,70 +250,9 @@ int dlp_is_valid_cc(const unsigned char *buffer, int length)
     if(sum % 10)
 	return 0;
 
-    if(digits == 13) /* VISA */
-    {
-	if(cc_digits[0] == '4') {
-	    cli_dbgmsg("dlp_is_valid_cc: VISA [1] (%s)\n", cc_digits);
-	    return 1;
-	}
-    }
-    else if(digits == 14) /* Diners Club */
-    {
-	if(cc_digits[0] == '3' && (cc_digits[1] == '6' || cc_digits[1] == '8'))
-	{
-	    cli_dbgmsg("dlp_is_valid_cc: Diners Club [1] (%s)\n", cc_digits);
-	    return 1;
-	}
-	else if(cc_digits[0] == '3' && cc_digits[1] == '0')
-	{
-	    val = cc_digits[2] - '0';
-	    if(val >= 0 && val <= 5) {
-		cli_dbgmsg("dlp_is_valid_cc: Diners Club [2] (%s)\n", cc_digits);
-		return 1;
-	    }
-	}
-    }
-    else if(digits == 15)
-    {
-	if(cc_digits[0] == '3' && (cc_digits[1] == '4' || cc_digits[1] == '7')) /*AMEX*/
-	{
-	    cli_dbgmsg("dlp_is_valid_cc: AMEX (%s)\n", cc_digits);
-	    return 1;
-	}
-	else if(!strncmp(cc_digits, "2131", 4) || !strncmp(cc_digits, "1800", 4))
-	{ /* JCB  */
-	    cli_dbgmsg("dlp_is_valid_cc: JCB [1] (%s)\n", cc_digits);
-	    return 1;
-	}
-    }
-    else if(digits == 16)
-    {
-	if(cc_digits[0] == '3') /* JCB */
-	{
-	    cli_dbgmsg("dlp_is_valid_cc: JCB [2] (%s)\n", cc_digits);
-	    return 1;
-	}
-	else if(cc_digits[0] == '4') /* VISA */
-	{
-	    cli_dbgmsg("dlp_is_valid_cc: VISA [2] (%s)\n", cc_digits);
-	    return 1;
-	}
-	else if(cc_digits[0] == '5') /* MASTERCARD */
-	{
-	    val = cc_digits[1] - '0';
-	    if(val >= 1 && val <= 5) {
-		cli_dbgmsg("dlp_is_valid_cc: MASTERCARD (%s)\n", cc_digits);
-		return 1;
-	    }
-	}
-	else if(!strncmp(cc_digits, "6011", 4)) /* Discover */
-	{
-	    cli_dbgmsg("dlp_is_valid_cc: Discover (%s)\n", cc_digits);
-	    return 1;
-	} 
-    }
+    cli_dbgmsg("Luhn algorithm successful for %s\n", cc_digits);
 
-    return 0;
+    return 1;
 }
 
 static int contains_cc(const unsigned char *buffer, int length, int detmode)
@@ -454,4 +474,176 @@ int dlp_has_normal_ssn(const unsigned char *buffer, int length)
                         length, 
                         SSN_FORMAT_HYPHENS, 
                         DETECT_MODE_DETECT);
+}
+
+/*  The program below checks for the instances of where a   */
+/*  Canadian Bank Routing Number or EFT is found, or if a   */
+/*  U.S. MICR Bank Routing Number is encountered.           */
+
+/*  Author: Bill Parker                                     */
+/*  Date:   February 17, 2013                               */
+/*  Last Modified: February 25, 2013                        */
+
+/*  Purpose: To provide Snort and ClamAV the ability to     */
+/*  detect canadian and U.S. bank routing transaction       */
+/*  numbers via the DLP module in ClamAV or the SDF pre-    */
+/*  processor in the Snort IDS.                             */
+
+
+/*  Are first three or last three digits a valid bank code  */
+int is_bank_code_valid(int bank_code)
+{
+    switch (bank_code) {
+        case 1:     return 1;    /*  Bank of Montreal    */
+        case 2:     return 1;    /*  Bank of Nova Scotia */
+        case 3:     return 1;    /*  Royal Bank of Canada    */
+        case 4:     return 1;    /*  Toronto-Dominion Bank   */
+        case 6:     return 1;    /*  National Bank of Canada */
+        case 10:    return 1;    /*  Canadian Imperial Bank of Commerce  */
+        case 16:    return 1;    /*  HSBC Canada */
+        case 30:    return 1;    /*  Canadian Western Bank   */
+        case 39:    return 1;    /*  Laurentian Bank of Canada   */
+        case 117:   return 1;    /*  Government of Canada    */
+        case 127:   return 1;    /*  Canada Post (Money Orders)  */
+        case 177:   return 1;    /*  Bank of Canada  */
+        case 219:   return 1;    /*  ATB Financial   */
+        case 260:   return 1;    /*  Citibank Canada */
+        case 290:   return 1;    /*  UBS Bank (Canada)   */
+        case 308:   return 1;    /*  Bank of China (Canada)  */
+        case 309:   return 1;    /*  Citizens Bank of Canada */
+        case 326:   return 1;    /*  President’s Choice Financial    */
+        case 338:   return 1;    /*  Canadian Tire Bank  */
+        case 340:   return 1;    /*  ICICI Bank Canada   */
+        case 509:   return 1;    /*  Canada Trust    */
+        case 540:   return 1;    /*  Manulife Bank   */
+        case 614:   return 1;    /*  ING Direct Canada   */
+        case 809:   return 1;    /*  Central 1 [Credit Union] – BC Region    */
+        case 815:   return 1;    /*  Caisses Desjardins du Québec    */
+        case 819:   return 1;    /*  Caisses populaires Desjardins du Manitoba   */
+        case 828:   return 1;    /*  Central 1 [Credit Union] – ON Region    */
+        case 829:   return 1;    /*  Caisses populaires Desjardins de l’Ontario  */
+        case 837:   return 1;    /*  Meridian Credit Union   */
+        case 839:   return 1;    /*  Credit Union Heritage (Nova Scotia) */
+        case 865:   return 1;    /*  Caisses populaires Desjardins acadiennes */
+        case 879:   return 1;    /*  Credit Union Central of Manitoba    */
+        case 889:   return 1;    /*  Credit Union Central of Saskatchewan    */
+        case 899:   return 1;    /*  Credit Union Central Alberta    */
+        case 900:   return 1;    /*  Unknown???  */
+        default:    return 0;    /*  NO MATCH...FAIL */
+    }   /*  end if switch(bank_code)    */
+
+    return 0;
+}       /*  end function is_bank_code_valid()   */
+
+/*  This function checks if the supplied string is a valid  */
+/*  canadian transit number, the format is as follows:      */
+
+/*  XXXXX-YYY where XXXXX is a branch number, and YYY is    */
+/*  the institutional number.                               */
+
+/*  note: it does NOT appear that the canadian RTN or EFT   */
+/*  number formats contain any type of checksum algorithm   */
+/*  or a check digit.                                       */
+int cdn_ctn_is_valid(const char *buffer, int length)
+{
+    int i;
+    int bank_code = 0;          /*  last three digits of Canada RTN/MICR is Bank I.D.   */
+
+    if (buffer == NULL || length < 9)   /* if the buffer is empty or  */
+        return 0;                       /* the length is less than 9, it's not valid    */
+
+    if (buffer[5] != '-') return 0;     /* if the 6th char isn't a '-', not a valid RTN */
+
+    for (i = 0; i < 5; i++)
+        if (isdigit(buffer[i]) == 0)
+            return 0;
+
+    /*  Check the various branch codes which are listed, but there  */
+    /*  may be more valid codes which could be added as well...     */
+
+    /*  convert last three elements in buffer to a numeric value    */
+
+    for (i = 6; i < 9; i++) {
+        if (isdigit(buffer[i]) == 0)
+            return 0;
+        bank_code = (bank_code * 10) + (buffer[i] - '0');
+    }
+
+    /* now have a switch sandwich for bank codes    */
+    return(is_bank_code_valid(bank_code));  /*  return 1 if valid, 0 if not */
+}
+
+/*  If the string is a canadian EFT (Electronic Fund        */
+/*  Transaction), the format is as follows:                 */
+
+/*  0YYYXXXX, where a leading zero is required, XXXXX is a  */
+/*  branch number, and YYY is the institution number.       */
+
+/*  note: it does NOT appear that the canadian RTN or EFT   */
+/*  number formats contain any type of checksum algorithm   */
+/*  or a check digit.                                       */
+
+int cdn_eft_is_valid(const char *buffer, int length)
+{
+    int bank_code = 0;
+    int i;
+
+    if (buffer == NULL || length < 9)   /* if the buffer is empty or  */
+        return 0;                       /* the length is less than 9, it's not valid    */
+
+    if (buffer[0] != '0') return 0;     /* if the 1st char isn't a '0', not a valid EFT */
+
+    for (i = 1; i < 4; i++)
+    {
+        if (isdigit(buffer[i]) == 0)
+            return 0;
+        bank_code = (bank_code * 10) + (buffer[i] - '0');
+    }
+
+    /*  Check the various branch codes which are listed, but there  */
+    /*  may be more valid codes which could be added as well...     */
+    if (!is_bank_code_valid(bank_code))
+        return 0;
+
+    for(i = 4; i < 9; i++)
+        if (isdigit(buffer[i]) == 0)
+            return 0;
+
+    return 1;
+}
+
+int us_micr_is_valid(const char *buffer, int length)
+{
+    int result, sum, sum1, sum2, sum3;
+    int i;
+    unsigned char micr_digits[9];
+
+    if (buffer == NULL || length < 9)   /* if the buffer is empty or    */
+        return 0;                       /* the length is < 9, it's not valid    */
+
+    /* loop and make sure all the characters are actually digits    */
+
+    for (i = 0; i < 9; i++)
+    {
+        if (isdigit(buffer[i]) == 0)
+            return 0;
+        micr_digits[i] = buffer[i];
+    }
+
+    /*  see if we have a valid MICR number via the following formula */
+
+    /*  7 * (micr_digits[0] + micr_digits[3] + micr_digits[6]) +    */
+    /*  3 * (micr_digits[1] + micr_digits[4] + micr_digits[7]) +    */
+    /*  9 * (micr_digits[2] + micr_digits[5]) (the check digit is   */
+    /*  computed by the sum above modulus 10                        */
+
+    sum1 = 7 * ((micr_digits[0] - '0') + (micr_digits[3] - '0') + (micr_digits[6] - '0'));
+    sum2 = 3 * ((micr_digits[1] - '0') + (micr_digits[4] - '0') + (micr_digits[7] - '0'));
+    sum3 = 9 * ((micr_digits[2] - '0') + (micr_digits[5] - '0'));
+    sum = sum1 + sum2 + sum3;
+    result = sum % 10;
+
+    if (result == (micr_digits[8] - '0'))
+        return 1;   /* last digit of MICR matches result    */
+    return 0;       /* MICR number isn't valid  */
 }
