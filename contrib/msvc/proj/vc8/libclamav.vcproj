@@ -844,6 +844,34 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\..\libclamav\yara_arena.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\yara_compiler.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\yara_exec.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\yara_grammar.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\yara_hash.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\yara_lexer.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\yara_parser.c"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\..\libclamav\yc.c"
 				>
 			</File>
@@ -1975,6 +2003,38 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\libclamav\xz_iface.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\yara_arena.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\yara_clam.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\yara_compiler.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\yara_exec.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\yara_grammar.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\yara_hash.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\yara_lexer.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\yara_parser.h"
 				>
 			</File>
 			<File

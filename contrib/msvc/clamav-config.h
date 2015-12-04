@@ -448,7 +448,7 @@
 #undef HAVE_WORKING_ARGZ
 
 /* yara sources are compiled in */
-#undef HAVE_YARA
+#define HAVE_YARA 1
 
 /* For internal use only - DO NOT DEFINE */
 #undef HAVE__INTERNAL__SHA_COLLECT
