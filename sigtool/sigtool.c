@@ -43,8 +43,6 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <sys/wait.h>
-#else
-#include "w32_stat.h"
 #endif
 #include <dirent.h>
 #include <ctype.h>
