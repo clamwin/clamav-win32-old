@@ -525,12 +525,12 @@ static void scanfile(const char *filename, struct cl_engine *engine, const struc
                 funmap(maptype);
             }
         }
-    close(fd);
+        close(fd);
         if (type == CL_TYPE_MAIL)
             logg("~%s: no action performed on a mailbox\n", filename);
         else
-        action(filename);
-}
+            action(filename);
+    }
     else
         close(fd);
 }
