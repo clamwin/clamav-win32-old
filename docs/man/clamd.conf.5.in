@@ -467,6 +467,20 @@ If you turn off this option, the original files will still be scanned, but witho
 .br 
 Default: yes
 .TP
+\fBScanXMLDOCS BOOL\fR
+This option enables scanning xml-based document files supported by libclamav.
+.br
+If you turn off this option, the original files will still be scanned, but without additional processing.
+.br
+Default: yes
+.TP
+\fBScanHWP3 BOOL\fR
+This option enables scanning HWP3 files.
+.br
+If you turn off this option, the original files will still be scanned, but without additional processing.
+.br
+Default: yes
+.TP 
 \fBScanArchive BOOL\fR
 Scan within archives and compressed files.
 .br
@@ -576,6 +590,19 @@ Negative values are not allowed.
 WARNING: setting this limit too high may result in severe damage or impact performance.
 .br
 Default: 100
+.TP
+\fBMaxRecHWP3 NUMBER\fR
+This option sets the maximum recursive calls to HWP3 parsing function.
+.br
+HWP3 files using more than this limit will be terminated and alert the user.
+.br
+Scans will be unable to scan any HWP3 attachments if the recursive limit is reached.
+.br
+Negative values are not allowed.
+.br
+WARNING: setting this limit too high may result in severe damage or impact performance.
+.br
+Default: 16
 .TP
 \fBPCREMatchLimit NUMBER\fR
 This option sets the maximum calls to the PCRE match function during an instance of regex matching.

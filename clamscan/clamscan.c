@@ -274,6 +274,8 @@ void help(void)
     mprintf("    --scan-pdf[=yes(*)/no]               Scan PDF files\n");
     mprintf("    --scan-swf[=yes(*)/no]               Scan SWF files\n");
     mprintf("    --scan-html[=yes(*)/no]              Scan HTML files\n");
+    mprintf("    --scan-xmldocs[=yes(*)/no]           Scan xml-based document files\n");
+    mprintf("    --scan-hwp3[=yes(*)/no]              Scan HWP3 files\n");
     mprintf("    --scan-archive[=yes(*)/no]           Scan archive files (supported by libclamav)\n");
     mprintf("    --detect-broken[=yes/no(*)]          Try to detect broken executable files\n");
     mprintf("    --block-encrypted[=yes/no(*)]        Block encrypted archives\n");
@@ -292,6 +294,7 @@ void help(void)
     mprintf("    --max-ziptypercg=#n                  Maximum size zip to type reanalyze\n");
     mprintf("    --max-partitions=#n                  Maximum number of partitions in disk image to be scanned\n");
     mprintf("    --max-iconspe=#n                     Maximum number of icons in PE file to be scanned\n");
+    mprintf("    --max-rechwp3=#n                     Maximum recursive calls to HWP3 parsing function\n");
 #if HAVE_PCRE
     mprintf("    --pcre-match-limit=#n                Maximum calls to the PCRE match function.\n");
     mprintf("    --pcre-recmatch-limit=#n             Maximum recursive calls to the PCRE match function.\n");
@@ -301,6 +304,7 @@ void help(void)
     mprintf("    --disable-pe-stats                   Disable submission of individual PE sections in stats submissions\n");
     mprintf("    --stats-timeout=#n                   Number of seconds to wait for waiting a response back from the stats server\n");
     mprintf("    --stats-host-id=UUID                 Set the Host ID used when submitting statistical info.\n");
+    mprintf("    --disable-cache                      Disable caching and cache checks for hash sums of scanned files.\n");
     mprintf("\n");
     mprintf("(*) Default scan settings\n");
     mprintf("(**) Certain files (e.g. documents, archives, etc.) may in turn contain other\n");

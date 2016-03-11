@@ -930,7 +930,7 @@ getfile_mirman (const char *srcfile, const char *destfile,
             percentage = (int) (100 * (float) totaldownloaded / totalsize);
 
 #ifdef HAVE_UNISTD_H
-        if (!mprintf_quiet && isatty(fileno(stdout)))
+        if (!mprintf_quiet && (mprintf_progress || isatty(fileno(stdout))))
 #else
         if (!mprintf_quiet)
 #endif
@@ -2177,7 +2177,8 @@ updatedb (const char *dbname, const char *hostname, char *ip, int *signo,
         logg ("^Your ClamAV installation is OUTDATED!\n");
         logg ("^Current functionality level = %d, recommended = %d\n", flevel,
               current->fl);
-        logg ("DON'T PANIC! Read http://www.clamav.net/support/faq\n");
+        logg ("DON'T PANIC! Read http://www.clamav.net/documents/upgrading-clamav\n");
+
     }
 
     *signo += current->sigs;
@@ -2497,7 +2498,7 @@ downloadmanager (const struct optstruct *opts, const char *hostname,
                         {
                             logg ("^Your ClamAV installation is OUTDATED!\n");
                             logg ("^Local version: %s Recommended version: %s\n", vstr, newver);
-                            logg ("DON'T PANIC! Read http://www.clamav.net/support/faq\n");
+                            logg ("DON'T PANIC! Read http://www.clamav.net/documents/upgrading-clamav\n");
                             outdated = 1;
                         }
                     }

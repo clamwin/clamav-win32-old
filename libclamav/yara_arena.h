@@ -17,6 +17,7 @@ limitations under the License.
 #ifndef YR_ARENA_H
 #define YR_ARENA_H
 
+#include <stdint.h>
 #include <stddef.h>
 
 

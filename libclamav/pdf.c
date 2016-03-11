@@ -701,6 +701,10 @@ static void aes_decrypt(const unsigned char *in, off_t *length, unsigned char *q
 
     cli_dbgmsg("aes_decrypt: Calling rijndaelSetupDecrypt\n");
     nrounds = rijndaelSetupDecrypt(rk, (const unsigned char *)key, key_n*8);
+    if (!nrounds) {
+	cli_dbgmsg("cli_pdf: aes_decrypt: nrounds = 0\n");
+	return;
+    }
     cli_dbgmsg("aes_decrypt: Beginning rijndaelDecrypt\n");
 
     while (len >= 16) {
@@ -785,7 +789,7 @@ char *decrypt_any(struct pdf_struct *pdf, uint32_t id, const char *in, off_t *le
     if (n > 16)
         n = 16;
 
-    q = cli_malloc(*length);
+    q = cli_calloc(*length, sizeof(char));
     if (!q) {
         noisy_warnmsg("decrypt_any: malloc failed\n");
         return NULL;

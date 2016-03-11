@@ -176,13 +176,15 @@ typedef enum {
 #define CL_SCAN_ALLMATCHES		0x200000
 #define CL_SCAN_SWF			0x400000
 #define CL_SCAN_PARTITION_INTXN         0x800000
+#define CL_SCAN_XMLDOCS                 0x1000000
+#define CL_SCAN_HWP3                    0x2000000
 #define CL_SCAN_FILE_PROPERTIES         0x10000000
 //#define UNUSED                        0x20000000
 #define CL_SCAN_PERFORMANCE_INFO        0x40000000 /* collect performance timings */
 #define CL_SCAN_INTERNAL_COLLECT_SHA    0x80000000 /* Enables hash output in sha-collect builds - for internal use only */
 
 /* recommended scan settings */
-#define CL_SCAN_STDOPT		(CL_SCAN_ARCHIVE | CL_SCAN_MAIL | CL_SCAN_OLE2 | CL_SCAN_PDF | CL_SCAN_HTML | CL_SCAN_PE | CL_SCAN_ALGORITHMIC | CL_SCAN_ELF | CL_SCAN_SWF)
+#define CL_SCAN_STDOPT		(CL_SCAN_ARCHIVE | CL_SCAN_MAIL | CL_SCAN_OLE2 | CL_SCAN_PDF | CL_SCAN_HTML | CL_SCAN_PE | CL_SCAN_ALGORITHMIC | CL_SCAN_ELF | CL_SCAN_SWF | CL_SCAN_XMLDOCS | CL_SCAN_HWP3)
 
 /* cl_countsigs options */
 #define CL_COUNTSIGS_OFFICIAL	    0x1
@@ -246,6 +248,7 @@ enum cl_engine_field {
     CL_ENGINE_STATS_TIMEOUT,        /* uint32_t */
     CL_ENGINE_MAX_PARTITIONS,       /* uint32_t */
     CL_ENGINE_MAX_ICONSPE,          /* uint32_t */
+    CL_ENGINE_MAX_RECHWP3,          /* uint32_t */
     CL_ENGINE_TIME_LIMIT,           /* uint32_t */
     CL_ENGINE_PCRE_MATCH_LIMIT,     /* uint64_t */
     CL_ENGINE_PCRE_RECMATCH_LIMIT,  /* uint64_t */

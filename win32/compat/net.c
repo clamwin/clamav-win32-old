@@ -19,7 +19,6 @@
  *  MA 02110-1301, USA.
  */
 
-#ifdef NOCLAMWIN
 #include <stdio.h>
 #include <winsock2.h>
 #include <Ws2tcpip.h>
@@ -365,7 +364,6 @@ int w32_shutdown(int sockfd, int how) {
     }
     return 0;
 }
-#endif /* NOCLAMWIN */
 
 struct w32polldata {
     HANDLE setme;
@@ -476,7 +474,6 @@ int poll_with_event(struct pollfd *fds, int nfds, int timeout, HANDLE event) {
     return ret;
 }
 
-#ifdef NOCLAMWIN
 int fcntl(int fd, int cmd, ...) {
     va_list ap;
     va_start(ap, cmd);
@@ -493,5 +490,3 @@ int fcntl(int fd, int cmd, ...) {
     }
     return -1;
 }
-#endif
-

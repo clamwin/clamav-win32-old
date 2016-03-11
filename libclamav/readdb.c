@@ -760,26 +760,73 @@ char *cli_dbgets(char *buff, unsigned int size, FILE *fs, struct cli_dbio *dbio)
     }
 }
 
+static char *cli_signorm(const char *signame)
+{
+    char *new_signame = NULL;
+    size_t pad = 0;
+    size_t nsz;
+
+    if (!signame)
+        return NULL;
+
+    nsz = strlen(signame);
+
+    if (nsz > 11) {
+        if (!strncmp(signame+nsz-11, ".UNOFFICIAL", 11))
+            nsz -= 11;
+        else
+            return NULL;
+    } else if (nsz > 2)
+        return NULL;
+    
+    if (nsz < 3) {
+        pad = 3 - nsz;
+        nsz = 3;
+    }
+
+    new_signame = malloc(nsz + 1);
+    if (!new_signame) 
+        return NULL;
+
+    memcpy(new_signame, signame, nsz-pad);
+    new_signame[nsz] = '\0';
+
+    while (pad > 0)
+        new_signame[nsz-pad--] = '\x20';
+
+    return new_signame;
+}
+
 static int cli_chkign(const struct cli_matcher *ignored, const char *signame, const char *entry)
 {
+
     const char *md5_expected = NULL;
+    char *norm_signame;
     unsigned char digest[16];
+    int ret = 0;
 
     if(!ignored || !signame || !entry)
         return 0;
 
-    if(cli_bm_scanbuff((const unsigned char *) signame, strlen(signame), &md5_expected, NULL, ignored, 0, NULL, NULL,NULL) == CL_VIRUS) {
-        if(md5_expected) {
-            cl_hash_data("md5", entry, strlen(entry), digest, NULL);
-            if(memcmp(digest, (const unsigned char *) md5_expected, 16))
-                return 0;
-        }
+    norm_signame = cli_signorm(signame);
+    if (norm_signame != NULL)
+	signame = norm_signame;
 
-        cli_dbgmsg("Ignoring signature %s\n", signame);
-        return 1;
-    }
+    if(cli_bm_scanbuff((const unsigned char *) signame, strlen(signame), &md5_expected, NULL, ignored, 0, NULL, NULL,NULL) == CL_VIRUS)
+        do {
+            if(md5_expected) {
+                cl_hash_data("md5", entry, strlen(entry), digest, NULL);
+                if(memcmp(digest, (const unsigned char *) md5_expected, 16))
+                    break;
+            }
+            
+            cli_dbgmsg("Ignoring signature %s\n", signame);
+            ret = 1;
+        } while (0);
 
-    return 0;
+    if (norm_signame)
+	free(norm_signame);
+    return ret;
 }
 
 static int cli_chkpua(const char *signame, const char *pua_cats, unsigned int options)
@@ -2273,6 +2320,18 @@ static int cli_loadign(FILE *fs, struct cl_engine *engine, unsigned int options,
 	    ret = CL_EMALFDB;
 	    break;
 	}
+        if (len < 3) {
+            int pad = 3 - len;
+            /* patch-up for Boyer-Moore minimum length of 3: pad with spaces */ 
+            if (signame != buffer) {
+                strncpy (buffer, signame, len);
+                signame = buffer;
+            }
+            buffer[3] = '\0';
+            while (pad > 0)
+                buffer[3-pad--] = '\x20';
+            len = 3;
+        }
 
         new = (struct cli_bm_patt *) mpool_calloc(engine->mempool, 1, sizeof(struct cli_bm_patt));
 	if(!new) {
@@ -3079,6 +3138,16 @@ static char *parse_yara_hex_string(YR_STRING *string, int *ret)
         }
     }
 
+/* FIXME: removing this code because anchored bytes are not sufficiently 
+   general for the purposes of yara rule to ClamAV sig conversions.
+   1. ClamAV imposes a maximum value for the upper range limit of 32:
+      #define AC_CH_MAXDIST 32
+      Values larger cause an error in matcher-ac.c
+   2. If the upper range values is not present, ClamAV sets the missing
+      range value to be equal to the lower range value. This changes the
+      semantic of yara jumps.
+*/
+#ifdef YARA_ANCHOR_SUPPORT
     /* backward anchor overwrite, 2 (hex chars in one byte) */
     if ((ovr = strchr(res, '{')) && ((ovr - res) == 2)) {
         *ovr = '[';
@@ -3101,6 +3170,16 @@ static char *parse_yara_hex_string(YR_STRING *string, int *ret)
             return NULL;
         }
     }
+#else
+    if (((ovr = strchr(res, '{')) && ((ovr - res) == 2)) ||
+        ((ovr = strrchr(res, '}')) && ((res+j - ovr) == 3))) {
+        cli_errmsg("parse_yara_hex_string: Single byte subpatterns unsupported in ClamAV\n");
+        free(res);
+        if (ret != NULL)
+            *ret = CL_EMALFDB;
+        return NULL;
+    }
+#endif
 
     if (ret)
         *ret = CL_SUCCESS;

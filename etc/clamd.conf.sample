@@ -318,6 +318,18 @@ Example
 # Default: yes
 #ScanSWF yes
 
+# This option enables scanning xml-based document files supported by libclamav.
+# If you turn off this option, the original files will still be scanned, but
+# without additional processing.
+# Default: yes
+#ScanXMLDOCS yes
+
+# This option enables scanning of HWP3 files.
+# If you turn off this option, the original files will still be scanned, but
+# without additional processing.
+# Default: yes
+#ScanHWP3 yes
+
 
 ##
 ## Mail files
@@ -521,6 +533,14 @@ Example
 # WARNING: setting this limit too high may result in severe damage or impact performance.
 # Default: 100
 #MaxIconsPE 200
+
+# This option sets the maximum recursive calls for HWP3 parsing during scanning.
+# HWP3 files using more than this limit will be terminated and alert the user.
+# Scans will be unable to scan any HWP3 attachments if the recursive limit is reached.
+# Negative values are not allowed.
+# WARNING: setting this limit too high may result in severe damage or impact performance.
+# Default: 16
+#MaxRecHWP3 16
 
 # This option sets the maximum calls to the PCRE match function during an instance of regex matching.
 # Instances using more than this limit will be terminated and alert the user but the scan will continue.

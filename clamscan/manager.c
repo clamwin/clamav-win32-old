@@ -525,12 +525,12 @@ static void scanfile(const char *filename, struct cl_engine *engine, const struc
                 funmap(maptype);
             }
         }
-        close(fd);
+    close(fd);
         if (type == CL_TYPE_MAIL)
             logg("~%s: no action performed on a mailbox\n", filename);
         else
-            action(filename);
-	}
+        action(filename);
+}
     else
         close(fd);
 }
@@ -601,8 +601,9 @@ static void scandirs(const char *dirname, struct cl_engine *engine, const struct
                         sprintf(fname, PATHSEP"%s", dent->d_name);
                     else
                         sprintf(fname, "%s"PATHSEP"%s", dirname, dent->d_name);
+
 #ifdef _WIN32
-            NORMALIZE_PATH(fname, 1, continue);
+                    NORMALIZE_PATH(fname, 1, continue);
 #endif
                     /* stat the file */
                     if(LSTAT(fname, &sb) != -1) {
@@ -976,6 +977,23 @@ int scanmanager(const struct optstruct *opts)
         free(dbdir);
     }
 
+    /* pcre engine limits - required for cl_engine_compile */
+    if ((opt = optget(opts, "pcre-match-limit"))->active) {
+        if ((ret = cl_engine_set_num(engine, CL_ENGINE_PCRE_MATCH_LIMIT, opt->numarg))) {
+            logg("!cli_engine_set_num(CL_ENGINE_PCRE_MATCH_LIMIT) failed: %s\n", cl_strerror(ret));
+            cl_engine_free(engine);
+            return 2;
+        }
+    }
+
+    if ((opt = optget(opts, "pcre-recmatch-limit"))->active) {
+        if ((ret = cl_engine_set_num(engine, CL_ENGINE_PCRE_RECMATCH_LIMIT, opt->numarg))) {
+            logg("!cli_engine_set_num(CL_ENGINE_PCRE_RECMATCH_LIMIT) failed: %s\n", cl_strerror(ret));
+            cl_engine_free(engine);
+            return 2;
+        }
+    }
+
     if((ret = cl_engine_compile(engine)) != 0) {
         logg("!Database initialization error: %s\n", cl_strerror(ret));;
 
@@ -1124,26 +1142,19 @@ int scanmanager(const struct optstruct *opts)
         }
     }
 
+    if((opt = optget(opts, "max-rechwp3"))->active) {
+        if((ret = cl_engine_set_num(engine, CL_ENGINE_MAX_RECHWP3, opt->numarg))) {
+            logg("!cli_engine_set_num(CL_ENGINE_MAX_RECHWP3) failed: %s\n", cl_strerror(ret));
+
+            cl_engine_free(engine);
+            return 2;
+        }
+    }
+
     if ((opt = optget(opts, "timelimit"))->active) {
         if ((ret = cl_engine_set_num(engine, CL_ENGINE_TIME_LIMIT, opt->numarg))) {
             logg("!cli_engine_set_num(CL_ENGINE_TIME_LIMIT) failed: %s\n", cl_strerror(ret));
 
-            cl_engine_free(engine);
-            return 2;
-        }
-    }
-
-    if ((opt = optget(opts, "pcre-match-limit"))->active) {
-        if ((ret = cl_engine_set_num(engine, CL_ENGINE_PCRE_MATCH_LIMIT, opt->numarg))) {
-            logg("!cli_engine_set_num(CL_ENGINE_PCRE_MATCH_LIMIT) failed: %s\n", cl_strerror(ret));
-            cl_engine_free(engine);
-            return 2;
-        }
-    }
-
-    if ((opt = optget(opts, "pcre-recmatch-limit"))->active) {
-        if ((ret = cl_engine_set_num(engine, CL_ENGINE_PCRE_RECMATCH_LIMIT, opt->numarg))) {
-            logg("!cli_engine_set_num(CL_ENGINE_PCRE_RECMATCH_LIMIT) failed: %s\n", cl_strerror(ret));
             cl_engine_free(engine);
             return 2;
         }
@@ -1204,6 +1215,12 @@ int scanmanager(const struct optstruct *opts)
 
     if(optget(opts, "scan-mail")->enabled)
         options |= CL_SCAN_MAIL;
+
+    if(optget(opts, "scan-xmldocs")->enabled)
+        options |= CL_SCAN_XMLDOCS;
+
+    if(optget(opts, "scan-hwp3")->enabled)
+        options |= CL_SCAN_HWP3;
 
     if(optget(opts, "algorithmic-detection")->enabled)
         options |= CL_SCAN_ALGORITHMIC;
@@ -1268,6 +1285,7 @@ int scanmanager(const struct optstruct *opts)
     if (optget(opts, "gen-json")->enabled)
         options |= CL_SCAN_FILE_PROPERTIES;
 #endif
+
 #ifdef _WIN32
     /* scan only memory */
     if (optget(opts, "memory")->enabled && (!opts->filename && !optget(opts, "file-list")->enabled))
@@ -1290,6 +1308,7 @@ int scanmanager(const struct optstruct *opts)
     } else {
         if(opts->filename && optget(opts, "file-list")->enabled)
             logg("^Only scanning files from --file-list (files passed at cmdline are ignored)\n");
+
 #ifdef _WIN32
     /* scan first memory if requested */
     if (optget(opts, "memory")->enabled)

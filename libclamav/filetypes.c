@@ -108,9 +108,9 @@ static const struct ftmap_s {
     { "CL_TYPE_ISO9660",	CL_TYPE_ISO9660		},
     { "CL_TYPE_JAVA",		CL_TYPE_JAVA		},
     { "CL_TYPE_DMG",		CL_TYPE_DMG		},
-    { "CL_TYPE_MBR",        CL_TYPE_MBR     },
-    { "CL_TYPE_GPT",        CL_TYPE_GPT     },
-    { "CL_TYPE_APM",        CL_TYPE_APM     },
+    { "CL_TYPE_MBR",		CL_TYPE_MBR		},
+    { "CL_TYPE_GPT",		CL_TYPE_GPT		},
+    { "CL_TYPE_APM",		CL_TYPE_APM		},
     { "CL_TYPE_XAR",		CL_TYPE_XAR		},
     { "CL_TYPE_PART_ANY",	CL_TYPE_PART_ANY	},
     { "CL_TYPE_PART_HFSPLUS",	CL_TYPE_PART_HFSPLUS	},
@@ -119,9 +119,13 @@ static const struct ftmap_s {
     { "CL_TYPE_OOXML_PPT",	CL_TYPE_OOXML_PPT     	},
     { "CL_TYPE_OOXML_XL",	CL_TYPE_OOXML_XL     	},
     { "CL_TYPE_INTERNAL",	CL_TYPE_INTERNAL     	},
-    { "CL_TYPE_XDP",        CL_TYPE_XDP             },
-    { "CL_TYPE_XML_WORD",   CL_TYPE_XML_WORD        },
-    { "CL_TYPE_XML_XL",     CL_TYPE_XML_XL          },
+    { "CL_TYPE_XDP",		CL_TYPE_XDP		},
+    { "CL_TYPE_XML_WORD",	CL_TYPE_XML_WORD	},
+    { "CL_TYPE_XML_XL",		CL_TYPE_XML_XL		},
+    { "CL_TYPE_HWP3",		CL_TYPE_HWP3		},
+    { "CL_TYPE_XML_HWP",	CL_TYPE_XML_HWP		},
+    { "CL_TYPE_HWPOLE2",	CL_TYPE_HWPOLE2		},
+    { "CL_TYPE_OOXML_HWP",	CL_TYPE_OOXML_HWP	},
     { NULL,			CL_TYPE_IGNORED		}
 };
 
@@ -209,6 +213,55 @@ cli_file_t cli_filetype(const unsigned char *buf, size_t buflen, const struct cl
 
 int is_tar(const unsigned char *buf, unsigned int nbytes);
 
+/* organize by length, cannot exceed SIZEOF_LH */
+const struct ooxml_ftcodes {
+    const char *entry;
+    size_t len;
+    cli_file_t type;
+} ooxml_detect[] = {
+    { "xl/",                     3, CL_TYPE_OOXML_XL    },
+    { "ppt/",                    4, CL_TYPE_OOXML_PPT   },
+    { "word/",                   5, CL_TYPE_OOXML_WORD  },
+    { "BinData",                 7, CL_TYPE_ZIP         }, /* HWP */
+    { "mimetype",                8, CL_TYPE_ZIP         }, /* HWP */
+    { "Contents",                8, CL_TYPE_ZIP         }, /* HWP */
+    { "docProps/",               9, CL_TYPE_ZIP         }, /* MS */
+    { "customXml/",             10, CL_TYPE_ZIP         }, /* MS */
+    { "version.xml",            11, CL_TYPE_ZIP         }, /* HWP */
+    { "settings.xml",           12, CL_TYPE_ZIP         }, /* HWP */
+    { "_.rels/.rels",           12, CL_TYPE_ZIP         }, /* MS */
+    { "[ContentTypes].xml",     18, CL_TYPE_ZIP         }, /* MS */
+    { "[Content_Types].xml",    19, CL_TYPE_ZIP         }, /* MS */
+    { "Preview/PrvText.txt",    19, CL_TYPE_ZIP         }, /* HWP */
+    { "Contents/content.hpf",   20, CL_TYPE_OOXML_HWP   },
+    { "META-INF/container.xml", 22, CL_TYPE_ZIP         }, /* HWP */
+    { NULL,                      0, CL_TYPE_ANY         }
+};
+/* set to biggest ooxml_detect len */
+#define OOXML_DETECT_MAXLEN 22
+
+#define OOXML_FTIDENTIFIED(type)                                \
+    do {                                                        \
+    if (type != CL_TYPE_ZIP) {                                  \
+        switch (type) {                                         \
+        case CL_TYPE_OOXML_XL:                                  \
+            cli_dbgmsg("Recognized OOXML XL file\n");           \
+            return CL_TYPE_OOXML_XL;                            \
+        case CL_TYPE_OOXML_PPT:                                 \
+            cli_dbgmsg("Recognized OOXML PPT file\n");          \
+            return CL_TYPE_OOXML_PPT;                           \
+        case CL_TYPE_OOXML_WORD:                                \
+            cli_dbgmsg("Recognized OOXML WORD file\n");         \
+            return CL_TYPE_OOXML_WORD;                          \
+        case CL_TYPE_OOXML_HWP:                                 \
+            cli_dbgmsg("Recognized OOXML HWP file\n");          \
+            return CL_TYPE_OOXML_HWP;                           \
+        default:                                                \
+            cli_dbgmsg("unexpected ooxml_filetype return: %i\n", type); \
+        }                                                       \
+    }                                                           \
+    } while(0)
+
 cli_file_t cli_filetype2(fmap_t *map, const struct cl_engine *engine, cli_file_t basetype)
 {
 	unsigned char buffer[MAGIC_BUFFER_SIZE];
@@ -271,7 +324,7 @@ cli_file_t cli_filetype2(fmap_t *map, const struct cl_engine *engine, cli_file_t
             const unsigned char * znamep = buff;
             int32_t zlen = bread;
             int lhc = 0;
-            int zi, likely_ooxml = 0;
+            int zi, i, likely_ooxml = 0;
             cli_file_t ret2;
             
             for (zi=0; zi<32; zi++) {
@@ -279,40 +332,27 @@ cli_file_t cli_filetype2(fmap_t *map, const struct cl_engine *engine, cli_file_t
                 if (NULL != znamep) {
                     znamep += SIZEOF_LH;
                     zlen = zread - (znamep - zbuff);
-                    if (zlen > 4) { /* Ensure we've mapped for OOXML filename compare */
-                        if (0 == memcmp(znamep, "xl/", 3)) {
-                            cli_dbgmsg("Recognized OOXML XL file\n");
-                            return CL_TYPE_OOXML_XL;
-                        } else if (0 == memcmp(znamep, "ppt/", 4)) {
-                            cli_dbgmsg("Recognized OOXML PPT file\n");
-                            return CL_TYPE_OOXML_PPT;                        
-                        } else if (0 == memcmp(znamep, "word/", 5)) {
-                            cli_dbgmsg("Recognized OOXML Word file\n");
-                            return CL_TYPE_OOXML_WORD;
-                        } else if (0 == memcmp(znamep, "docProps/", 5)) {
-                            likely_ooxml = 1;
-                        }
+                    if (zlen > OOXML_DETECT_MAXLEN) {
+                        for (i = 0; ooxml_detect[i].entry; i++) {
+                            if (0 == memcmp(znamep, ooxml_detect[i].entry, ooxml_detect[i].len)) {
+                                if (ooxml_detect[i].type != CL_TYPE_ZIP) {
+                                    OOXML_FTIDENTIFIED(ooxml_detect[i].type);
+                                    /* returns any unexpected type detection */
+                                    return ooxml_detect[i].type;
+                                }
 
+                                likely_ooxml = 1;
+                            }
+                        }
+                        /* only check first three readable zip headers */
                         if (++lhc > 2) {
-                            /* only check first three zip headers unless likely ooxml */
+                            /* if likely, check full archive */
                             if (likely_ooxml) {
                                 cli_dbgmsg("Likely OOXML, checking additional zip headers\n");
                                 if ((ret2 = cli_ooxml_filetype(NULL, map)) != CL_SUCCESS) {
                                     /* either an error or retyping has occurred, return error or just CL_TYPE_ZIP? */
-                                    switch (ret2) {
-                                    case CL_TYPE_OOXML_XL:
-                                        cli_dbgmsg("Recognized OOXML XL file\n");
-                                        break;
-                                    case CL_TYPE_OOXML_PPT:
-                                        cli_dbgmsg("Recognized OOXML PPT file\n");
-                                        break;
-                                    case CL_TYPE_OOXML_WORD:
-                                        cli_dbgmsg("Recognized OOXML WORD file\n");
-                                        break;
-                                    default:
-                                        cli_dbgmsg("unexpected ooxml_filetype return: %i\n", ret2);
-                                    }
-                                    return ret2;
+                                    OOXML_FTIDENTIFIED(ret2);
+                                    /* falls-through to additional filetyping */
                                 }
                             }
                             break;
@@ -325,7 +365,7 @@ cli_file_t cli_filetype2(fmap_t *map, const struct cl_engine *engine, cli_file_t
 
                 if (znamep == NULL) {
                     if (map->len-zoff > SIZEOF_LH) {
-                        zoff -= SIZEOF_LH+5; /* remap for SIZEOF_LH+filelen for header overlap map boundary */ 
+                        zoff -= SIZEOF_LH+OOXML_DETECT_MAXLEN+1; /* remap for SIZEOF_LH+filelen for header overlap map boundary */ 
                         zread = MIN(MAGIC_BUFFER_SIZE, map->len-zoff);
                         zbuff = fmap_need_off_once(map, zoff, zread);
                         if (zbuff == NULL) {

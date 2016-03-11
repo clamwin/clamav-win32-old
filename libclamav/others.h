@@ -72,7 +72,7 @@
  * in re-enabling affected modules.
  */
 
-#define CL_FLEVEL 81
+#define CL_FLEVEL 82
 #define CL_FLEVEL_DCONF	CL_FLEVEL
 #define CL_FLEVEL_SIGTOOL CL_FLEVEL
 
@@ -372,6 +372,7 @@ struct cl_engine {
 
     /* Engine max settings */
     uint32_t maxiconspe; /* max number of icons to scan for PE */
+    uint32_t maxrechwp3; /* max recursive calls for HWP3 parsing */
 
     /* millisecond time limit for preclassification scanning */
     uint32_t time_limit;
@@ -444,6 +445,7 @@ struct cl_settings {
 
     /* Engine max settings */
     uint32_t maxiconspe; /* max number of icons to scan for PE */
+    uint32_t maxrechwp3; /* max recursive calls for HWP3 parsing */
 
     /* PCRE matching limitations */
     uint64_t pcre_match_limit;
@@ -473,6 +475,8 @@ extern int have_rar;
 #define SCAN_ALL            (ctx->options & CL_SCAN_ALLMATCHES)
 #define SCAN_SWF            (ctx->options & CL_SCAN_SWF)
 #define SCAN_PROPERTIES     (ctx->options & CL_SCAN_FILE_PROPERTIES)
+#define SCAN_XMLDOCS        (ctx->options & CL_SCAN_XMLDOCS)
+#define SCAN_HWP3           (ctx->options & CL_SCAN_HWP3)
 
 /* based on macros from A. Melnikoff */
 #define cbswap16(v) (((v & 0xff) << 8) | (((v) >> 8) & 0xff))
