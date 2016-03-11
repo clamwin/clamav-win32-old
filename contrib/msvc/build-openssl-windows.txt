@@ -1,0 +1,20 @@
+Visual Studio (unpack with cygwin tar)
+
+perl Configure VC-WIN32 --prefix=C:\Work\Clamav\openssl\win32\build
+ms\do_nasm.bat
+/MT to /MD in ms\nt.mak
+nmake -f ms\nt.mak
+nmake -f ms\nt.mak install
+
+perl Configure VC-WIN64A --prefix=C:\Work\Clamav\openssl\x64\build
+ms\do_win64a.bat
+/MT to /MD in ms\nt.mak
+nmake -f ms\nt.mak
+nmake -f ms\nt.mak install
+
+MinGW (with MSYS shell, unpack with MinGW tar)
+perl Configure mingw no-shared --prefix=/c/Work/Clamav/openssl/mingw/build
+make depend
+make
+make install_sw
+(no need to do strip -g)
