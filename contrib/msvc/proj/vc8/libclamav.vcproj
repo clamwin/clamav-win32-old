@@ -528,6 +528,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\..\libclamav\hwp.c"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\..\libclamav\inflate64.c"
 				>
 			</File>
@@ -1675,6 +1679,10 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\libclamav\htmlnorm.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libclamav\hwp.h"
 				>
 			</File>
 			<File
