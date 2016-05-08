@@ -20,8 +20,7 @@ dnl   MA 02110-1301, USA.
 AC_PREREQ([2.59])
 dnl For a release change [devel] to the real version [0.xy]
 dnl also change VERSION below
-dnl AC_INIT([ClamAV], [devel], [http://bugs.clamav.net/], [clamav], [http://www.clamav.net/])
-AC_INIT([ClamAV], [0.99.1], [http://bugs.clamav.net/], [clamav], [http://www.clamav.net/])
+AC_INIT([ClamAV], [devel], [http://bugs.clamav.net/], [clamav], [http://www.clamav.net/])
 
 AH_BOTTOM([#include "platform.h"])
 dnl put configure auxiliary into config
@@ -88,6 +87,7 @@ AM_MAINTAINER_MODE
 m4_include([m4/reorganization/libs/libz.m4])
 m4_include([m4/reorganization/libs/bzip.m4])
 m4_include([m4/reorganization/libs/unrar.m4])
+m4_include([m4/reorganization/libs/systemd.m4])
 m4_include([m4/reorganization/code_checks/ipv6.m4])
 m4_include([m4/reorganization/code_checks/dns.m4])
 m4_include([m4/reorganization/code_checks/fanotify.m4])
@@ -140,9 +140,12 @@ clamscan/Makefile
 database/Makefile
 docs/Makefile
 clamd/Makefile
+clamd/clamav-daemon.service
+clamd/clamav-daemon.socket
 clamdscan/Makefile
 clamsubmit/Makefile
 clamav-milter/Makefile
+freshclam/clamav-freshclam.service
 freshclam/Makefile
 sigtool/Makefile
 clamconf/Makefile
