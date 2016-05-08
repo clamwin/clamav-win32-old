@@ -390,6 +390,9 @@
 /* Define to 1 if you have the `sysctlbyname' function. */
 #undef HAVE_SYSCTLBYNAME
 
+/* systemd is supported */
+#undef HAVE_SYSTEMD
+
 /* Define to 1 if you have the <sys/cdefs.h> header file. */
 #undef HAVE_SYS_CDEFS_H
 
@@ -482,12 +485,14 @@
    module search path. */
 #undef LT_MODULE_PATH_VAR
 
-/* Define to the sub-directory in which libtool stores uninstalled libraries.
-   */
+/* Define to the sub-directory where libtool stores uninstalled libraries. */
 #undef LT_OBJDIR
 
 /* Define to the shared library suffix, say, ".dylib". */
 #undef LT_SHARED_EXT
+
+/* Define to the shared archive member specification, say "(shr.o)". */
+#undef LT_SHARED_LIB_MEMBER
 
 /* disable assertions */
 /* #undef NDEBUG */ /* NOTE: don't undef */
@@ -581,7 +586,7 @@
 #endif
 
 /* Stable releases tag */
-#define CLAMWIN_RELEASE "0.99.1"
+#define CLAMWIN_RELEASE "0.99.2"
 
 /* Version number of package */
 #ifdef CLAMWIN_RELEASE
