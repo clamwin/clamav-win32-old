@@ -122,7 +122,7 @@ static void rotate(cb_data_t *cbctx, const char *fmt)
     if ((cbctx->count++ % 100000) == 0)
     {
         mprintf(fmt, cbctx->filename, rotation[cbctx->oldvalue]);
-        cbctx->oldvalue = (cbctx->oldvalue + 1) % sizeof(rotation);
+        cbctx->oldvalue = (cbctx->oldvalue + 1) % 4;
     }
 }
 
