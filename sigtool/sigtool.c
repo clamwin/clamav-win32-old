@@ -116,7 +116,8 @@ static const struct dblist_s {
     { "gdb",   1 },
     { "pdb",   1 },
     { "wdb",   0 },
-    { "crb", 1 },
+    { "crb",   1 },
+    { "cdb",   1 },
 
     { NULL,	    0 }
 };
@@ -1405,6 +1406,10 @@ static int listdb(const char *filename, const regex_t *regex)
 		continue;
 	    }
 	    line++;
+
+            if(buffer && buffer[0] == '#')
+                continue;
+
 	    pt = strchr(buffer, '=');
 	    if(!pt) {
 		mprintf("!listdb: Malformed pattern line %u (file %s)\n", line, filename);
@@ -1448,7 +1453,11 @@ static int listdb(const char *filename, const regex_t *regex)
 		continue;
 	    }
 	    line++;
-	    start = cli_strtok(buffer, 2, ":");
+
+            if(buffer && buffer[0] == '#')
+                continue;
+
+            start = cli_strtok(buffer, 2, ":");
 
 	    if(!start) {
 		mprintf("!listdb: Malformed pattern line %u (file %s)\n", line, filename);
@@ -1474,6 +1483,9 @@ static int listdb(const char *filename, const regex_t *regex)
 		continue;
 	    }
 	    line++;
+
+            if(buffer && buffer[0] == '#')
+                continue;
 
 	    if(cli_strbcasestr(filename, ".ldb") || cli_strbcasestr(filename, ".ldu"))
 		pt = strchr(buffer, ';');
@@ -3246,7 +3258,7 @@ static int dumpcerts(const struct optstruct *opts)
 	return -1;
     }
 
-    engine->dconf->pe |= PE_CONF_DUMPCERT;
+    cl_engine_set_num(engine, CL_ENGINE_PE_DUMPCERTS, 1);
     cl_debug();
 
     /* prepare context */

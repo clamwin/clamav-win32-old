@@ -456,6 +456,12 @@ static void scanfile(const char *filename, struct cl_engine *engine, const struc
         chain.chains = malloc(sizeof(char **));
         if (chain.chains) {
             chain.chains[0] = strdup(filename);
+            if (!chain.chains[0]) {
+                free(chain.chains);
+                logg("Unable to allocate memory in scanfile()\n");
+                info.errors++;
+                return;
+            }
             chain.nchains = 1;
         }
     }
@@ -912,6 +918,12 @@ int scanmanager(const struct optstruct *opts)
     if((opt = optget(opts,"bytecode-timeout"))->enabled)
         cl_engine_set_num(engine, CL_ENGINE_BYTECODE_TIMEOUT, opt->numarg);
 
+    if (optget(opts, "nocerts")->enabled)
+        cl_engine_set_num(engine, CL_ENGINE_DISABLE_PE_CERTS, 1);
+
+    if (optget(opts, "dumpcerts")->enabled)
+        cl_engine_set_num(engine, CL_ENGINE_PE_DUMPCERTS, 1);
+
     if((opt = optget(opts,"bytecode-mode"))->enabled) {
         enum bytecode_mode mode;
 
@@ -1021,12 +1033,6 @@ int scanmanager(const struct optstruct *opts)
         memset(&cbdata, 0, sizeof(cb_data_t));
         cl_engine_set_clcb_progress(engine, scancallback, &cbdata);
     }
-
-    if (optget(opts, "nocerts")->enabled)
-        engine->dconf->pe |= PE_CONF_DISABLECERT;
-
-    if (optget(opts, "dumpcerts")->enabled)
-        engine->dconf->pe |= PE_CONF_DUMPCERT;
 
     /* set limits */
 
@@ -1194,6 +1200,9 @@ int scanmanager(const struct optstruct *opts)
 
     if(optget(opts, "block-encrypted")->enabled)
         options |= CL_SCAN_BLOCKENCRYPTED;
+
+    if(optget(opts, "block-macros")->enabled)
+        options |= CL_SCAN_BLOCKMACROS;
 
     if(optget(opts, "scan-pe")->enabled)
         options |= CL_SCAN_PE;

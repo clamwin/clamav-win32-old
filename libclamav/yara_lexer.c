@@ -708,10 +708,6 @@ limitations under the License.
       } \
     }
 
-#ifdef _WIN32
-#define snprintf _snprintf
-#endif
-
 #define YY_NO_UNISTD_H 1
 #define YY_NO_INPUT 1
 
@@ -2303,10 +2299,6 @@ static void yara_yy_load_buffer_state  (yyscan_t yyscanner)
 	yara_yyfree((void *) b ,yyscanner );
 }
 
-#ifndef __cplusplus
-extern int isatty (int );
-#endif /* __cplusplus */
-    
 /* Initializes or reinitializes a buffer.
  * This function is sometimes called more than once on the same buffer,
  * such as during a yara_yyrestart() or at EOF.

@@ -20,7 +20,7 @@ dnl   MA 02110-1301, USA.
 AC_PREREQ([2.59])
 dnl For a release change [devel] to the real version [0.xy]
 dnl also change VERSION below
-AC_INIT([ClamAV], [devel], [http://bugs.clamav.net/], [clamav], [http://www.clamav.net/])
+AC_INIT([ClamAV], [0.99.2], [http://bugs.clamav.net/], [clamav], [http://www.clamav.net/])
 
 AH_BOTTOM([#include "platform.h"])
 dnl put configure auxiliary into config
@@ -125,6 +125,7 @@ m4_include([m4/reorganization/distcheck.m4])
 m4_include([m4/reorganization/llvm.m4])
 m4_include([m4/reorganization/sha_collect.m4])
 m4_include([m4/reorganization/yara.m4])
+m4_include([m4/reorganization/libfreshclam.m4])
 
 m4_include([m4/reorganization/bsd.m4])
 
@@ -154,6 +155,7 @@ test/Makefile
 unit_tests/Makefile
 clamdtop/Makefile
 clambc/Makefile
+libfreshclam/Makefile
 Makefile
 clamav-config
 libclamav.pc
