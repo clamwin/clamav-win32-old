@@ -120,13 +120,13 @@ struct dirent *readdir_w(DIR *d)
     {
         if (!wfdw.cAlternateFileName[0])
         {
-            fwprintf(stderr, L"[dirent] alternative name path not found (ntfs 8dot3 disabled?)\n", GetLastError());
+            fwprintf(stderr, L"[dirent] alternative name path not found (ntfs 8dot3 disabled?) (err=%d)\n", GetLastError());
             errno = EINVAL; return NULL;
         }
 
         if (!(name_a = cw_wc2mb(wfdw.cAlternateFileName, 0)))
         {
-            fwprintf(stderr, L"[dirent] alternative name path conversion failed (%d)\n", GetLastError());
+            fwprintf(stderr, L"[dirent] alternative name path conversion failed (err=%d)\n", GetLastError());
             errno = EINVAL; return NULL;
         }
     }
