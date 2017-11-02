@@ -105,7 +105,10 @@ typedef LONG (WINAPI *imp_WinVerifyTrust)(HWND, GUID *, LPVOID);
 
 /* dbghelp32 */
 #ifdef _MSC_VER
+#pragma warning (push)
+#pragma warning (disable:4091)
 #include <dbghelp.h>
+#pragma warning (pop)
 #define MINDUMP_FLAGS (MINIDUMP_TYPE) \
     (MiniDumpWithDataSegs  | MiniDumpWithIndirectlyReferencedMemory | MiniDumpFilterModulePaths)
 typedef BOOL (WINAPI *pMiniDumpWriteDumpFunc)(HANDLE, DWORD, HANDLE, MINIDUMP_TYPE,
